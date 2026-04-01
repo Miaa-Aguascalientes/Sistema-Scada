@@ -425,83 +425,77 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* --- 1. BLOQUEO TOTAL DEL SIDEBAR (ADIÓS FLECHAS) --- */
-        /* Oculta el contenedor de las flechas y cualquier control de colapso */
+        /* 1. ELIMINAR FLECHAS Y BLOQUEAR EL SIDEBAR PARA QUE NO SE MUEVA */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
         [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
 
-        /* Bloquea el ancho del sidebar para que sea fijo y no se pueda arrastrar */
+        /* Definimos un ancho fijo para el sidebar */
         [data-testid="stSidebar"] {
-            min-width: 350px !important; 
-            max-width: 350px !important;
-            width: 350px !important;
+            min-width: 320px !important; 
+            max-width: 320px !important;
+            width: 320px !important;
         }
 
-        /* --- 2. ELIMINAR LETREROS DE ADMINISTRADOR Y NOTIFICACIONES --- */
-        /* Esto elimina el cuadro azul de 'Modo Administrador' y alertas */
+        /* 2. QUITAR EL LETRERO AZUL Y CUALQUIER NOTIFICACIÓN */
+        /* Esto elimina de raíz los st.info, st.success, etc., que causan el letrero de administrador */
         [data-testid="stNotification"], 
         .stAlert, 
-        [data-testid="stStatusWidget"],
-        .element-container:has(.stAlert) {
+        [data-testid="stStatusWidget"] {
             display: none !important;
         }
         
-        /* Oculta la barra superior (Deploy, Settings, etc) */
+        /* Ocultar la barra superior gris de Streamlit */
         header { visibility: hidden !important; height: 0px !important; }
         #MainMenu { visibility: hidden !important; }
         footer { visibility: hidden !important; }
 
-        /* --- 3. LOGO MIAA (FIJO ARRIBA A LA IZQUIERDA) --- */
+        /* 3. LOGO MIAA (AJUSTADO A LA IZQUIERDA) */
         .sidebar-logo { 
             position: fixed;
             top: 15px; 
             left: 20px; 
             z-index: 999999;
-            width: 250px; /* Ajusta el tamaño de tu logo aquí */
+            width: 200px;
         }
-        .sidebar-logo img { 
-            width: 100%; 
-            height: auto; 
-        }
+        .sidebar-logo img { width: 100%; height: auto; }
 
-        /* --- 4. AJUSTE DE CONTENEDOR PRINCIPAL --- */
+        /* 4. MOVER EL CONTENIDO PRINCIPAL A LA DERECHA (PARA QUE NO SE ENCIME) */
         .stApp { background-color: #000000; color: white; }
         
-        .block-container {
-            padding-top: 2rem !important;
-            margin-left: 20px !important; /* Espacio extra para que no pegue con el sidebar fijo */
+        .main .block-container {
+            padding-top: 3rem !important;
+            margin-left: 330px !important; /* Esto empuja el mapa y los datos fuera del área del sidebar */
+            max-width: 95% !important;
         }
 
-        /* --- 5. TÍTULO SUPERIOR --- */
+        /* 5. TÍTULO SUPERIOR */
         .titulo-superior {
             position: fixed;
             top: 15px;
-            left: 60%; /* Centrado compensando el sidebar fijo */
+            left: 60%; 
             transform: translateX(-50%);
             z-index: 999;
             color: #00d4ff; 
             font-size: 1.4rem;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
         }
 
-        /* --- 6. ESTILO DEL SIDEBAR (FONDO) --- */
+        /* 6. ESTILO DEL SIDEBAR */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
-            border-right: 1px solid #1f4068; 
+            border-right: 2px solid #1f4068; 
         }
         
-        /* Baja el contenido del menú para que no se encime con el logo */
         [data-testid="stSidebarContent"] {
             padding-top: 5rem !important; 
         }
 
-        /* --- 7. DISEÑO DE CARTAS (SCADA LOOK) --- */
+        /* 7. SCADA CARDS */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -509,10 +503,6 @@ st.markdown("""
             padding: 15px; 
             margin-bottom: 10px;
         }
-
-        /* ANIMACIÓN DE PARPADEO */
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
