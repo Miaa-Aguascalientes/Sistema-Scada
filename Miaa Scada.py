@@ -73,12 +73,6 @@ def login_miaa():
 # EJECUCIÓN DEL LOGIN
 login_miaa()
 
-# Ejemplo de cómo usar los roles en el tablero:
-if st.session_state.rol == "administrador":
-    st.sidebar.info("Modo: Administrador (Acceso Total)")
-else:
-    st.sidebar.info("Modo: Supervisor (Solo Lectura)")
-
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
 sector_seleccionado = params.get("sector", None)
