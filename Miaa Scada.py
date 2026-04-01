@@ -425,7 +425,7 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO DE SIDEBAR Y FLECHAS */
+        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
         [data-testid="stSidebarCollapseButton"] {
@@ -439,37 +439,47 @@ st.markdown("""
         }
 
         /* 2. LIMPIEZA DE INTERFAZ Y NOTIFICACIONES */
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
+        [data-testid="stNotification"], 
+        .stAlert, 
+        [data-testid="stStatusWidget"],
+        div.stException {
             display: none !important;
         }
+        
         header { visibility: hidden !important; height: 0px !important; }
+        #MainMenu { visibility: hidden !important; }
         footer { visibility: hidden !important; }
 
-        /* 3. LOGO EN EL TOPE (POSICIÓN FIJA) */
+        /* 3. LOGO EN LO MÁS ALTO (POSICIÓN FIJA) */
         .sidebar-logo { 
             position: fixed;
-            top: 0px;
-            left: 0px;
-            width: 320px;
-            height: 80px; /* Reduje un poco el alto del contenedor del logo */
+            top: 0px;        /* Pegado al borde superior */
+            left: 0px;       /* Alineado al inicio del sidebar */
+            width: 320px;    /* Mismo ancho que el sidebar */
+            height: 100px;   /* Ajusta según el alto de tu logo */
             z-index: 999999;
             display: flex; 
             justify-content: center; 
             align-items: center;
-            background-color: #0b1a29; 
+            background-color: #0b1a29; /* Fondo igual al sidebar para ocultar lo que pase atrás */
             border-bottom: 1px solid #1f4068;
         }
-        .sidebar-logo img { width: 75%; height: auto; }
+        
+        .sidebar-logo img { 
+            width: 80%;      /* Tamaño del logo dentro del contenedor */
+            height: auto; 
+        }
 
-        /* 4. CONTENEDOR PRINCIPAL */
+        /* 4. CONTENEDOR PRINCIPAL (MAPA Y DATOS) */
         .stApp { background-color: #000000; color: white; }
+        
         .main .block-container {
             padding-top: 3rem !important;
             margin-left: 320px !important; 
             max-width: calc(100% - 340px) !important;
         }
 
-        /* 5. TÍTULO SUPERIOR */
+        /* 5. TÍTULO SUPERIOR ANIMADO */
         .titulo-superior {
             position: fixed;
             top: 15px;
@@ -480,20 +490,22 @@ st.markdown("""
             font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
         }
 
-        /* 6. SIDEBAR - AQUÍ SUBIMOS LOS COMPONENTES */
+        /* 6. SIDEBAR - AJUSTE DE CONTENIDO BAJO EL LOGO */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
             border-right: 2px solid #1f4068; 
         }
         
-        /* AJUSTE CRÍTICO: Este número controla qué tan cerca están los componentes del logo */
+        /* Bajamos el contenido del sidebar para que empiece DEBAJO del logo fijo */
         [data-testid="stSidebarContent"] {
-            padding-top: 65px !important; /* Estaba en 110px, lo bajamos a 85px para que esté pegadito al borde del logo */
+            padding-top: 50px !important; /* Debe ser mayor al height de .sidebar-logo */
         }
 
-        /* 7. ESTILO DE CARTAS */
+        /* 7. COMPONENTES DEL DASHBOARD */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -501,6 +513,13 @@ st.markdown("""
             padding: 15px; 
             margin-bottom: 15px; 
         }
+        
+        .status-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
+        .status-err { background-color: #b71c1c; color: #ef9a9a; }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
