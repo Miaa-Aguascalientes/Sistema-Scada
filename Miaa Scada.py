@@ -9,6 +9,58 @@ import json
 import urllib.parse
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
+import hashlib
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
+
+def verificar_credenciales(usuario_input, password_input):
+    try:
+        engine = get_mysql_scada_engine()
+        # Consultamos el password hash y el tipo de usuario
+        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
+        df_user = pd.read_sql(query, engine)
+        
+        if not df_user.empty:
+            hashed_db = df_user['password'].iloc[0].encode('utf-8')
+            # Verificamos la contraseña encriptada
+            if bcrypt.checkpw(password_input.encode('utf-8'), hashed_db):
+                return df_user['tipo_usuario'].iloc[0]
+        return None
+    except Exception as e:
+        st.error(f"Error en validación: {e}")
+        return None
+
+def login_miaa():
+    if 'autenticado' not in st.session_state:
+        st.session_state.autenticado = False
+        st.session_state.rol = None
+
+    if not st.session_state.autenticado:
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso MIAA</h2>", unsafe_allow_html=True)
+            
+            user = st.text_input("Usuario")
+            password = st.text_input("Contraseña", type="password")
+            
+            if st.button("Entrar", use_container_width=True):
+                rol = verificar_credenciales(user, password)
+                if rol:
+                    st.session_state.autenticado = True
+                    st.session_state.rol = rol
+                    st.success(f"Bienvenido {user} ({rol})")
+                    st.rerun()
+                else:
+                    st.error("Credenciales inválidas")
+        st.stop()
+
+# Ejecutar Login
+login_miaa()
+
+# Ejemplo de cómo usar los roles en el tablero:
+if st.session_state.rol == "administrador":
+    st.sidebar.info("Modo: Administrador (Acceso Total)")
+else:
+    st.sidebar.info("Modo: Supervisor (Solo Lectura)")
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
