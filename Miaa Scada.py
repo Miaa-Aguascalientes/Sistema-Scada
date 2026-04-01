@@ -470,7 +470,7 @@ st.markdown("""
             padding-bottom: 0rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-            margin-top: -100px !important;    /* Sube todo el contenido para cubrir el hueco del header */
+            margin-top: -10px !important;    /* Sube todo el contenido para cubrir el hueco del header */
         }
 
         /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
