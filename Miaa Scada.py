@@ -9,75 +9,6 @@ import json
 import urllib.parse
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
-import hashlib
-import bcrypt
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
-
-@st.cache_resource
-def get_mysql_telemetria_engine():
-    try:
-        c = st.secrets["mysql_telemetria"]
-        pwd = urllib.parse.quote_plus(c["password"])
-        # Nota: Asegúrate de que en tu archivo secrets.toml, 'database' sea 'miaamx_telemetria2'
-        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-        with engine.connect() as conn: pass 
-        return engine
-    except Exception as e:
-        st.error(f"Error de conexión: {e}")
-        return None
-
-#  VERIFICACIÓN DE CREDENCIALES
-def verificar_credenciales(usuario_input, password_input):
-    try:
-        # Llamamos a tu motor con credenciales ocultas
-        engine = get_mysql_telemetria_engine()
-        if engine is None: return None
-        
-        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
-        df_user = pd.read_sql(query, engine)
-        
-        if not df_user.empty:
-           password_db = str(df_user['password'].iloc[0]) # El valor de la DB (ej: "418")
-    
-    # Comparamos texto directo en lugar de usar bcrypt
-           if password_input == password_db:
-               return df_user['tipo_usuario'].iloc[0]
-        return None
-    except Exception as e:
-        st.error(f"Error en validación: {e}")
-        return None
-
-#  INTERFAZ DE LOGIN
-def login_miaa():
-    if 'autenticado' not in st.session_state:
-        st.session_state.autenticado = False
-        st.session_state.rol = None
-
-    if not st.session_state.autenticado:
-        col1, col2, col3 = st.columns([1, 1.5, 1])
-        with col2:
-            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso al sistema MIAA</h2>", unsafe_allow_html=True)
-            user = st.text_input("Usuario")
-            password = st.text_input("Contraseña", type="password")
-            
-            if st.button("Entrar", use_container_width=True):
-                rol = verificar_credenciales(user, password)
-                if rol:
-                    st.session_state.autenticado = True
-                    st.session_state.rol = rol
-                    st.rerun()
-                else:
-                    st.error("Usuario o contraseña incorrectos")
-        st.stop()
-
-# EJECUCIÓN DEL LOGIN
-login_miaa()
-
-# Ejemplo de cómo usar los roles en el tablero:
-if st.session_state.rol == "administrador":
-    st.sidebar.info("Modo: Administrador (Acceso Total)")
-else:
-    st.sidebar.info("Modo: Supervisor (Solo Lectura)")
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
@@ -92,7 +23,7 @@ st.set_page_config(
     page_title=titulo_pestaña, 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide", 
-    initial_sidebar_state="expanded" # Fuerza el estado expandido
+    initial_sidebar_state="expanded"
 )
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
 
@@ -535,23 +466,6 @@ st.markdown("""
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
-
-        /* 1. Ocultar el botón de abrir/cerrar del sidebar */
-        [data-testid="collapsedControl"] {
-            display: none;
-        }
-        
-        /* 2. Forzar que el sidebar no se pueda colapsar */
-        section[data-testid="stSidebar"] {
-            min-width: 250px !important;
-            max-width: 350px !important;
-        }
-
-        /* 3. Ocultar el botón de cierre (la X) dentro del sidebar si existe */
-        button[kind="headerNoSpacing"] {
-            display: none;
-        }
-
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
