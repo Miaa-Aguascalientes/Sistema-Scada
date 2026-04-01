@@ -453,37 +453,40 @@ st.markdown("""
         /* 3. LOGO EN LO MÁS ALTO (POSICIÓN FIJA) */
         .sidebar-logo { 
             position: fixed;
-            top: 0px;        /* Pegado al borde superior */
-            left: 0px;       /* Alineado al inicio del sidebar */
-            width: 320px;    /* Mismo ancho que el sidebar */
-            height: 100px;   /* Ajusta según el alto de tu logo */
+            top: 0px;
+            left: 0px;
+            width: 320px;
+            height: 100px;
             z-index: 999999;
             display: flex; 
             justify-content: center; 
             align-items: center;
-            background-color: #0b1a29; /* Fondo igual al sidebar para ocultar lo que pase atrás */
+            background-color: #0b1a29; 
             border-bottom: 1px solid #1f4068;
         }
-        
-        .sidebar-logo img { 
-            width: 80%;      /* Tamaño del logo dentro del contenedor */
-            height: auto; 
-        }
+        .sidebar-logo img { width: 80%; height: auto; }
 
-        /* 4. CONTENEDOR PRINCIPAL (MAPA Y DATOS) */
+        /* 4. CONTENEDOR PRINCIPAL - AJUSTE PARA EL MAPA */
         .stApp { background-color: #000000; color: white; }
         
         .main .block-container {
-            padding-top: 1rem !important;
+            /* Eliminamos el padding superior para que el contenido suba al tope */
+            padding-top: 0rem !important; 
+            margin-top: 50px !important; /* Espacio para que el título no tape el inicio del mapa */
             margin-left: 320px !important; 
-            max-width: calc(100% - 340px) !important;
+            max-width: calc(100% - 330px) !important;
         }
 
-        /* 5. TÍTULO SUPERIOR ANIMADO */
+        /* Forzamos al elemento del mapa (iframe) a no tener márgenes extras */
+        iframe {
+            margin-top: 0px !important;
+        }
+
+        /* 5. TÍTULO SUPERIOR FIJO */
         .titulo-superior {
             position: fixed;
-            top: 15px;
-            left: 50%;
+            top: 0px; /* Lo pegamos al borde superior */
+            left: calc(50% + 160px); /* Centrado relativo al área del mapa */
             transform: translateX(-50%);
             z-index: 1000;
             color: #00d4ff; 
@@ -492,17 +495,21 @@ st.markdown("""
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            background-color: rgba(0, 0, 0, 0.8); /* Fondo para que no se pierda con el mapa */
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f4068;
         }
 
-        /* 6. SIDEBAR - AJUSTE DE CONTENIDO BAJO EL LOGO */
+        /* 6. SIDEBAR - CONTENIDO BAJO EL LOGO */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
             border-right: 2px solid #1f4068; 
         }
         
-        /* Bajamos el contenido del sidebar para que empiece DEBAJO del logo fijo */
         [data-testid="stSidebarContent"] {
-            padding-top: 20px !important; /* Debe ser mayor al height de .sidebar-logo */
+            padding-top: 110px !important; 
         }
 
         /* 7. COMPONENTES DEL DASHBOARD */
