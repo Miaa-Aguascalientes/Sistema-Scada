@@ -465,11 +465,12 @@ st.markdown("""
         /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
         .stApp { background-color: #000000; color: white; }
         
-        .main .block-container {
-            padding-top: 100rem !important; /* Quitamos el espacio superior de Streamlit */
-            margin-top: 100px !important;  /* Ajuste para que el mapa empiece justo bajo el título */
-            margin-left: 320px !important; 
-            max-width: calc(100% - 330px) !important;
+        .block-container {
+            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
+            padding-bottom: 0rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            margin-top: -30px !important;    /* Sube todo el contenido para cubrir el hueco del header */
         }
 
         /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
