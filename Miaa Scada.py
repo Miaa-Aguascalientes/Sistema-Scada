@@ -9,6 +9,75 @@ import json
 import urllib.parse
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
+import hashlib
+import bcrypt
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
+
+@st.cache_resource
+def get_mysql_telemetria_engine():
+    try:
+        c = st.secrets["mysql_telemetria"]
+        pwd = urllib.parse.quote_plus(c["password"])
+        # Nota: Asegúrate de que en tu archivo secrets.toml, 'database' sea 'miaamx_telemetria2'
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        with engine.connect() as conn: pass 
+        return engine
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
+
+#  VERIFICACIÓN DE CREDENCIALES
+def verificar_credenciales(usuario_input, password_input):
+    try:
+        # Llamamos a tu motor con credenciales ocultas
+        engine = get_mysql_telemetria_engine()
+        if engine is None: return None
+        
+        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
+        df_user = pd.read_sql(query, engine)
+        
+        if not df_user.empty:
+           password_db = str(df_user['password'].iloc[0]) # El valor de la DB (ej: "418")
+    
+    # Comparamos texto directo en lugar de usar bcrypt
+           if password_input == password_db:
+               return df_user['tipo_usuario'].iloc[0]
+        return None
+    except Exception as e:
+        st.error(f"Error en validación: {e}")
+        return None
+
+#  INTERFAZ DE LOGIN
+def login_miaa():
+    if 'autenticado' not in st.session_state:
+        st.session_state.autenticado = False
+        st.session_state.rol = None
+
+    if not st.session_state.autenticado:
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso al sistema MIAA</h2>", unsafe_allow_html=True)
+            user = st.text_input("Usuario")
+            password = st.text_input("Contraseña", type="password")
+            
+            if st.button("Entrar", use_container_width=True):
+                rol = verificar_credenciales(user, password)
+                if rol:
+                    st.session_state.autenticado = True
+                    st.session_state.rol = rol
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
+        st.stop()
+
+# EJECUCIÓN DEL LOGIN
+login_miaa()
+
+# Ejemplo de cómo usar los roles en el tablero:
+if st.session_state.rol == "administrador":
+    st.sidebar.info("Modo: Administrador (Acceso Total)")
+else:
+    st.sidebar.info("Modo: Supervisor (Solo Lectura)")
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
@@ -362,32 +431,35 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* --- ARREGLO DE INTERFAZ (FLECHAS VISIBLES) --- */
-        /* En lugar de ocultar todo el header, ocultamos solo el fondo y el menú de 3 puntos */
-        [data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important;
-            color: white !important;
-        }
-        #MainMenu { visibility: hidden; }
-        footer { visibility: hidden; }
-
+        /* --- OCULTAR ELEMENTOS DE INTERFAZ DE STREAMLIT --- */
+        header {visibility: hidden;} /* Oculta la barra superior (Deploy, Share) */
+        #MainMenu {visibility: hidden;} /* Oculta el menú de 3 puntos */
+        footer {visibility: hidden;} /* Oculta "Made with Streamlit" */
+        
         /* --- AJUSTE DE CONTENEDOR PRINCIPAL --- */
         .stApp { background-color: #000000; color: white; }
         
         .block-container {
-            padding-top: 2rem !important;    /* Espacio suficiente para que aparezcan las flechas */
+            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
             padding-bottom: 0rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
+            margin-top: -30px !important;    /* Sube todo el contenido para cubrir el hueco del header */
+        }
+
+        /* --- AJUSTE ESPECÍFICO PARA BAJAR EL MAPA --- */
+        /* Esto empuja el iframe del mapa hacia abajo para que no choque con el título */
+        .element-container:has(iframe) {
+            margin-top: 10px !important;
         }
 
         /* --- TÍTULO SUPERIOR ANIMADO --- */
         .titulo-superior {
             position: fixed;
-            top: 10px; 
+            top: 15px; /* Ajustado para que flote centrado en el espacio superior */
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10; /* Valor bajo para no tapar el botón del sidebar */
+            z-index: 9999999;
             color: #00d4ff; 
             font-size: 1.5rem;
             font-weight: bold;
@@ -411,28 +483,28 @@ st.markdown("""
     
         /* --- SIDEBAR Y LOGO --- */
         [data-testid="stSidebar"] { 
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
+            background-color: #0b1a29; 
+            border-right: 2px solid #333; 
         }
         
-        /* Quitamos el margen negativo que escondía el logo */
+        [data-testid="stSidebarContent"] { padding-top: 0rem !important; }
+        [data-testid="stSidebarNav"] { padding-top: 0rem !important; }
+        
         .sidebar-logo { 
             display: flex; 
             justify-content: center; 
-            padding: 10px 0 !important; 
-            margin-top: 0px !important; 
+            padding: 0px !important; 
+            margin-top: -50px !important; 
             margin-bottom: 10px;
         }
         .sidebar-logo img { max-width: 85%; height: auto; }
 
-        /* Estilo para el botón de las flechas (hacerlo resaltar) */
-        button[kind="headerNoPadding"] {
-            background-color: rgba(0, 212, 255, 0.2) !important;
-            color: #00d4ff !important;
-            border-radius: 5px;
-        }
-
         /* --- COMPONENTES DEL DASHBOARD --- */
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+        }
+        
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -451,10 +523,35 @@ st.markdown("""
         
         .status-ok { background-color: #1b5e20; color: #a5d6a7; }
         .status-err { background-color: #b71c1c; color: #ef9a9a; }
+        
+        .section-header { 
+            padding: 10px; 
+            border-radius: 3px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            color: white; 
+        }
 
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
+
+        /* 1. Ocultar el botón de abrir/cerrar del sidebar */
+        [data-testid="collapsedControl"] {
+            display: none;
+        }
+        
+        /* 2. Forzar que el sidebar no se pueda colapsar */
+        section[data-testid="stSidebar"] {
+            min-width: 250px !important;
+            max-width: 350px !important;
+        }
+
+        /* 3. Ocultar el botón de cierre (la X) dentro del sidebar si existe */
+        button[kind="headerNoSpacing"] {
+            display: none;
+        }
+
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
