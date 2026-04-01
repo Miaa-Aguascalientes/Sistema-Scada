@@ -10,6 +10,7 @@ import urllib.parse
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 import hashlib
+import bcrypt
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
 @st.cache_resource
