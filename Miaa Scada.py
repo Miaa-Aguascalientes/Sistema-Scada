@@ -26,23 +26,27 @@ def get_mysql_telemetria_engine():
         st.error(f"Error de conexión: {e}")
         return None
 
+# 2. VERIFICACIÓN DE CREDENCIALES
 def verificar_credenciales(usuario_input, password_input):
     try:
+        # Llamamos a tu motor con credenciales ocultas
         engine = get_mysql_telemetria_engine()
-        # Consultamos el password hash y el tipo de usuario
+        if engine is None: return None
+        
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
         
         if not df_user.empty:
-            hashed_db = df_user['password'].iloc[0].encode('utf-8')
-            # Verificamos la contraseña encriptada
-            if bcrypt.checkpw(password_input.encode('utf-8'), hashed_db):
+            hashed_db = df_user['password'].iloc[0]
+            # Validamos contra el hash de la base de datos
+            if bcrypt.checkpw(password_input.encode('utf-8'), hashed_db.encode('utf-8')):
                 return df_user['tipo_usuario'].iloc[0]
         return None
     except Exception as e:
         st.error(f"Error en validación: {e}")
         return None
 
+# 3. INTERFAZ DE LOGIN
 def login_miaa():
     if 'autenticado' not in st.session_state:
         st.session_state.autenticado = False
@@ -52,7 +56,6 @@ def login_miaa():
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
             st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso MIAA</h2>", unsafe_allow_html=True)
-            
             user = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
             
@@ -61,13 +64,12 @@ def login_miaa():
                 if rol:
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
-                    st.success(f"Bienvenido {user} ({rol})")
                     st.rerun()
                 else:
-                    st.error("Credenciales inválidas")
+                    st.error("Usuario o contraseña incorrectos")
         st.stop()
 
-# Ejecutar Login
+# EJECUCIÓN DEL LOGIN
 login_miaa()
 
 # Ejemplo de cómo usar los roles en el tablero:
