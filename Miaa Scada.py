@@ -25,6 +25,24 @@ st.set_page_config(
     layout="wide", 
     initial_sidebar_state="expanded"
 )
+
+st.markdown(
+    """
+    <style>
+        /* Oculta el botón de flechas (abrir/cerrar) */
+        [data-testid="collapsedControl"] {
+            display: none;
+        }
+        /* Fija el ancho del sidebar */
+        section[data-testid="stSidebar"] {
+            min-width: 250px !important;
+            max-width: 300px !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
 
 # 2  SECCION------------------------------------------------------------------------------2. FUNCIONES DE CONEXIÓN ------------------------------------------------------------------------------------------------------
