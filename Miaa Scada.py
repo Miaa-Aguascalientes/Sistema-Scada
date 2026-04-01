@@ -55,7 +55,7 @@ def login_miaa():
     if not st.session_state.autenticado:
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
-            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso MIAA</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso al sistema MIAA</h2>", unsafe_allow_html=True)
             user = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
             
