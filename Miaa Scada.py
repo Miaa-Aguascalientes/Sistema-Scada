@@ -438,19 +438,15 @@ st.markdown("""
             width: 320px !important;
         }
 
-        /* 2. LIMPIEZA DE INTERFAZ Y NOTIFICACIONES */
-        [data-testid="stNotification"], 
-        .stAlert, 
-        [data-testid="stStatusWidget"],
-        div.stException {
+        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
+        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
             display: none !important;
         }
-        
         header { visibility: hidden !important; height: 0px !important; }
         #MainMenu { visibility: hidden !important; }
         footer { visibility: hidden !important; }
 
-        /* 3. LOGO EN LO MÁS ALTO (POSICIÓN FIJA) */
+        /* 3. LOGO EN LO MÁS ALTO */
         .sidebar-logo { 
             position: fixed;
             top: 0px;
@@ -466,27 +462,26 @@ st.markdown("""
         }
         .sidebar-logo img { width: 80%; height: auto; }
 
-        /* 4. CONTENEDOR PRINCIPAL - AJUSTE PARA EL MAPA */
+        /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
         .stApp { background-color: #000000; color: white; }
         
         .main .block-container {
-            /* Eliminamos el padding superior para que el contenido suba al tope */
-            padding-top: 0rem !important; 
-            margin-top: 50px !important; /* Espacio para que el título no tape el inicio del mapa */
+            padding-top: 0rem !important; /* Quitamos el espacio superior de Streamlit */
+            margin-top: 55px !important;  /* Ajuste para que el mapa empiece justo bajo el título */
             margin-left: 320px !important; 
             max-width: calc(100% - 330px) !important;
         }
 
-        /* Forzamos al elemento del mapa (iframe) a no tener márgenes extras */
+        /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
         iframe {
-            margin-top: 0px !important;
+            margin-top: -15px !important; /* Margen negativo para succionar el mapa hacia arriba */
         }
 
-        /* 5. TÍTULO SUPERIOR FIJO */
+        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
-            top: 0px; /* Lo pegamos al borde superior */
-            left: calc(50% + 160px); /* Centrado relativo al área del mapa */
+            top: 0px; 
+            left: calc(50% + 160px); 
             transform: translateX(-50%);
             z-index: 1000;
             color: #00d4ff; 
@@ -495,38 +490,22 @@ st.markdown("""
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: rgba(0, 0, 0, 0.8); /* Fondo para que no se pierda con el mapa */
+            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
             width: 100%;
             text-align: center;
             padding: 10px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* 6. SIDEBAR - CONTENIDO BAJO EL LOGO */
-        [data-testid="stSidebar"] { 
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-        
+        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
         [data-testid="stSidebarContent"] {
             padding-top: 110px !important; 
         }
 
-        /* 7. COMPONENTES DEL DASHBOARD */
-        .resumen-card { 
-            background: #050505; 
-            border: 1px solid #1f4068; 
-            border-radius: 5px; 
-            padding: 15px; 
-            margin-bottom: 15px; 
+        [data-testid="stSidebar"] { 
+            background-color: #0b1a29 !important; 
+            border-right: 2px solid #1f4068; 
         }
-        
-        .status-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
-        .status-err { background-color: #b71c1c; color: #ef9a9a; }
-
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
