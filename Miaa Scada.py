@@ -425,77 +425,87 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* --- ARREGLO DE INTERFAZ (FLECHAS VISIBLES) --- */
-        /* En lugar de ocultar todo el header, ocultamos solo el fondo y el menú de 3 puntos */
-        [data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important;
-            color: white !important;
+        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
+        /* Oculta definitivamente el botón de las flechas y cualquier control de colapso */
+        [data-testid="collapsedControl"], 
+        button[kind="headerNoPadding"], 
+        [data-testid="stSidebarCollapseButton"] {
+            display: none !important;
         }
-        #MainMenu { visibility: hidden; }
-        footer { visibility: hidden; }
 
-        /* --- AJUSTE DE CONTENEDOR PRINCIPAL --- */
+        /* Fijamos el ancho del sidebar para que sea estático */
+        [data-testid="stSidebar"] {
+            min-width: 320px !important; 
+            max-width: 320px !important;
+            width: 320px !important;
+        }
+
+        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
+        /* Elimina el letrero azul de 'Modo Administrador' y cualquier notificación/alerta */
+        [data-testid="stNotification"], 
+        .stAlert, 
+        [data-testid="stStatusWidget"],
+        div.stException {
+            display: none !important;
+        }
+        
+        /* Oculta la barra superior de Streamlit (Deploy, Settings, etc) */
+        header { visibility: hidden !important; height: 0px !important; }
+        #MainMenu { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
+
+        /* 3. CONTENEDOR PRINCIPAL (EVITA QUE EL CONTENIDO SE ENCIME) */
         .stApp { background-color: #000000; color: white; }
         
-        .block-container {
-            padding-top: 2rem !important;    /* Espacio suficiente para que aparezcan las flechas */
-            padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
+        /* Esta es la clave: empuja todo el contenido a la derecha del sidebar fijo */
+        .main .block-container {
+            padding-top: 3rem !important;
+            margin-left: 320px !important; 
+            max-width: calc(100% - 340px) !important;
         }
 
-        /* --- TÍTULO SUPERIOR ANIMADO --- */
+        /* 4. TÍTULO SUPERIOR ANIMADO */
         .titulo-superior {
             position: fixed;
-            top: 10px; 
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10; /* Valor bajo para no tapar el botón del sidebar */
+            z-index: 1000;
             color: #00d4ff; 
             font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
-            white-space: nowrap;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
             animation: glow 2s ease-in-out infinite alternate;
         }
 
         @keyframes glow {
-            from {
-                text-shadow: 0 0 5px #00d4ff, 0 0 10px #00d4ff;
-                transform: translateX(-50%) scale(1);
-            }
-            to {
-                text-shadow: 0 0 15px #00d4ff, 0 0 25px #0077ff;
-                transform: translateX(-50%) scale(1.02);
-            }
+            from { text-shadow: 0 0 5px #00d4ff; transform: translateX(-50%) scale(1); }
+            to { text-shadow: 0 0 15px #0077ff; transform: translateX(-50%) scale(1.02); }
         }
     
-        /* --- SIDEBAR Y LOGO --- */
+        /* 5. SIDEBAR Y LOGO */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
             border-right: 2px solid #1f4068; 
         }
         
-        /* Quitamos el margen negativo que escondía el logo */
+        /* Logo posicionado arriba en el sidebar fijo */
         .sidebar-logo { 
             display: flex; 
             justify-content: center; 
-            padding: 10px 0 !important; 
-            margin-top: 0px !important; 
-            margin-bottom: 10px;
+            padding: 20px 0 !important;
+            margin-top: 0px !important;
         }
-        .sidebar-logo img { max-width: 85%; height: auto; }
+        .sidebar-logo img { width: 80%; height: auto; }
 
-        /* Estilo para el botón de las flechas (hacerlo resaltar) */
-        button[kind="headerNoPadding"] {
-            background-color: rgba(0, 212, 255, 0.2) !important;
-            color: #00d4ff !important;
-            border-radius: 5px;
+        /* Baja el menú del sidebar para que no choque con el logo */
+        [data-testid="stSidebarContent"] {
+            padding-top: 2rem !important; 
         }
 
-        /* --- COMPONENTES DEL DASHBOARD --- */
+        /* 6. COMPONENTES DEL DASHBOARD (ESTILO SCADA) */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -504,14 +514,7 @@ st.markdown("""
             margin-bottom: 15px; 
         }
         
-        .status-tag { 
-            font-size: 10px; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            margin-left: 5px; 
-            font-weight: bold; 
-        }
-        
+        .status-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .status-ok { background-color: #1b5e20; color: #a5d6a7; }
         .status-err { background-color: #b71c1c; color: #ef9a9a; }
 
