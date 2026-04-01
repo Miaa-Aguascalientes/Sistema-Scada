@@ -466,8 +466,8 @@ st.markdown("""
         .stApp { background-color: #000000; color: white; }
         
         .main .block-container {
-            padding-top: 0rem !important; /* Quitamos el espacio superior de Streamlit */
-            margin-top: 0px !important;  /* Ajuste para que el mapa empiece justo bajo el título */
+            padding-top: 100rem !important; /* Quitamos el espacio superior de Streamlit */
+            margin-top: 100px !important;  /* Ajuste para que el mapa empiece justo bajo el título */
             margin-left: 320px !important; 
             max-width: calc(100% - 330px) !important;
         }
