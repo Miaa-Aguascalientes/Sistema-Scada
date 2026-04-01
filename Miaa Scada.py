@@ -43,6 +43,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+with st.sidebar:
+    st.image("https://www.miaa.mx/favicon.ico", width=50) # O un logo local
+    st.title("Panel de Control")
+    st.markdown("---")
+    if st.session_state.get('autenticado'):
+        st.write(f"Usuario: **{st.session_state.user}**")
+        if st.button("Cerrar Sesión"):
+            st.session_state.autenticado = False
+            st.rerun()
+
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
 
 # 2  SECCION------------------------------------------------------------------------------2. FUNCIONES DE CONEXIÓN ------------------------------------------------------------------------------------------------------
