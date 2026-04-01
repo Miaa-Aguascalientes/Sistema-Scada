@@ -502,7 +502,7 @@ st.markdown("""
         
         /* Bajamos el contenido del sidebar para que empiece DEBAJO del logo fijo */
         [data-testid="stSidebarContent"] {
-            padding-top: 50px !important; /* Debe ser mayor al height de .sidebar-logo */
+            padding-top: 30px !important; /* Debe ser mayor al height de .sidebar-logo */
         }
 
         /* 7. COMPONENTES DEL DASHBOARD */
