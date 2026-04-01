@@ -426,22 +426,19 @@ if tag_a_graficar:
 st.markdown("""
     <style>
         /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
-        /* Oculta definitivamente el botón de las flechas y cualquier control de colapso */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
         [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
 
-        /* Fijamos el ancho del sidebar para que sea estático */
         [data-testid="stSidebar"] {
             min-width: 320px !important; 
             max-width: 320px !important;
             width: 320px !important;
         }
 
-        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
-        /* Elimina el letrero azul de 'Modo Administrador' y cualquier notificación/alerta */
+        /* 2. LIMPIEZA DE INTERFAZ Y NOTIFICACIONES */
         [data-testid="stNotification"], 
         .stAlert, 
         [data-testid="stStatusWidget"],
@@ -449,22 +446,40 @@ st.markdown("""
             display: none !important;
         }
         
-        /* Oculta la barra superior de Streamlit (Deploy, Settings, etc) */
         header { visibility: hidden !important; height: 0px !important; }
         #MainMenu { visibility: hidden !important; }
         footer { visibility: hidden !important; }
 
-        /* 3. CONTENEDOR PRINCIPAL (EVITA QUE EL CONTENIDO SE ENCIME) */
+        /* 3. LOGO EN LO MÁS ALTO (POSICIÓN FIJA) */
+        .sidebar-logo { 
+            position: fixed;
+            top: 0px;        /* Pegado al borde superior */
+            left: 0px;       /* Alineado al inicio del sidebar */
+            width: 320px;    /* Mismo ancho que el sidebar */
+            height: 100px;   /* Ajusta según el alto de tu logo */
+            z-index: 999999;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            background-color: #0b1a29; /* Fondo igual al sidebar para ocultar lo que pase atrás */
+            border-bottom: 1px solid #1f4068;
+        }
+        
+        .sidebar-logo img { 
+            width: 80%;      /* Tamaño del logo dentro del contenedor */
+            height: auto; 
+        }
+
+        /* 4. CONTENEDOR PRINCIPAL (MAPA Y DATOS) */
         .stApp { background-color: #000000; color: white; }
         
-        /* Esta es la clave: empuja todo el contenido a la derecha del sidebar fijo */
         .main .block-container {
             padding-top: 3rem !important;
             margin-left: 320px !important; 
             max-width: calc(100% - 340px) !important;
         }
 
-        /* 4. TÍTULO SUPERIOR ANIMADO */
+        /* 5. TÍTULO SUPERIOR ANIMADO */
         .titulo-superior {
             position: fixed;
             top: 15px;
@@ -477,35 +492,20 @@ st.markdown("""
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            animation: glow 2s ease-in-out infinite alternate;
         }
 
-        @keyframes glow {
-            from { text-shadow: 0 0 5px #00d4ff; transform: translateX(-50%) scale(1); }
-            to { text-shadow: 0 0 15px #0077ff; transform: translateX(-50%) scale(1.02); }
-        }
-    
-        /* 5. SIDEBAR Y LOGO */
+        /* 6. SIDEBAR - AJUSTE DE CONTENIDO BAJO EL LOGO */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
             border-right: 2px solid #1f4068; 
         }
         
-        /* Logo posicionado arriba en el sidebar fijo */
-        .sidebar-logo { 
-            display: flex; 
-            justify-content: center; 
-            padding: 10px 0 !important;
-            margin-top: 0px !important;
-        }
-        .sidebar-logo img { width: 80%; height: auto; }
-
-        /* Baja el menú del sidebar para que no choque con el logo */
+        /* Bajamos el contenido del sidebar para que empiece DEBAJO del logo fijo */
         [data-testid="stSidebarContent"] {
-            padding-top: 2rem !important; 
+            padding-top: 110px !important; /* Debe ser mayor al height de .sidebar-logo */
         }
 
-        /* 6. COMPONENTES DEL DASHBOARD (ESTILO SCADA) */
+        /* 7. COMPONENTES DEL DASHBOARD */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -518,7 +518,6 @@ st.markdown("""
         .status-ok { background-color: #1b5e20; color: #a5d6a7; }
         .status-err { background-color: #b71c1c; color: #ef9a9a; }
 
-        /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
