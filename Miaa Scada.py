@@ -37,11 +37,11 @@ def verificar_credenciales(usuario_input, password_input):
         df_user = pd.read_sql(query, engine)
         
         if not df_user.empty:
-        password_db = str(df_user['password'].iloc[0]) # El valor de la DB (ej: "418")
+           password_db = str(df_user['password'].iloc[0]) # El valor de la DB (ej: "418")
     
     # Comparamos texto directo en lugar de usar bcrypt
-        if password_input == password_db:
-        return df_user['tipo_usuario'].iloc[0]
+           if password_input == password_db:
+               return df_user['tipo_usuario'].iloc[0]
         return None
     except Exception as e:
         st.error(f"Error en validación: {e}")
