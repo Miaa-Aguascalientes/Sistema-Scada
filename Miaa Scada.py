@@ -490,7 +490,7 @@ st.markdown("""
         
         /* AJUSTE CRÍTICO: Este número controla qué tan cerca están los componentes del logo */
         [data-testid="stSidebarContent"] {
-            padding-top: 85px !important; /* Estaba en 110px, lo bajamos a 85px para que esté pegadito al borde del logo */
+            padding-top: 65px !important; /* Estaba en 110px, lo bajamos a 85px para que esté pegadito al borde del logo */
         }
 
         /* 7. ESTILO DE CARTAS */
