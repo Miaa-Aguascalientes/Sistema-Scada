@@ -474,7 +474,7 @@ st.markdown("""
 
         /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
         iframe {
-            margin-top: -15px !important; /* Margen negativo para succionar el mapa hacia arriba */
+            margin-top: -50px !important; /* Margen negativo para succionar el mapa hacia arriba */
         }
 
         /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
