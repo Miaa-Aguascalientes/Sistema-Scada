@@ -467,7 +467,7 @@ st.markdown("""
         
         .main .block-container {
             padding-top: 0rem !important; /* Quitamos el espacio superior de Streamlit */
-            margin-top: 55px !important;  /* Ajuste para que el mapa empiece justo bajo el título */
+            margin-top: 10px !important;  /* Ajuste para que el mapa empiece justo bajo el título */
             margin-left: 320px !important; 
             max-width: calc(100% - 330px) !important;
         }
