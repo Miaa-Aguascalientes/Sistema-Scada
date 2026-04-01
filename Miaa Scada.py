@@ -12,6 +12,19 @@ from streamlit_autorefresh import st_autorefresh
 import hashlib
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
+@st.cache_resource
+def get_mysql_telemetria_engine():
+    try:
+        c = st.secrets["mysql_telemetria"]
+        pwd = urllib.parse.quote_plus(c["password"])
+        # Nota: Asegúrate de que en tu archivo secrets.toml, 'database' sea 'miaamx_telemetria2'
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        with engine.connect() as conn: pass 
+        return engine
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
+
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
