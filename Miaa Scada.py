@@ -474,7 +474,7 @@ st.markdown("""
         .stApp { background-color: #000000; color: white; }
         
         .main .block-container {
-            padding-top: 1.5rem !important;
+            padding-top: 1rem !important;
             margin-left: 320px !important; 
             max-width: calc(100% - 340px) !important;
         }
