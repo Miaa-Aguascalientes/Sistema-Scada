@@ -92,7 +92,7 @@ st.set_page_config(
     page_title=titulo_pestaña, 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide", 
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded" # Fuerza el estado expandido
 )
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
 
