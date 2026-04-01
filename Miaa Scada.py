@@ -14,7 +14,7 @@ import hashlib
 
 def verificar_credenciales(usuario_input, password_input):
     try:
-        engine = get_mysql_scada_engine()
+        engine = get_mysql_telemetria_engine()
         # Consultamos el password hash y el tipo de usuario
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
