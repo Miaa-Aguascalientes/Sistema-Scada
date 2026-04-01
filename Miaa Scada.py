@@ -425,79 +425,79 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* --- 1. ELIMINAR INTERFAZ DE ADMINISTRADOR Y DEPLOY --- */
-        /* Oculta la barra superior completa, incluyendo el botón de 'Deploy' y 'Settings' */
-        header[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important;
-            height: 0px !important;
-        }
+        /* --- 1. LIMPIEZA TOTAL DE INTERFAZ --- */
+        header { visibility: hidden !important; height: 0px !important; }
+        #MainMenu { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
         
-        /* Oculta el menú de 3 puntos (hamburguesa) y el estado de carga */
-        #MainMenu { visibility: hidden; }
-        footer { visibility: hidden; }
-        [data-testid="stStatusWidget"] { visibility: hidden; }
+        /* Elimina letreros de información, alertas o banners de administrador */
+        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
+            display: none !important;
+        }
 
-        /* --- 2. POSICIONAR LOGO JUNTO A LAS FLECHAS --- */
-        /* Estilo para el contenedor del logo en el sidebar */
+        /* --- 2. LOGO AL LADO DE LAS FLECHAS --- */
         .sidebar-logo { 
             position: fixed;
-            top: 10px; /* Alineado con el botón del sidebar */
-            left: 60px; /* Espacio para que no tape las flechas << */
+            top: 12px; 
+            left: 55px; /* Se coloca justo a la derecha de las flechas >> */
             z-index: 999999;
-            display: flex;
-            align-items: center;
+            width: 180px;
         }
-        
         .sidebar-logo img { 
-            height: 40px; /* Tamaño controlado para que quepa arriba */
-            width: auto;
+            width: 100%; 
+            height: auto; 
+            filter: drop-shadow(0 0 5px rgba(0,212,255,0.3));
         }
 
-        /* --- 3. ESTILO DEL BOTÓN DEL SIDEBAR (FLECHAS) --- */
-        /* Hacemos que el botón sea más visible sobre el fondo negro */
-        button[kind="headerNoPadding"] {
-            background-color: rgba(0, 212, 255, 0.1) !important;
-            color: #00d4ff !important;
-            border-radius: 5px !important;
-            margin-left: 5px !important;
-        }
-
-        /* --- 4. AJUSTE DE CONTENEDOR PRINCIPAL --- */
+        /* --- 3. AJUSTE DE CONTENEDOR Y FLECHAS --- */
         .stApp { background-color: #000000; color: white; }
         
-        .block-container {
-            padding-top: 2rem !important;
-            margin-top: 0px !important;
+        /* Estilo para las flechas de ocultar/mostrar para que resalten en el fondo negro */
+        button[kind="headerNoPadding"] {
+            background-color: rgba(0, 212, 255, 0.15) !important;
+            color: #00d4ff !important;
+            border-radius: 4px !important;
+            margin-top: 5px !important;
         }
 
-        /* --- 5. TÍTULO SUPERIOR --- */
+        .block-container {
+            padding-top: 1rem !important;
+            margin-top: -20px !important;
+        }
+
+        /* --- 4. TÍTULO SUPERIOR --- */
         .titulo-superior {
             position: fixed;
             top: 15px;
-            left: 55%; /* Movido un poco a la derecha para no chocar con el logo */
+            left: 50%;
             transform: translateX(-50%);
-            z-index: 10;
+            z-index: 999;
             color: #00d4ff; 
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
         }
 
-        /* --- 6. SIDEBAR --- */
+        /* --- 5. SIDEBAR --- */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
+            border-right: 1px solid #1f4068; 
         }
         
-        /* Quitamos el padding extra que Streamlit pone por defecto arriba del sidebar */
+        /* Baja el contenido del sidebar para que no choque con el logo fijo */
         [data-testid="stSidebarContent"] {
-            padding-top: 3rem !important; 
+            padding-top: 4rem !important; 
         }
 
-        /* --- 7. OTROS COMPONENTES --- */
-        .resumen-card { background: #050505; border: 1px solid #1f4068; border-radius: 5px; padding: 15px; }
+        /* --- 6. CARTAS Y OTROS --- */
+        .resumen-card { 
+            background: #050505; 
+            border: 1px solid #1f4068; 
+            border-radius: 5px; 
+            padding: 15px; 
+        }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
