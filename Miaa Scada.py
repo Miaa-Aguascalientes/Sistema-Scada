@@ -26,7 +26,7 @@ def get_mysql_telemetria_engine():
         st.error(f"Error de conexión: {e}")
         return None
 
-# 2. VERIFICACIÓN DE CREDENCIALES
+#  VERIFICACIÓN DE CREDENCIALES
 def verificar_credenciales(usuario_input, password_input):
     try:
         # Llamamos a tu motor con credenciales ocultas
@@ -47,7 +47,7 @@ def verificar_credenciales(usuario_input, password_input):
         st.error(f"Error en validación: {e}")
         return None
 
-# 3. INTERFAZ DE LOGIN
+#  INTERFAZ DE LOGIN
 def login_miaa():
     if 'autenticado' not in st.session_state:
         st.session_state.autenticado = False
@@ -535,6 +535,23 @@ st.markdown("""
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
+
+        /* 1. Ocultar el botón de abrir/cerrar del sidebar */
+        [data-testid="collapsedControl"] {
+            display: none;
+        }
+        
+        /* 2. Forzar que el sidebar no se pueda colapsar */
+        section[data-testid="stSidebar"] {
+            min-width: 250px !important;
+            max-width: 350px !important;
+        }
+
+        /* 3. Ocultar el botón de cierre (la X) dentro del sidebar si existe */
+        button[kind="headerNoSpacing"] {
+            display: none;
+        }
+
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
