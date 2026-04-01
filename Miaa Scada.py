@@ -425,84 +425,99 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. ELIMINAR FLECHAS Y BLOQUEAR EL SIDEBAR PARA QUE NO SE MUEVA */
-        [data-testid="collapsedControl"], 
-        button[kind="headerNoPadding"], 
-        [data-testid="stSidebarCollapseButton"] {
-            display: none !important;
+        /* --- ARREGLO DE INTERFAZ (FLECHAS VISIBLES) --- */
+        /* En lugar de ocultar todo el header, ocultamos solo el fondo y el menú de 3 puntos */
+        [data-testid="stHeader"] {
+            background-color: rgba(0,0,0,0) !important;
+            color: white !important;
         }
+        #MainMenu { visibility: hidden; }
+        footer { visibility: hidden; }
 
-        /* Definimos un ancho fijo para el sidebar */
-        [data-testid="stSidebar"] {
-            min-width: 320px !important; 
-            max-width: 320px !important;
-            width: 320px !important;
-        }
-
-        /* 2. QUITAR EL LETRERO AZUL Y CUALQUIER NOTIFICACIÓN */
-        /* Esto elimina de raíz los st.info, st.success, etc., que causan el letrero de administrador */
-        [data-testid="stNotification"], 
-        .stAlert, 
-        [data-testid="stStatusWidget"] {
-            display: none !important;
-        }
-        
-        /* Ocultar la barra superior gris de Streamlit */
-        header { visibility: hidden !important; height: 0px !important; }
-        #MainMenu { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
-
-        /* 3. LOGO MIAA (AJUSTADO A LA IZQUIERDA) */
-        .sidebar-logo { 
-            position: fixed;
-            top: 15px; 
-            left: 20px; 
-            z-index: 999999;
-            width: 200px;
-        }
-        .sidebar-logo img { width: 100%; height: auto; }
-
-        /* 4. MOVER EL CONTENIDO PRINCIPAL A LA DERECHA (PARA QUE NO SE ENCIME) */
+        /* --- AJUSTE DE CONTENEDOR PRINCIPAL --- */
         .stApp { background-color: #000000; color: white; }
         
-        .main .block-container {
-            padding-top: 3rem !important;
-            margin-left: 330px !important; /* Esto empuja el mapa y los datos fuera del área del sidebar */
-            max-width: 95% !important;
+        .block-container {
+            padding-top: 2rem !important;    /* Espacio suficiente para que aparezcan las flechas */
+            padding-bottom: 0rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
 
-        /* 5. TÍTULO SUPERIOR */
+        /* --- TÍTULO SUPERIOR ANIMADO --- */
         .titulo-superior {
             position: fixed;
-            top: 15px;
-            left: 60%; 
+            top: 10px; 
+            left: 50%;
             transform: translateX(-50%);
-            z-index: 999;
+            z-index: 10; /* Valor bajo para no tapar el botón del sidebar */
             color: #00d4ff; 
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
         }
 
-        /* 6. ESTILO DEL SIDEBAR */
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #00d4ff, 0 0 10px #00d4ff;
+                transform: translateX(-50%) scale(1);
+            }
+            to {
+                text-shadow: 0 0 15px #00d4ff, 0 0 25px #0077ff;
+                transform: translateX(-50%) scale(1.02);
+            }
+        }
+    
+        /* --- SIDEBAR Y LOGO --- */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
             border-right: 2px solid #1f4068; 
         }
         
-        [data-testid="stSidebarContent"] {
-            padding-top: 5rem !important; 
+        /* Quitamos el margen negativo que escondía el logo */
+        .sidebar-logo { 
+            display: flex; 
+            justify-content: center; 
+            padding: 10px 0 !important; 
+            margin-top: 0px !important; 
+            margin-bottom: 10px;
+        }
+        .sidebar-logo img { max-width: 85%; height: auto; }
+
+        /* Estilo para el botón de las flechas (hacerlo resaltar) */
+        button[kind="headerNoPadding"] {
+            background-color: rgba(0, 212, 255, 0.2) !important;
+            color: #00d4ff !important;
+            border-radius: 5px;
         }
 
-        /* 7. SCADA CARDS */
+        /* --- COMPONENTES DEL DASHBOARD --- */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
             border-radius: 5px; 
             padding: 15px; 
-            margin-bottom: 10px;
+            margin-bottom: 15px; 
         }
+        
+        .status-tag { 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            margin-left: 5px; 
+            font-weight: bold; 
+        }
+        
+        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
+        .status-err { background-color: #b71c1c; color: #ef9a9a; }
+
+        /* ANIMACIÓN DE PARPADEO */
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
