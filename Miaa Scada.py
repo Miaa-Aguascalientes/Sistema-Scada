@@ -495,7 +495,7 @@ st.markdown("""
         .sidebar-logo { 
             display: flex; 
             justify-content: center; 
-            padding: 20px 0 !important;
+            padding: 70px 0 !important;
             margin-top: 0px !important;
         }
         .sidebar-logo img { width: 80%; height: auto; }
