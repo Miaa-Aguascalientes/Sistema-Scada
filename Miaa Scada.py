@@ -290,29 +290,6 @@ def get_blink_icon(color):
     </style>
     """
 
-# --- EN TU SECCIÓN DE FUNCIONES DE DB ---
-def cargar_infraestructura_miaa():
-    if not st.session_state.capas_estaticas:
-        try:
-            # 1. Cargar Polígonos (Sectores)
-            conn = psycopg2.connect(**st.secrets["postgres"])
-            query = 'SELECT sector, ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo FROM "Sectorizacion"."Sectores_hidr"'
-            st.session_state.geo_sectores = pd.read_sql(query, conn).to_dict('records')
-            conn.close()
-
-            # 2. Cargar Ubicaciones (Pozos, Tanques, Rebombeos)
-            engine = get_mysql_telemetria_engine()
-            st.session_state.dic_pozos = pd.read_sql("SELECT * FROM Diccionario_de_pozos", engine).to_dict('records')
-            st.session_state.dic_tanques = pd.read_sql("SELECT * FROM Diccionario_de_tanques", engine).to_dict('records')
-            st.session_state.dic_rebombeos = pd.read_sql("SELECT * FROM Diccionario_de_rebombeos", engine).to_dict('records')
-            
-            st.session_state.capas_estaticas = True
-        except Exception as e:
-            st.error(f"Error crítico cargando capas: {e}")
-
-# Llamar a la función inmediatamente
-cargar_infraestructura_miaa()
-
 # 3 SECCION -------------------------------------------------------------------------------- 3. CARGA DE DATOS DE DICCIONARIOS -------------------------------------------------------------------------------------------
 # DICCIONARIO POZOS
 @st.cache_data(ttl=600)
@@ -1070,21 +1047,6 @@ with col_mapa:
         tiles="CartoDB dark_matter"
     )
     Fullscreen().add_to(m)
-
-    for s in st.session_state.geo_sectores:
-        folium.GeoJson(
-        json.loads(s['geo']),
-        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1},
-        tooltip=f"Sector: {s['sector']}"
-    ).add_to(m)
-
-# Dibujar Pozos (Usando los datos guardados)
-    for p in st.session_state.dic_pozos:
-    # Aquí procesas tus coordenadas y el color que viene del SCADA
-    # Ejemplo rápido:
-        coords = [float(x) for x in str(p['coord']).replace('(','').replace(')','').split(',')]
-        folium.CircleMarker(location=coords, radius=4, color="green", fill=True).add_to(m)
-    
 
 # Añadir el resaltado del sector si existe
     if datos_sector_resaltado:
