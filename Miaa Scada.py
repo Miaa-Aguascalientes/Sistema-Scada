@@ -127,42 +127,52 @@ else:
     titulo_pestaña = "MIAA - Estado de Pozos"
 
 st.set_page_config(
-    # --- DENTRO DE TU SECCIÓN 1 (debajo de set_page_config) ---
-if 'capas_estaticas' not in st.session_state:
-    st.session_state.capas_estaticas = False
-    st.session_state.geo_sectores = []
-    st.session_state.dic_pozos = []
-    st.session_state.dic_tanques = []
-    st.session_state.dic_rebombeos = []
-    
     page_title=titulo_pestaña, 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
+
+# --- ESTO ES LO QUE SOLUCIONA LA DESAPARICIÓN DE CAPAS ---
+# Inicializamos los contenedores de datos en la memoria de la sesión
+if 'capas_cargadas' not in st.session_state:
+    st.session_state.capas_cargadas = False
+    st.session_state.geo_sectores = []
+    st.session_state.datos_pozos = []
+    st.session_state.datos_tanques = []
+    st.session_state.datos_rebombeos = []
+
+# Autorefresh (5 minutos)
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
 
-# --- AÑADE ESTO EN LA SECCIÓN 1 ---
+# Función que carga todo UNA SOLA VEZ
 def inicializar_datos_estaticos():
+    # Solo entra aquí si las capas no han sido cargadas previamente
     if not st.session_state.capas_cargadas:
-        with st.spinner("Cargando infraestructura..."):
-            # Cargar Polígonos de Sectores (Postgres)
+        with st.spinner("Cargando infraestructura de agua..."):
+            # 1. Cargar Polígonos de Sectores (Postgres)
             try:
                 conn = psycopg2.connect(**st.secrets["postgres"])
+                # Importante: ST_AsGeoJSON convierte la geometría para que Folium la entienda directo
                 query_sec = 'SELECT sector, ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo FROM "Sectorizacion"."Sectores_hidr"'
                 st.session_state.geo_sectores = pd.read_sql(query_sec, conn).to_dict('records')
                 conn.close()
-            except: pass
+            except Exception as e:
+                st.warning(f"Sectores no disponibles: {e}")
 
-            # Cargar Diccionarios de Pozos/Tanques/RB (MySQL)
-            engine = get_mysql_telemetria_engine()
-            st.session_state.datos_pozos = pd.read_sql("SELECT * FROM Diccionario_de_pozos", engine).to_dict('records')
-            st.session_state.datos_tanques = pd.read_sql("SELECT * FROM Diccionario_de_tanques", engine).to_dict('records')
-            st.session_state.datos_rebombeos = pd.read_sql("SELECT * FROM Diccionario_de_rebombeos", engine).to_dict('records')
-            
-            st.session_state.capas_cargadas = True
+            # 2. Cargar Diccionarios de infraestructura (MySQL)
+            try:
+                engine = get_mysql_telemetria_engine() # Asegúrate que esta función esté definida en la Sec 0 o antes
+                st.session_state.datos_pozos = pd.read_sql("SELECT * FROM Diccionario_de_pozos", engine).to_dict('records')
+                st.session_state.datos_tanques = pd.read_sql("SELECT * FROM Diccionario_de_tanques", engine).to_dict('records')
+                st.session_state.datos_rebombeos = pd.read_sql("SELECT * FROM Diccionario_de_rebombeos", engine).to_dict('records')
+                
+                # Marcamos como cargado para que no lo vuelva a hacer en el próximo refresh
+                st.session_state.capas_cargadas = True
+            except Exception as e:
+                st.error(f"Error cargando bases de datos: {e}")
 
-# Ejecutar la carga
+# Llamamos a la carga de datos
 inicializar_datos_estaticos()
 
 # 2  SECCION------------------------------------------------------------------------------2. FUNCIONES DE CONEXIÓN ------------------------------------------------------------------------------------------------------
