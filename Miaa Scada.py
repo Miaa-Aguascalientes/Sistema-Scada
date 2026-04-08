@@ -677,60 +677,68 @@ for id_rb, info in mapa_rebombeos_dict.items():
     else:
         info.update({'status_label': 'OPERANDO', 'color_final': '#00FF00', 'blink': False})
 
-# 7 SECCIÓN --------------------------------------------------------------7 VISTA DETALLE DEL SECTOR (SE ABRE EN NUEVA PESTAÑA DEL NAVEGADOR) ---------------------------------------------------------------
+# 7 SECCIÓN --------------------------------------------------------------7 VISTA DETALLE DEL SECTOR ---------------------------------------------------------------
 
 if sector_seleccionado:
+    # 1. Título de la sección
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
+    # 2. Extracción de datos
     datos_s = next((s for s in sectores if s['sector'] == sector_seleccionado), None)
     
-# --- DENTRO DE: if sector_seleccionado: ---
-if datos_s:
-    st.markdown("""
-        <style>
-            /* Ajuste específico para que las métricas respiren y no se oculten */
-            .block-container { 
-                padding-top: 5rem !important; 
-                margin-top: 0px !important; 
-            }
-            
-            .metrics-container {
-                position: relative;
-                z-index: 9999;
-                background: #000000;
-                padding-bottom: 20px;
-            }
+    if datos_s:
+        # 3. Inyección de CSS para corregir el posicionamiento (Z-INDEX y Margen)
+        st.markdown("""
+            <style>
+                /* Forzamos que el contenedor principal de Streamlit no tenga margen superior negativo */
+                .block-container { 
+                    padding-top: 5.5rem !important; 
+                    margin-top: 0px !important; 
+                }
+                
+                /* Contenedor de métricas: Se asegura de estar por encima del mapa (z-index) */
+                .metrics-container {
+                    position: relative;
+                    z-index: 99999;
+                    background-color: transparent;
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
 
-            .micro-card {
-                background: #0b1a29; 
-                border: 1px solid #1f4068;
-                border-radius: 5px; 
-                padding: 10px; 
-                text-align: center;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            }
-            .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
-            .micro-value { color: #00d4ff; font-size: 16px; font-weight: bold; }
-            
-            /* Evitamos que el iframe del mapa suba sobre las métricas en esta vista */
-            .stApp3 iframe {
-                margin-top: 10px !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+                .micro-card {
+                    background: #0b1a29; 
+                    border: 1px solid #1f4068;
+                    border-radius: 5px; 
+                    padding: 10px; 
+                    text-align: center;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                }
+                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+                .micro-value { color: #00d4ff; font-size: 16px; font-weight: bold; }
+                
+                /* Empujamos el mapa hacia abajo para que no traslape las métricas */
+                iframe {
+                    margin-top: 20px !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
 
-    # Envolvemos las métricas en un div para control de capas
-    st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
-    
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
-    with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
-    with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        # 4. Renderizado de Métricas envueltas en el contenedor de alta prioridad
+        st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
+        
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        
+        with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
+        with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
+        with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True) # Cierre de metrics-container
+
+        # 5. Separador y continuación del mapa/gráficas
+        st.divider()
 
         # --- MAPA DEL SECTOR ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
