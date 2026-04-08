@@ -534,13 +534,13 @@ if tag_a_graficar:
 
 st.markdown("""
     <style>
-        /* 1. CONFIGURACIÓN DE FONDO Y ELIMINAR TÍTULOS NATIVOS */
+        /* 1. FONDO Y ELIMINAR RESIDUOS */
         .stApp { background-color: #000000; color: white; }
-        
-        /* Oculta cualquier h1 o h2 que Streamlit ponga automáticamente y que esté causando el doble título */
-        .main h1, .main h2 { display: none !important; }
+        .main h1, .main h2, .main h3 { display: none !important; }
+        header { visibility: hidden !important; height: 0px !important; }
+        footer { visibility: hidden !important; }
 
-        /* 2. BARRA SUPERIOR ÚNICA (HEADER) */
+        /* 2. BARRA SUPERIOR FIJA */
         .header-container {
             position: fixed;
             top: 0;
@@ -552,10 +552,10 @@ st.markdown("""
             align-items: center;
             justify-content: center;
             border-bottom: 2px solid #1f4068;
-            z-index: 999999; /* Máxima prioridad */
+            z-index: 999999;
         }
 
-        .titulo-scada-unico {
+        .titulo-superior {
             color: #00d4ff;
             font-size: 1.8rem;
             font-weight: bold;
@@ -565,7 +565,7 @@ st.markdown("""
             margin: 0;
         }
 
-        /* 3. RELOJ A LA MERA DERECHA */
+        /* 3. RELOJ A LA DERECHA */
         .reloj-scada {
             position: absolute;
             right: 30px;
@@ -573,30 +573,28 @@ st.markdown("""
             font-family: 'Courier New', Courier, monospace;
             font-size: 1.5rem;
             font-weight: bold;
+            min-width: 120px;
+            text-align: right;
         }
 
-        /* 4. LIMPIEZA TOTAL DE INTERFAZ ST */
-        header { visibility: hidden !important; height: 0px !important; }
-        [data-testid="collapsedControl"] { display: none !important; }
-        footer { visibility: hidden !important; }
-
-        /* 5. AJUSTE DE CONTENIDO */
+        /* 4. AJUSTE DE CONTENIDO PRINCIPAL */
         .block-container {
-            padding-top: 80px !important; /* Espacio para que el mapa no quede debajo del título */
+            padding-top: 80px !important;
         }
 
-        /* 6. LOGO Y SIDEBAR */
+        /* 5. SIDEBAR Y LOGO */
+        [data-testid="stSidebar"] { min-width: 320px !important; z-index: 1000000 !important; }
+        [data-testid="collapsedControl"] { display: none !important; }
+        
         .sidebar-logo { 
             position: fixed;
             top: 0; left: 0;
             width: 320px; height: 100px;
             background-color: #0b1a29;
             display: flex; justify-content: center; align-items: center;
-            z-index: 1000000;
+            z-index: 1000001;
             border-bottom: 1px solid #1f4068;
         }
-        
-        [data-testid="stSidebar"] { min-width: 320px !important; }
 
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
@@ -604,27 +602,29 @@ st.markdown("""
     </style>
 
     <div class="header-container">
-        <div class="titulo-scada-unico">SISTEMA SCADA</div>
-        <div id="reloj-display" class="reloj-scada">--:--:--</div>
+        <div class="titulo-superior">SISTEMA SCADA</div>
+        <div id="reloj-scada-pro" class="reloj-scada">--:--:--</div>
     </div>
-
-    <script>
-    (function() {
-        function actualizarReloj() {
-            const fecha = new Date();
-            const h = String(fecha.getHours()).padStart(2, '0');
-            const m = String(fecha.getMinutes()).padStart(2, '0');
-            const s = String(fecha.getSeconds()).padStart(2, '0');
-            const display = document.getElementById('reloj-display');
-            if (display) {
-                display.innerText = h + ":" + m + ":" + s;
-            }
-        }
-        actualizarReloj();
-        setInterval(actualizarReloj, 1000);
-    })();
-    </script>
 """, unsafe_allow_html=True)
+
+# SCRIPT INDEPENDIENTE PARA EL RELOJ
+st.components.v1.html("""
+    <script>
+    const updateTime = () => {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        // Buscamos el elemento en el documento padre porque Streamlit lo renderiza ahí
+        const display = window.parent.document.getElementById('reloj-scada-pro');
+        if (display) {
+            display.innerText = `${h}:${m}:${s}`;
+        }
+    };
+    setInterval(updateTime, 1000);
+    updateTime();
+    </script>
+""", height=0)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
 
 # 1. Carga de datos base
