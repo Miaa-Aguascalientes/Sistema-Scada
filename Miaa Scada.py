@@ -14,6 +14,14 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
+# ESTO TIENE QUE IR PRIMERO QUE TODO
+st.set_page_config(
+    page_title="Sistema Scada", 
+    page_icon="https://www.miaa.mx/favicon.ico", # Puedes poner un emoji o un link a un .png
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
 # --- 1. MOVER ESTAS FUNCIONES AL PRINCIPIO (Para que Python las reconozca) ---
