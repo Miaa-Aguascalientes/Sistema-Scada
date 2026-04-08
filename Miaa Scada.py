@@ -1040,43 +1040,54 @@ with col_mapa:
         """
 
 # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
-    if ver_sectores and sectores:
-        for s in sectores:
-            try:
-                nombre_sec = s['sector']
-                
-                # CONSTRUCCIÓN DINÁMICA: Pegamos la llave de acceso a la URL del sector
-                # Esto hará que al abrir el link, la Sección 0 de la nueva pestaña lo deje pasar.
-                url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.rol}"
-                
-                geo_data = json.loads(s['geo'])
-                
-                html_sector = f"""
-                <div style="font-family: sans-serif; text-align: center; color: white; background: #0b1a29; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff;">
-                    <h4 style="margin: 0; color: #00d4ff;">{nombre_sec}</h4>
-                    <a href="{url_sector}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #00d4ff; color: black; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top:5px;">🚀 Ver Detalles</a>
-                </div>
-                """
-    
-                # Aquí restauramos el estilo interactivo (Se queda igual)
-                folium.GeoJson(
-                    geo_data, 
-                    style_function=lambda x: {
-                        'fillColor': '#00d4ff', 
-                        'color': '#00d4ff', 
-                        'weight': 1.5, 
-                        'fillOpacity': 0.1
-                    },
-                    highlight_function=lambda x: {
-                        'fillColor': '#00d4ff', 
-                        'color': '#ffffff',  # Borde blanco al pasar el mouse
-                        'weight': 3, 
-                        'fillOpacity': 0.4
-                    },
-                    popup=folium.Popup(html_sector, max_width=250),
-                    tooltip=folium.Tooltip(f"Sector: {nombre_sec}", sticky=True)
-                ).add_to(m)
-            except: continue
+# -------------------------------------------------------------------------------------- 
+# RENDERIZADO DE SECTORES (SIEMPRE PRESENTES)
+# -------------------------------------------------------------------------------------- 
+if sectores:
+    for s in sectores:
+        try:
+            nombre_sec = s['sector']
+            # Construcción de URL con bypass de autenticación
+            url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.rol}"
+            geo_data = json.loads(s['geo'])
+            
+            html_sector = f"""
+            <div style="font-family: sans-serif; text-align: center; color: white; background: #0b1a29; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff;">
+                <h4 style="margin: 0; color: #00d4ff;">{nombre_sec}</h4>
+                <a href="{url_sector}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #00d4ff; color: black; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top:5px;">🚀 Ver Detalles</a>
+            </div>
+            """
+
+            # Definimos el estilo base
+            estilo_base = {
+                'fillColor': '#00d4ff', 
+                'color': '#00d4ff', 
+                'weight': 1.5, 
+                'fillOpacity': 0.1
+            }
+
+            # Si el usuario desmarca "Mostrar Sectores", solo bajamos la opacidad a casi 0 
+            # pero mantenemos el objeto en el mapa para evitar parpadeos o desapariciones
+            if not ver_sectores:
+                estilo_base['fillOpacity'] = 0.01
+                estilo_base['weight'] = 0.5
+
+            folium.GeoJson(
+                geo_data, 
+                style_function=lambda x, style=estilo_base: style,
+                highlight_function=lambda x: {
+                    'fillColor': '#00d4ff', 
+                    'color': '#ffffff', 
+                    'weight': 3, 
+                    'fillOpacity': 0.4
+                },
+                popup=folium.Popup(html_sector, max_width=250),
+                tooltip=folium.Tooltip(f"Sector: {nombre_sec}", sticky=True),
+                # Controlamos que los sectores siempre estén al fondo
+                z_index=1 
+            ).add_to(m)
+        except: 
+            continue
 
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
     # Usamos solo 'ver_pozos' para controlar ambas cosas
