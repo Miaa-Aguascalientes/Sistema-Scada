@@ -14,26 +14,18 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-import time
-import urllib.parse
-from sqlalchemy import create_engine
-import pandas as pd
-import streamlit as st
-
-# 1. DETECCIÓN AUTOMÁTICA (La "llave" para sectores y tanques)
+# 1. DETECCIÓN DE ACCESO (Para que los 140 sectores entren directo)
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
-    # Si la URL trae el permiso, entramos directo (Bypass para sectores)
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
     else:
         st.session_state.autenticado = False
 
-# --- TUS FUNCIONES DE MOTOR Y CREDENCIALES ---
+# --- FUNCIONES DE BASE DE DATOS (Mantenemos las tuyas) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -55,7 +47,7 @@ def verificar_credenciales(usuario_input, password_input):
         return None
     except: return None
 
-# 2. LÓGICA DE LOGIN CON INTRO FUTURISTA
+# 2. LOGIN Y CARGA FUTURISTA DETALLADA
 if not st.session_state.autenticado:
     placeholder = st.empty()
     with placeholder.container():
@@ -68,38 +60,60 @@ if not st.session_state.autenticado:
             if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
                 rol = verificar_credenciales(u, p)
                 if rol:
-                    # Guardamos permiso en URL y Sesión
+                    # Guardamos llaves de acceso
                     st.query_params["access"] = "granted"
                     st.query_params["role"] = rol
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
                     
-                    # --- INTRO FUTURISTA ---
+                    # --- INICIO DEL INTRO FUTURISTA CON CARGA DINÁMICA ---
                     placeholder.empty()
                     with placeholder.container():
-                        st.markdown(f"""
-                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
-                                <div class="loader"></div>
-                                <h2 style="color: #00d4ff; font-family: monospace; margin-top: 25px;" class="blink_me">ENLACE ESTABLECIDO</h2>
-                                <div style="width: 250px; height: 2px; background: #1f4068; margin-top: 15px; overflow: hidden;">
-                                    <div style="width: 100%; height: 100%; background: #00d4ff; animation: load 2s ease-in-out;"></div>
+                        # Contenedor visual principal
+                        main_box = st.empty()
+                        
+                        # Pasos de carga que mencionaste
+                        pasos = [
+                            "Inyectando Protocolos de Seguridad...",
+                            "Cargando Polígonos de Sectores (140 Nodos)...",
+                            "Sincronizando Pozos de Aguascalientes...",
+                            "Mapeando Tanques y Rebombeos...",
+                            "Finalizando Enlace SCADA..."
+                        ]
+                        
+                        for i, paso in enumerate(pasos):
+                            progreso = (i + 1) / len(pasos)
+                            main_box.markdown(f"""
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
+                                    <div class="loader"></div>
+                                    <h2 style="color: #00d4ff; font-family: 'Courier New', monospace; margin-top: 20px;" class="blink_me">
+                                        SISTEMA MIAA: CARGANDO
+                                    </h2>
+                                    <p style="color: #00d4ff; font-family: monospace; font-size: 14px; margin-top: 10px;">
+                                        >>> {paso}
+                                    </p>
+                                    <div style="width: 350px; height: 4px; background: #1f4068; margin-top: 20px; border-radius: 10px; overflow: hidden; border: 1px solid #00d4ff;">
+                                        <div style="width: {progreso*100}%; height: 100%; background: #00d4ff; box-shadow: 0 0 10px #00d4ff;"></div>
+                                    </div>
+                                    <p style="color: #444; font-family: monospace; font-size: 10px; margin-top: 10px;">STATUS: {int(progreso*100)}% COMPLETE</p>
                                 </div>
-                            </div>
-                            <style>
-                                .loader {{
-                                    border: 4px solid #0b1a29; border-top: 4px solid #00d4ff;
-                                    border-radius: 50%; width: 70px; height: 70px; animation: spin 1s linear infinite;
-                                }}
-                                @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                @keyframes load {{ 0% {{ width: 0%; }} 100% {{ width: 100%; }} }}
-                                .blink_me {{ animation: blink 1s infinite; }}
-                                @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
-                            </style>
-                        """, unsafe_allow_html=True)
-                        time.sleep(2.0)
+                                <style>
+                                    .loader {{
+                                        border: 2px solid #0b1a29; border-top: 2px solid #00d4ff; border-right: 2px solid #00d4ff;
+                                        border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite;
+                                        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+                                    }}
+                                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                                    @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.4; }} }}
+                                    .blink_me {{ animation: blink 1.5s infinite; }}
+                                </style>
+                            """, unsafe_allow_html=True)
+                            time.sleep(0.7) # Tiempo visual para cada paso
+                        
+                        st.balloons() # Pequeño toque de éxito al terminar
                     st.rerun()
                 else:
-                    st.error("Credenciales incorrectas")
+                    st.error("Credenciales Incorrectas")
     st.stop()
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
@@ -997,7 +1011,6 @@ with col_mapa:
         """
 
 # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
-   # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
     if ver_sectores and sectores:
         for s in sectores:
             try:
@@ -1015,11 +1028,7 @@ with col_mapa:
                     <a href="{url_sector}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #00d4ff; color: black; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top:5px;">🚀 Ver Detalles</a>
                 </div>
                 """
-                
-                # ... (El resto de tu folium.GeoJson se queda exactamente igual) ...
-                
-  
-                
+    
                 # Aquí restauramos el estilo interactivo (Se queda igual)
                 folium.GeoJson(
                     geo_data, 
