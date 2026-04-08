@@ -14,15 +14,32 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD FINAL --------------------------------------------------------------------
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
-# --- 1. CONFIGURACIÓN DE PÁGINA ---
-# Debe ser la primera instrucción de Streamlit en el archivo
-if 'setup_done' not in st.session_state:
-    st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
-    st.session_state.setup_done = True
+# --- 1. MOVER ESTAS FUNCIONES AL PRINCIPIO (Para que Python las reconozca) ---
+@st.cache_resource
+def get_mysql_telemetria_engine():
+    try:
+        c = st.secrets["mysql_telemetria"]
+        pwd = urllib.parse.quote_plus(c["password"])
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        return engine
+    except Exception as e:
+        return None
 
-# --- 2. LÓGICA DE ACCESO INICIAL ---
+def verificar_credenciales(usuario_input, password_input):
+    try:
+        engine = get_mysql_telemetria_engine()
+        if engine is None: return None
+        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
+        df_user = pd.read_sql(query, engine)
+        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
+            return df_user['tipo_usuario'].iloc[0]
+        return None
+    except:
+        return None
+
+# --- 2. LÓGICA DE ACCESO Y ESTADO ---
 if 'autenticado' not in st.session_state:
     query_params = st.query_params
     if query_params.get("access") == "granted":
@@ -31,110 +48,57 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# --- 3. CSS PARA ACOMODO ---
+# --- 3. CSS (EL QUE TE GUSTÓ) ---
 st.markdown("""
 <style>
     .stApp { background-color: #050a10 !important; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
     header, footer { visibility: hidden !important; }
-    
     .visual-core { position: relative; width: 350px; height: 350px; margin: auto; }
     .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
     .r1 { width: 100%; height: 100%; border-top: 6px solid #00d4ff; border-bottom: 6px solid #00d4ff; --d: 4s; }
     .r2 { width: 75%; height: 75%; top: 12.5%; left: 12.5%; border: 2px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
-    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; font-family: 'Orbitron', sans-serif; }
-
-    .login-box {
-        background: rgba(0, 212, 255, 0.05);
-        border-left: 8px solid #00d4ff;
-        padding: 40px;
-        width: 100%;
-        max-width: 400px;
-        box-shadow: -15px 0 35px rgba(0,0,0,0.5);
-        font-family: 'Orbitron', sans-serif;
-    }
-    
+    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; font-family: 'Orbitron'; }
+    .login-box { background: rgba(0, 212, 255, 0.05); border-left: 8px solid #00d4ff; padding: 40px; width: 100%; max-width: 400px; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
     .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; border-radius: 0; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. FLUJO DE LOGIN / CARGA ---
-# IMPORTANTE: El st.stop() solo ocurre si NO estamos autenticados
+# --- 4. INTERFAZ DE LOGIN ---
 if not st.session_state.autenticado:
-    if 'fase_carga' not in st.session_state: 
-        st.session_state.fase_carga = False
+    if 'fase_carga' not in st.session_state: st.session_state.fase_carga = False
     
-    # Contenedor principal con columnas para centrar
-    col_espacio1, col_visual, col_login, col_espacio2 = st.columns([0.5, 2, 2, 0.5])
+    col_esp1, col_vis, col_log, col_esp2 = st.columns([0.5, 2, 2, 0.5])
     
-    with col_visual:
+    with col_vis:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
-        st.markdown("""
-            <div class="visual-core">
-                <div class="ring r1"></div><div class="ring r2"></div>
-                <div class="center-logo">
-                    <h1 style="margin:0; font-size:45px;">MIAA</h1>
-                    <p style="margin:0; font-size:12px; letter-spacing:4px;">SCADA_SYSTEM</p>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="ring r2"></div><div class="center-logo"><h1>MIAA</h1><p>SCADA</p></div></div>', unsafe_allow_html=True)
 
-    with col_login:
+    with col_log:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
-        
         if not st.session_state.fase_carga:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#00d4ff; font-size:18px; margin-bottom:20px;">// ACCESO_REQUERIDO</h2>', unsafe_allow_html=True)
-            
-            u = st.text_input("USUARIO", key="usr_input")
-            p = st.text_input("CONTRASEÑA", type="password", key="pwd_input")
-            
-            if st.button("INICIAR SISTEMA"):
-                rol = verificar_credenciales(u, p)
+            u = st.text_input("USUARIO", key="usr")
+            p = st.text_input("PASSWORD", type="password", key="pwd")
+            if st.button("LOGIN"):
+                rol = verificar_credenciales(u, p) # Ahora la función sí existe arriba
                 if rol:
                     st.session_state.temp_rol = rol
                     st.session_state.fase_carga = True
                     st.rerun()
-                else:
-                    st.error("CREDENCIALES INVÁLIDAS")
+                else: st.error("Error")
             st.markdown('</div>', unsafe_allow_html=True)
-        
         else:
-            # FASE DE CARGA REAL (Running)
-            st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO_BASES_DATOS...</h2>', unsafe_allow_html=True)
-            
-            status = st.empty()
-            prog = st.progress(0)
-            
-            tareas = [
-                ("Motor SQL", "get_mysql_telemetria_engine"),
-                ("Sectores", "cargar_sectores_poligonos"),
-                ("Pozos", "cargar_mapa_pozos_desde_db"),
-                ("Tanques", "cargar_tanques_desde_db"),
-                ("Rebombeos", "cargar_rebombeos_desde_db")
-            ]
-            
-            for i, (msg, func) in enumerate(tareas):
-                status.markdown(f"<small style='color:#00d4ff;'>>>> {msg}</small>", unsafe_allow_html=True)
-                if func in globals():
-                    globals()[func]() # Ejecuta tu función real
-                prog.progress((i + 1) / len(tareas))
-                time.sleep(0.4)
-            
-            # Al terminar, liberamos el acceso
+            # PANTALLA DE CARGA
+            st.markdown('<div class="login-box"><h3>RUNNING SYNC...</h3>', unsafe_allow_html=True)
+            # Aquí podrías poner las funciones de carga de polígonos
             st.session_state.autenticado = True
             st.session_state.rol = st.session_state.temp_rol
-            st.query_params["access"] = "granted"
-            st.query_params["role"] = st.session_state.rol
             st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
-    # ESTA LÍNEA ES LA CLAVE: Solo se detiene si no hemos pasado el login
-    st.stop()
-
+    st.stop() # Bloquea el resto del script si no está logueado
 # --- SI LLEGA AQUÍ, ES QUE YA ESTÁ AUTENTICADO Y EL MAPA SE DIBUJARÁ ---
 # (Aquí sigue el resto de tu código original: st_autorefresh, cargar_mapa, etc.)
 
