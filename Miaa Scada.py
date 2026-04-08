@@ -15,20 +15,6 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-def inicializar_sesion():
-    query_params = st.query_params
-    
-    if 'autenticado' not in st.session_state:
-        # Si la URL contiene el token de acceso, saltamos el login
-        if query_params.get("access") == "granted":
-            st.session_state.autenticado = True
-            st.session_state.rol = query_params.get("role", "usuario")
-            st.session_state.usuario = query_params.get("user", "externo")
-        else:
-            st.session_state.autenticado = False
-            st.session_state.rol = None
-            st.session_state.usuario = None
-
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -40,6 +26,7 @@ def get_mysql_telemetria_engine():
         st.error(f"Error de conexión: {e}")
         return None
 
+# 2. VERIFICACIÓN DE CREDENCIALES
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
@@ -52,80 +39,66 @@ def verificar_credenciales(usuario_input, password_input):
         return None
     except: return None
 
+# 3. INTERFAZ DE LOGIN CON PERSISTENCIA POR URL
 def login_miaa():
-    inicializar_sesion()
+    # Revisamos si la URL ya trae el permiso de acceso
+    query_params = st.query_params
+    
+    if 'autenticado' not in st.session_state:
+        if query_params.get("access") == "granted":
+            st.session_state.autenticado = True
+            st.session_state.rol = query_params.get("role", "usuario")
+        else:
+            st.session_state.autenticado = False
+            st.session_state.rol = None
 
-    # Si ya está autenticado, inyectamos los parámetros en la URL y salimos
-    if st.session_state.autenticado:
-        st.query_params["access"] = "granted"
-        st.query_params["role"] = st.session_state.rol
-        st.query_params["user"] = st.session_state.usuario
-        return
-
-    # Interfaz de Login
-    placeholder = st.empty()
-    with placeholder.container():
-        col1, col2, col3 = st.columns([1, 1.5, 1])
-        with col2:
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso al sistema MIAA</h2>", unsafe_allow_html=True)
-            user = st.text_input("Usuario", key="user_login")
-            password = st.text_input("Contraseña", type="password", key="pass_login")
-            
-            if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
-                rol = verificar_credenciales(user, password)
-                if rol:
-                    # Guardar en sesión
-                    st.session_state.autenticado = True
-                    st.session_state.rol = rol
-                    st.session_state.usuario = user
-                    
-                    # Guardar en URL para persistencia entre pestañas
-                    st.query_params["access"] = "granted"
-                    st.query_params["role"] = rol
-                    st.query_params["user"] = user
-
-                    # --- INTRO FUTURISTA ---
-                    placeholder.empty()
-                    with placeholder.container():
-                        st.markdown(f"""
-                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh;">
-                                <div class="loader"></div>
-                                <h2 style="color: #00d4ff; font-family: 'Courier New', Courier, monospace; margin-top: 20px;" class="blink_me">
-                                    ESTABLECIENDO ENLACE SCADA...
-                                </h2>
-                                <p style="color: #1f4068; font-family: monospace;">USUARIO: {user.upper()} | ACCESO: {rol.upper()}</p>
-                                <div style="width: 300px; height: 2px; background: #1f4068; margin-top: 10px;">
-                                    <div style="width: 100%; height: 100%; background: #00d4ff; animation: load 2.5s ease-in-out;"></div>
-                                </div>
-                            </div>
-                            <style>
-                                .loader {{
-                                    border: 4px solid #0b1a29; border-radius: 50%;
-                                    border-top: 4px solid #00d4ff; border-right: 4px solid #00d4ff;
-                                    width: 80px; height: 80px; animation: spin 1s linear infinite;
-                                    box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
-                                }}
-                                @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                @keyframes load {{ 0% {{ width: 0%; }} 100% {{ width: 100%; }} }}
-                            </style>
-                        """, unsafe_allow_html=True)
+    # Si NO está autenticado (ni por sesión ni por URL), mostramos el login
+    if not st.session_state.autenticado:
+        placeholder = st.empty()
+        with placeholder.container():
+            col1, col2, col3 = st.columns([1, 1.5, 1])
+            with col2:
+                st.markdown("<br><br><h2 style='text-align: center; color: #00d4ff;'>🔐 Acceso al sistema MIAA</h2>", unsafe_allow_html=True)
+                user = st.text_input("Usuario", key="user_main")
+                password = st.text_input("Contraseña", type="password", key="pass_main")
+                
+                if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
+                    rol = verificar_credenciales(user, password)
+                    if rol:
+                        st.session_state.autenticado = True
+                        st.session_state.rol = rol
                         
-                        time.sleep(1.2)
-                        st.toast("Cargando Diccionario de Pozos...")
-                        time.sleep(1.0)
-                        st.toast("Sincronizando Telemetría MIAA...")
-                        time.sleep(0.8)
-                    
-                    st.rerun()
-                else:
-                    st.error("Credenciales no válidas")
+                        # Inyectamos el permiso en la URL para que las nuevas pestañas lo lean
+                        st.query_params["access"] = "granted"
+                        st.query_params["role"] = rol
+                        
+                        # --- EFECTO DE CARGA FUTURISTA ---
+                        placeholder.empty()
+                        with placeholder.container():
+                            st.markdown(f"""
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
+                                    <div class="loader"></div>
+                                    <h2 style="color: #00d4ff; font-family: monospace;" class="blink_me">ESTABLECIENDO ENLACE...</h2>
+                                </div>
+                                <style>
+                                    .loader {{
+                                        border: 4px solid #0b1a29; border-top: 4px solid #00d4ff;
+                                        border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;
+                                    }}
+                                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                                    @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
+                                    .blink_me {{ animation: blink 1s infinite; }}
+                                </style>
+                            """, unsafe_allow_html=True)
+                            time.sleep(1.5)
+                        
+                        st.rerun()
+                    else:
+                        st.error("Credenciales incorrectas")
         st.stop()
 
-# EJECUCIÓN
+# EJECUCIÓN DEL LOGIN
 login_miaa()
-
-# --- EL RESTO DEL CÓDIGO (MAPAS, SECTORES, ETC.) VA AQUÍ ABAJO ---
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
