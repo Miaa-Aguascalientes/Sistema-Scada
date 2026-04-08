@@ -531,52 +531,58 @@ if tag_a_graficar:
     
     st.stop()
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
+
 st.markdown("""
     <style>
+        /* 1. CONFIGURACIÓN BASE Y CONTENEDOR PRINCIPAL */
+        .stApp { background-color: #000000; color: white; }
+        
+        .block-container {
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            margin-top: 60px !important; /* Ajuste para no chocar con la barra fija */
+        }
 
+        /* 2. ENCABEZADO PERSONALIZADO CON RELOJ A LA DERECHA */
         .header-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: rgba(17, 17, 17, 0.95);
-        padding: 10px 20px;
-        border-radius: 10px;
-        border-bottom: 2px solid #00d4ff;
-        margin-bottom: 20px;
-    }
-    .title-text {
-        color: white;
-        font-size: 24px;
-        font-weight: bold;
-        margin: 0;
-    }
-    .time-text {
-        color: #00d4ff;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 20px;
-        font-weight: bold;
-    }
-    </style>
-    
-    <div class="header-container">
-        <div class="title-text">SISTEMA SCADA</div>
-        <div id="live-clock" class="time-text"></div>
-    </div>
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #000000;
+            padding: 10px 30px;
+            border-bottom: 1px solid #1f4068;
+            position: fixed;
+            top: 0;
+            left: 320px; /* Alineado después del sidebar */
+            right: 0;
+            z-index: 1000;
+            height: 60px;
+        }
+        
+        .title-text {
+            color: #00d4ff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            margin: 0;
+        }
 
-    <script>
-    function updateClock() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const timeString = hours + ':' + minutes + ':' + seconds;
-        document.getElementById('live-clock').textContent = timeString;
-    }
-    setInterval(updateClock, 1000);
-    updateClock(); // Llamada inicial
-    </script>
-    
-        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
+        .time-text {
+            color: #00d4ff;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 20px;
+            font-weight: bold;
+            background: rgba(0, 212, 255, 0.1);
+            padding: 5px 15px;
+            border-radius: 5px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        /* 3. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
         [data-testid="stSidebarCollapseButton"] {
@@ -587,17 +593,19 @@ st.markdown("""
             min-width: 320px !important; 
             max-width: 320px !important;
             width: 320px !important;
+            background-color: #0b1a29 !important; 
+            border-right: 2px solid #1f4068; 
         }
 
-        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
-            display: none !important;
-        }
+        /* 4. LIMPIEZA DE INTERFAZ */
         header { visibility: hidden !important; height: 0px !important; }
         #MainMenu { visibility: hidden !important; }
         footer { visibility: hidden !important; }
+        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
+            display: none !important;
+        }
 
-        /* 3. LOGO EN LO MÁS ALTO */
+        /* 5. LOGO EN SIDEBAR */
         .sidebar-logo { 
             position: fixed;
             top: 0px;
@@ -613,58 +621,16 @@ st.markdown("""
         }
         .sidebar-logo img { width: 80%; height: auto; }
 
-        /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
-        .stApp { background-color: #000000; color: white; }
-        
-        .block-container {
-            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
-            padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            margin-top: 100px !important;    /* Sube todo el contenido para cubrir el hueco del header */
-        }
-
-        /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
-        iframe {
-            margin-top: -110px !important; /* Margen negativo para succionar el mapa hacia arriba */
-        }
-
-        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
-        .titulo-superior {
-            position: fixed;
-            top: 0px; 
-            left: calc(50% + 160px); 
-            transform: translateX(-50%);
-            z-index: 1000;
-            color: #00d4ff; 
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
-            width: 100%;
-            text-align: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #1f4068;
-        }
-
-        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
         [data-testid="stSidebarContent"] {
             padding-top: 110px !important; 
         }
 
-        [data-testid="stSidebar"] { 
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
+        /* 6. AJUSTE DE MAPA E IFRAMES */
+        iframe {
+            margin-top: 0px !important;
         }
 
-                /* --- COMPONENTES DEL DASHBOARD --- */
-        [data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 auto !important;
-        }
-        
+        /* 7. COMPONENTES DEL DASHBOARD */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -683,19 +649,32 @@ st.markdown("""
         
         .status-ok { background-color: #1b5e20; color: #a5d6a7; }
         .status-err { background-color: #b71c1c; color: #ef9a9a; }
-        
-        .section-header { 
-            padding: 10px; 
-            border-radius: 3px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            color: white; 
-        }
 
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
+
+    <div class="header-container">
+        <div class="title-text">SISTEMA SCADA</div>
+        <div id="live-clock" class="time-text">00:00:00</div>
+    </div>
+
+    <script>
+    function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timeString = hours + ':' + minutes + ':' + seconds;
+        const clockElement = document.getElementById('live-clock');
+        if (clockElement) {
+            clockElement.textContent = timeString;
+        }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    </script>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
 
