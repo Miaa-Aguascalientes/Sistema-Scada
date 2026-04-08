@@ -1043,50 +1043,63 @@ with col_mapa:
 # -------------------------------------------------------------------------------------- 
 # RENDERIZADO DE SECTORES (SIEMPRE PRESENTES)
 # -------------------------------------------------------------------------------------- 
+# -------------------------------------------------------------------------------------- 
+# RENDERIZADO DE SECTORES - SIEMPRE PRESENTES Y SEGUROS
+# -------------------------------------------------------------------------------------- 
+
 if sectores:
     for s in sectores:
         try:
+            # 1. Validación de datos mínimos para evitar mapa en blanco
+            if not s.get('geo') or not s.get('sector'):
+                continue
+
             nombre_sec = s['sector']
-            # Construcción de URL con bypass de autenticación
+            
+            # 2. Limpieza y carga del GeoJSON
+            # Usamos json.loads con manejo de errores para evitar que un sector mal formado rompa todo
+            try:
+                geo_data = json.loads(s['geo'])
+            except (ValueError, TypeError):
+                continue # Si el JSON está mal, salta a este sector pero no rompe el mapa
+
+            # 3. Configuración de URL y Popup
             url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.rol}"
-            geo_data = json.loads(s['geo'])
             
             html_sector = f"""
-            <div style="font-family: sans-serif; text-align: center; color: white; background: #0b1a29; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff;">
-                <h4 style="margin: 0; color: #00d4ff;">{nombre_sec}</h4>
-                <a href="{url_sector}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #00d4ff; color: black; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top:5px;">🚀 Ver Detalles</a>
+            <div style="font-family: Arial; text-align: center; color: white; background: #0b1a29; padding: 8px; border-radius: 5px;">
+                <strong style="color: #00d4ff;">{nombre_sec}</strong><br>
+                <a href="{url_sector}" target="_blank" style="color: #00d4ff; text-decoration: underline; font-size: 11px;">Abrir Panel</a>
             </div>
             """
 
-            # Definimos el estilo base
-            estilo_base = {
-                'fillColor': '#00d4ff', 
-                'color': '#00d4ff', 
-                'weight': 1.5, 
-                'fillOpacity': 0.1
-            }
-
-            # Si el usuario desmarca "Mostrar Sectores", solo bajamos la opacidad a casi 0 
-            # pero mantenemos el objeto en el mapa para evitar parpadeos o desapariciones
-            if not ver_sectores:
-                estilo_base['fillOpacity'] = 0.01
-                estilo_base['weight'] = 0.5
+            # 4. Estilo dinámico pero persistente
+            # Siempre se dibuja, pero la opacidad cambia según el checkbox
+            opacidad_relleno = 0.15 if ver_sectores else 0.0  # 0.0 lo hace invisible pero presente
+            color_borde = '#00d4ff' if ver_sectores else 'transparent'
 
             folium.GeoJson(
-                geo_data, 
-                style_function=lambda x, style=estilo_base: style,
+                geo_data,
+                style_function=lambda x, op=opacidad_relleno, cb=color_borde: {
+                    'fillColor': '#00d4ff',
+                    'color': cb,
+                    'weight': 1.5,
+                    'fillOpacity': op,
+                },
                 highlight_function=lambda x: {
-                    'fillColor': '#00d4ff', 
-                    'color': '#ffffff', 
-                    'weight': 3, 
+                    'fillColor': '#00d4ff',
+                    'color': '#ffffff',
+                    'weight': 3,
                     'fillOpacity': 0.4
                 },
-                popup=folium.Popup(html_sector, max_width=250),
-                tooltip=folium.Tooltip(f"Sector: {nombre_sec}", sticky=True),
-                # Controlamos que los sectores siempre estén al fondo
-                z_index=1 
+                tooltip=folium.Tooltip(f"Sector: {nombre_sec}"),
+                popup=folium.Popup(html_sector, max_width=200),
+                embed=False # Esto ayuda a que mapas grandes no saturen el navegador
             ).add_to(m)
-        except: 
+
+        except Exception as e:
+            # Si un sector falla, lo ignoramos silenciosamente para que el mapa principal cargue
+            st.error(f"Error en sector {s.get('sector', 'Desconocido')}") # Solo para debug, luego quitar
             continue
 
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
