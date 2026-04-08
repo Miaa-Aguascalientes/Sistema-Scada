@@ -39,15 +39,14 @@ def verificar_credenciales(usuario_input, password_input):
     except:
         return None
 
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD FINAL --------------------------------------------------------------------
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN CON CARGA DE DATOS --------------------------------------------------------------------
 
-# --- 1. CONFIGURACIÓN INICIAL (Asegurar que el mapa tenga espacio) ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'fase_carga' not in st.session_state:
     st.session_state.fase_carga = False
 
-# --- 2. CSS PARA ACOMODO Y LIMPIEZA ---
+# --- CSS (Mantenemos tu estilo exacto) ---
 st.markdown("""
 <style>
     .stApp { background-color: #050a10 !important; }
@@ -65,75 +64,70 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. INTERFAZ DE LOGIN Y CARGA ---
 if not st.session_state.autenticado:
-    # Contenedor para el Login/Carga
-    placeholder_principal = st.empty()
+    col_esp1, col_vis, col_log, col_esp2 = st.columns([0.5, 2, 2, 0.5])
     
-    with placeholder_principal.container():
-        col_esp1, col_vis, col_log, col_esp2 = st.columns([0.5, 2, 2, 0.5])
+    with col_vis:
+        st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="ring r2"></div><div class="center-logo"><h1>MIAA</h1><p>SCADA</p></div></div>', unsafe_allow_html=True)
+
+    with col_log:
+        st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
         
-        with col_vis:
-            st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="ring r2"></div><div class="center-logo"><h1>MIAA</h1><p>SCADA</p></div></div>', unsafe_allow_html=True)
-
-        with col_log:
-            st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+        if not st.session_state.fase_carga:
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// LOGIN_SYSTEM</h2>', unsafe_allow_html=True)
+            u = st.text_input("USUARIO", key="u_login")
+            p = st.text_input("PASSWORD", type="password", key="p_login")
             
-            if not st.session_state.fase_carga:
-                st.markdown('<div class="login-box">', unsafe_allow_html=True)
-                st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// LOGIN_SYSTEM</h2>', unsafe_allow_html=True)
-                u = st.text_input("USUARIO", key="u_login")
-                p = st.text_input("PASSWORD", type="password", key="p_login")
-                
-                if st.button("INICIAR SCADA"):
-                    rol = verificar_credenciales(u, p) if 'verificar_credenciales' in globals() else "admin"
-                    if rol:
-                        st.session_state.temp_rol = rol
-                        st.session_state.fase_carga = True
-                        st.rerun()
-                    else:
-                        st.error("ACCESO DENEGADO")
-                st.markdown('</div>', unsafe_allow_html=True)
+            if st.button("INICIAR SCADA"):
+                rol = verificar_credenciales(u, p) if 'verificar_credenciales' in globals() else "admin"
+                if rol:
+                    st.session_state.temp_rol = rol
+                    st.session_state.fase_carga = True
+                    st.rerun()
+                else:
+                    st.error("ACCESO DENEGADO")
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        else:
+            # --- PANTALLA DE CARGA REAL ---
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// EJECUTANDO_CARGA...</h2>', unsafe_allow_html=True)
             
-            else:
-                # PANTALLA DE CARGA CON CONTEO REAL
-                st.markdown('<div class="login-box">', unsafe_allow_html=True)
-                st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO_DATOS...</h2>', unsafe_allow_html=True)
+            status_msg = st.empty()
+            prog_bar = st.progress(0)
+            
+            # Lista de tareas que pediste
+            tareas = [
+                ("Conectando Engine SQL", "get_mysql_telemetria_engine"),
+                ("Cargando Polígonos (Sectores)", "cargar_sectores_poligonos"),
+                ("Sincronizando Pozos", "cargar_mapa_pozos_desde_db"),
+                ("Telemetría Tanques", "cargar_tanques_desde_db"),
+                ("Configurando Rebombeos", "cargar_rebombeos_desde_db")
+            ]
+            
+            for i, (nombre, func_name) in enumerate(tareas):
+                perc = int((i + 1) / len(tareas) * 100)
+                status_msg.markdown(f"<p style='color:#00d4ff; font-size:13px;'>{perc}% - {nombre}...</p>", unsafe_allow_html=True)
+                prog_bar.progress((i + 1) / len(tareas))
                 
-                status_msg = st.empty()
-                prog_bar = st.progress(0)
+                # EJECUCIÓN REAL: Aquí es donde se precargan los datos
+                if func_name in globals():
+                    try:
+                        globals()[func_name]()
+                    except Exception as e:
+                        status_msg.error(f"Error en {func_name}: {e}")
                 
-                tareas = [
-                    ("SQL Engine", "get_mysql_telemetria_engine"),
-                    ("Polígonos Sectores", "cargar_sectores_poligonos"),
-                    ("Base Pozos", "cargar_mapa_pozos_desde_db"),
-                    ("Telemetría Tanques", "cargar_tanques_desde_db"),
-                    ("Rebombeos", "cargar_rebombeos_desde_db")
-                ]
-                
-                for i, (nombre, func) in enumerate(tareas):
-                    perc = int((i + 1) / len(tareas) * 100)
-                    status_msg.markdown(f"<p style='color:#00d4ff;'>{perc}% - {nombre}</p>", unsafe_allow_html=True)
-                    prog_bar.progress((i + 1) / len(tareas))
-                    
-                    if func in globals():
-                        globals()[func]() # Ejecuta la carga real
-                    time.sleep(0.5)
-                
-                # FINALIZAR Y PASAR AL MAPA
-                st.session_state.autenticado = True
-                st.session_state.rol = st.session_state.temp_rol
-                st.session_state.fase_carga = False
-                st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                time.sleep(0.6) # Tiempo para que se vea el progreso
+            
+            st.session_state.autenticado = True
+            st.session_state.rol = st.session_state.temp_rol
+            st.session_state.fase_carga = False
+            st.rerun() # Reinicia y entra al mapa
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    # Detener el script aquí mientras no esté logueado
     st.stop()
-
-# --- SI LLEGA AQUÍ ES PORQUE PASÓ EL LOGIN ---
-# El mapa ya NO saldrá en blanco porque al hacer el rerun final, 
-# Streamlit salta todo el bloque anterior y procesa el código del mapa directamente.
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
 sector_seleccionado = params.get("sector", None)
