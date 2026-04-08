@@ -24,7 +24,7 @@ st.set_page_config(
 
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
-# --- A. LÓGICA DE PERSISTENCIA Y PARÁMETROS URL ---
+# --- A. LÓGICA DE PERSISTENCIA ---
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
@@ -37,120 +37,74 @@ if 'autenticado' not in st.session_state:
 if 'fase_carga' not in st.session_state:
     st.session_state.fase_carga = False
 
-# --- B. FUNCIONES DE BASE DE DATOS Y SEGURIDAD ---
+# --- B. FUNCIONES DE BASE DE DATOS (CON RECONEXIÓN) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
+        if "mysql_telemetria" not in st.secrets:
+            st.error("Error: No se encontraron las credenciales 'mysql_telemetria' en secrets.")
+            return None
         c = st.secrets["mysql_telemetria"]
         pwd = urllib.parse.quote_plus(c["password"])
-        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        engine = create_engine(
+            f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}",
+            pool_recycle=3600,
+            pool_pre_ping=True
+        )
         return engine
     except Exception as e:
+        st.error(f"Fallo de conexión SQL: {e}")
         return None
 
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
         if engine is None: return None
-        # Consulta segura para verificar usuario
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
         if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
             return df_user['tipo_usuario'].iloc[0]
         return None
-    except:
+    except Exception as e:
+        st.error(f"Error en verificación: {e}")
         return None
 
-# --- C. DISEÑO CSS HUD (ESTILO DARK CON ANIMACIONES AGRAUDADAS) ---
+# --- C. CSS HUD ---
 st.markdown("""
 <style>
     .stApp { background-color: #050a10 !important; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
     header, footer { visibility: hidden !important; }
     
-    /* --- CAMBIO: Contenedor del Núcleo Visual MÁS GRANDE (500px) --- */
-    .visual-core { 
-        position: relative; 
-        width: 500px;  /* Antes 350px */
-        height: 500px; /* Antes 350px */
-        margin: auto; 
-    }
-    
+    .visual-core { position: relative; width: 500px; height: 500px; margin: auto; }
     .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
-    
-    /* Ajuste de grosores para el tamaño grande */
     .r1 { width: 100%; height: 100%; border-top: 8px solid #00d4ff; border-bottom: 8px solid #00d4ff; --d: 4s; }
     .r2 { width: 75%; height: 75%; top: 12.5%; left: 12.5%; border: 3px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
     
-    /* Logo de la Empresa en el Centro */
-    .center-logo { 
-        position: absolute; 
-        top: 50%; 
-        left: 50%; 
-        transform: translate(-50%, -50%); 
-        text-align: center; 
-        width: 80%; /* Contenedor interno del logo */
-    }
+    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 80%; }
+    .logo-svg { width: 200px; filter: drop-shadow(0 0 15px #00d4ff); margin-bottom: 20px; }
     
-    /* --- CAMBIO: Logo SVG MÁS GRANDE --- */
-    .logo-svg {
-        width: 200px; /* Antes ~120px */
-        height: auto;
-        filter: drop-shadow(0 0 15px #00d4ff);
-        margin-bottom: 20px;
-    }
-
-    /* Caja de Login */
     .login-box { 
-        background: rgba(0, 212, 255, 0.05); 
-        border-left: 8px solid #00d4ff; 
-        padding: 40px; 
-        width: 100%; 
-        max-width: 400px; 
-        box-shadow: -20px 0 50px rgba(0,0,0,0.5);
-        margin-top: 50px; /* Ajuste para centrar verticalmente con el círculo grande */
+        background: rgba(0, 212, 255, 0.05); border-left: 8px solid #00d4ff; 
+        padding: 40px; width: 100%; max-width: 400px; margin-top: 50px; 
     }
     
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    
-    /* Inputs y Botones Estilo SCADA */
-    .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; border-radius: 0; }
-    .stButton button { 
-        background: #00d4ff !important; 
-        color: #050a10 !important; 
-        font-weight: bold !important; 
-        width: 100%; 
-        border-radius: 0; 
-        border: none;
-        transition: 0.3s;
-    }
-    .stButton button:hover { background: #ffffff !important; box-shadow: 0 0 20px #00d4ff; }
-    
-    /* Título SCADA debajo del logo */
-    .scada-txt {
-        color:#00d4ff; 
-        font-family:Orbitron, sans-serif; 
-        margin-top:10px; 
-        font-size:18px; /* Un poco más grande */
-        letter-spacing:5px;
-        text-shadow: 0 0 10px #00d4ff;
-    }
+    .scada-txt { color:#00d4ff; font-family:Orbitron; font-size:18px; letter-spacing:5px; text-shadow: 0 0 10px #00d4ff; }
+    .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
+    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- D. INTERFAZ DE USUARIO (LOGIN / CARGA) ---
+# --- D. INTERFAZ ---
 if not st.session_state.autenticado:
-    # Ajustamos las columnas para dar más espacio al círculo grande (col_vis)
     col_esp1, col_vis, col_log, col_esp2 = st.columns([0.3, 2.5, 2, 0.3])
     
     with col_vis:
-        # Reducimos el espacio superior (height) porque el círculo es más alto
         st.markdown('<div style="height: 10vh;"></div>', unsafe_allow_html=True)
-        # Renderizado del HUD GRANDE
         st.markdown(f'''
         <div class="visual-core">
-            <div class="ring r1"></div>
-            <div class="ring r2"></div>
+            <div class="ring r1"></div><div class="ring r2"></div>
             <div class="center-logo">
                 <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg" class="logo-svg">
                 <div class="scada-txt">SISTEMA SCADA</div>
@@ -159,12 +113,11 @@ if not st.session_state.autenticado:
         ''', unsafe_allow_html=True)
 
     with col_log:
-        # Mantenemos el espacio superior para el login box
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
         
         if not st.session_state.fase_carga:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#00d4ff; font-size:18px; font-family:monospace;">// ACCESS_CONTROL_UNIT</h2>', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px; font-family:monospace;">// ACCESS_CONTROL</h2>', unsafe_allow_html=True)
             u = st.text_input("USUARIO", key="u_login")
             p = st.text_input("PASSWORD", type="password", key="p_login")
             
@@ -179,32 +132,30 @@ if not st.session_state.autenticado:
             st.markdown('</div>', unsafe_allow_html=True)
         
         else:
-            # --- PANTALLA DE CARGA REAL CON PRECARGA DE FUNCIONES ---
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#00d4ff; font-size:18px; font-family:monospace;">// EJECUTANDO_PROTOCOLO_CARGA...</h2>', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px; font-family:monospace;">// CARGANDO_DATOS...</h2>', unsafe_allow_html=True)
             
             status_msg = st.empty()
             prog_bar = st.progress(0)
             
             tareas = [
-                ("Estableciendo Conexión SQL", "get_mysql_telemetria_engine"),
-                ("Cargando Sectores Hidráulicos", "cargar_sectores_poligonos"),
-                ("Sincronizando Estado de Pozos", "cargar_mapa_pozos_desde_db"),
-                ("Mapeando Telemetría de Tanques", "cargar_tanques_desde_db"),
-                ("Configurando Rebombeos", "cargar_rebombeos_desde_db")
+                ("Conectando SQL", "get_mysql_telemetria_engine"),
+                ("Sectores", "cargar_sectores_poligonos"),
+                ("Pozos", "cargar_mapa_pozos_desde_db"),
+                ("Tanques", "cargar_tanques_desde_db"),
+                ("Rebombeos", "cargar_rebombeos_desde_db")
             ]
             
             for i, (nombre, func_name) in enumerate(tareas):
-                perc = int((i + 1) / len(tareas) * 100)
-                status_msg.markdown(f"<p style='color:#00d4ff; font-size:13px; font-family:monospace;'>{perc}% - {nombre}...</p>", unsafe_allow_html=True)
+                status_msg.markdown(f"<p style='color:#00d4ff; font-size:13px;'>{nombre}...</p>", unsafe_allow_html=True)
                 prog_bar.progress((i + 1) / len(tareas))
                 
                 if func_name in globals():
                     try:
                         globals()[func_name]()
-                    except: pass
-                
-                time.sleep(0.5)
+                    except Exception as e:
+                        st.error(f"Error en {nombre}: {e}") # Aquí verás por qué se queda en blanco
+                time.sleep(0.4)
             
             st.session_state.autenticado = True
             st.session_state.rol = st.session_state.temp_rol
