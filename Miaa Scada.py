@@ -15,18 +15,16 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-
-
-# 1. DETECCIÓN AUTOMÁTICA DE PERMISO (Para que sectores y tanques entren directo)
+# AL PRINCIPIO DE LA SECCIÓN 0
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
-    # Si la URL ya trae "?access=granted", el sistema NO pide contraseña
+    # Si el link trae la llave, le damos paso directo sin preguntar nada
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
-    else:
-        st.session_state.autenticado = False
+
+
 
 @st.cache_resource
 def get_mysql_telemetria_engine():
@@ -988,11 +986,16 @@ with col_mapa:
         """
 
 # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
     if ver_sectores and sectores:
         for s in sectores:
             try:
                 nombre_sec = s['sector']
-                url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}"
+                
+                # --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
+                # Le pegamos el permiso de acceso y el rol actual a la URL de forma automática
+                url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+                
                 geo_data = json.loads(s['geo'])
                 
                 html_sector = f"""
@@ -1002,7 +1005,7 @@ with col_mapa:
                 </div>
                 """
                 
-                # Aquí restauramos el estilo interactivo
+                # Aquí restauramos el estilo interactivo (Se queda igual)
                 folium.GeoJson(
                     geo_data, 
                     style_function=lambda x: {
