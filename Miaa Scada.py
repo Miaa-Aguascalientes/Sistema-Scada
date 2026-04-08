@@ -698,7 +698,7 @@ if sector_seleccionado:
                 .metrics-container {
                     position: relative;
                     z-index: 9999;
-                    margin-top: 7000px; /* Subimos las métricas hacia el título */
+                    margin-top: -70000px; /* Subimos las métricas hacia el título */
                     margin-bottom: 5px;
                 }
 
