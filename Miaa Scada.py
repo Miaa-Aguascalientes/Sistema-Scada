@@ -74,6 +74,8 @@ def animacion_apertura():
     """Muestra una animación de cerradura circular (Iris Gate) abriéndose."""
     placeholder = st.empty()
     
+    # Definimos el HTML como un f-string limpio
+    # El height debe ser suficiente para que no salgan barras de desplazamiento
     cerradura_html = """
     <div id="iris-container">
         <div class="iris-wing" style="--r:0deg"></div>
@@ -85,7 +87,6 @@ def animacion_apertura():
         <div class="scanner-line"></div>
         <div class="access-text">SISTEMA SCADA: ACCESO CONCEDIDO</div>
     </div>
-
     <style>
         #iris-container {
             position: fixed;
@@ -100,46 +101,45 @@ def animacion_apertura():
             background: linear-gradient(45deg, #001a1a, #00d4ff);
             clip-path: polygon(50% 50%, 100% 0, 100% 100%);
             transform: rotate(var(--r)) scale(1.1);
-            transition: transform 1.5s cubic-bezier(0.85, 0, 0.15, 1);
+            transition: transform 1.8s cubic-bezier(0.85, 0, 0.15, 1);
             border: 2px solid #00f2ff;
-            opacity: 0.8;
+            opacity: 0.9;
         }
         .scanner-line {
             position: absolute;
-            width: 100%; height: 2px;
+            width: 100%; height: 3px;
             background: #00f2ff;
-            box-shadow: 0 0 20px #00f2ff;
-            animation: scan 1.5s infinite alternate;
+            box-shadow: 0 0 25px #00f2ff;
+            animation: scan 1.2s infinite alternate;
         }
         .access-text {
             position: absolute;
             color: #00f2ff;
             font-family: 'Courier New', monospace;
-            font-size: 24px;
-            letter-spacing: 5px;
-            text-shadow: 0 0 10px #00f2ff;
-            animation: blink 0.5s infinite;
+            font-size: 28px;
+            letter-spacing: 8px;
+            text-shadow: 0 0 15px #00f2ff;
+            animation: blink 0.6s infinite;
+            z-index: 10000;
         }
-        
         .open .iris-wing {
-            transform: rotate(var(--r)) translate(100%, 100%) scale(2);
+            transform: rotate(var(--r)) translate(120%, 120%) scale(2.5);
             opacity: 0;
         }
-        .open .access-text, .open .scanner-line { display: none; }
-
-        @keyframes scan { from { top: 10% ; } to { top: 90%; } }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .open .access-text, .open .scanner-line { opacity: 0; transition: 0.5s; }
+        @keyframes scan { from { top: 10%; } to { top: 90%; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
     </style>
-
     <script>
         setTimeout(() => {
             document.getElementById('iris-container').classList.add('open');
-        }, 600);
+        }, 800);
     </script>
     """
     
-    placeholder.components.v1.html(cerradura_html, height=1000)
-    time.sleep(2.8) 
+    # IMPORTANTE: El argumento debe ser html=cerradura_html
+    placeholder.components.v1.html(html=cerradura_html, height=1000, scrolling=False)
+    time.sleep(3.0) 
     placeholder.empty()
 
 # --- D. INTERFAZ DE LOGIN Y FLUJO DE CARGA ---
