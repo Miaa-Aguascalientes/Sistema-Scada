@@ -71,28 +71,41 @@ def verificar_credenciales(usuario_input, password_input):
         st.error(f"Error al consultar usuario: {e}")
         return None
 
-# --- C. ESTILO VISUAL HUD ---
+# --- C. ESTILO VISUAL HUD AJUSTADO ---
 st.markdown("""
 <style>
     .stApp { background-color: #050a10 !important; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
     header, footer { visibility: hidden !important; }
+    
     .visual-core { position: relative; width: 480px; height: 480px; margin: auto; }
     .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
     .r1 { width: 100%; height: 100%; border-top: 8px solid #00d4ff; border-bottom: 8px solid #00d4ff; --d: 4s; }
     .r2 { width: 78%; height: 78%; top: 11%; left: 11%; border: 3px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
     .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
     .logo-miaa { width: 190px; filter: drop-shadow(0 0 15px #00d4ff); }
-    .login-box { background: rgba(0, 212, 255, 0.05); border-left: 8px solid #00d4ff; padding: 40px; margin-top: 50px; }
+    
+    /* AJUSTE: login-box más estrecha y movida */
+    .login-box { 
+        background: rgba(0, 212, 255, 0.05); 
+        border-left: 8px solid #00d4ff; 
+        padding: 30px; 
+        margin-top: 50px;
+        max-width: 320px; /* Antes 400px - Ahora es más corta */
+        margin-left: 0;   /* Asegura que pegue a la izquierda de su columna */
+    }
+    
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
-    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; height: 50px; }
+    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; height: 45px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- D. LÓGICA DE BLOQUEO (ESTO ES LO QUE PROTEGE EL MAPA) ---
+# --- D. LÓGICA DE INTERFAZ (COLUMNAS AJUSTADAS) ---
 if not st.session_state.autenticado:
-    col_vis, col_log = st.columns([1.2, 1])
+    # AJUSTE: Se cambió la proporción de [0.3, 2.5, 2, 0.3] a [0.1, 1.8, 2, 1.1] 
+    # Esto empuja el contenido hacia la izquierda y deja más aire a la derecha.
+    col_esp1, col_vis, col_log, col_esp2 = st.columns([0.1, 1.8, 2, 1.1])
     
     with col_vis:
         st.markdown('<div style="height: 12vh;"></div>', unsafe_allow_html=True)
@@ -101,7 +114,7 @@ if not st.session_state.autenticado:
             <div class="ring r1"></div><div class="ring r2"></div>
             <div class="center-logo">
                 <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg" class="logo-miaa">
-                <h2 style="color:#00d4ff; font-family:Orbitron; font-size:20px; letter-spacing:5px;">SCADA</h2>
+                <h2 style="color:#00d4ff; font-family:Orbitron; font-size:18px; letter-spacing:5px; margin-top:10px;">SCADA</h2>
             </div>
         </div>
         ''', unsafe_allow_html=True)
