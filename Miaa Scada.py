@@ -15,11 +15,19 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-# 1. INICIALIZACIÓN DEL ESTADO (Crucial para que no pida credenciales de nuevo)
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
-    st.session_state.rol = None
-    st.session_state.usuario = None
+def inicializar_sesion():
+    query_params = st.query_params
+    
+    if 'autenticado' not in st.session_state:
+        # Si la URL contiene el token de acceso, saltamos el login
+        if query_params.get("access") == "granted":
+            st.session_state.autenticado = True
+            st.session_state.rol = query_params.get("role", "usuario")
+            st.session_state.usuario = query_params.get("user", "externo")
+        else:
+            st.session_state.autenticado = False
+            st.session_state.rol = None
+            st.session_state.usuario = None
 
 @st.cache_resource
 def get_mysql_telemetria_engine():
@@ -27,39 +35,35 @@ def get_mysql_telemetria_engine():
         c = st.secrets["mysql_telemetria"]
         pwd = urllib.parse.quote_plus(c["password"])
         engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-        with engine.connect() as conn: pass 
         return engine
     except Exception as e:
         st.error(f"Error de conexión: {e}")
         return None
 
-# VERIFICACIÓN DE CREDENCIALES
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
         if engine is None: return None
-        
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        
         if not df_user.empty:
-           password_db = str(df_user['password'].iloc[0])
-           if password_input == password_db:
+           if password_input == str(df_user['password'].iloc[0]):
                return df_user['tipo_usuario'].iloc[0]
         return None
-    except Exception as e:
-        st.error(f"Error en validación: {e}")
-        return None
+    except: return None
 
-# INTERFAZ DE LOGIN CON INTRO FUTURISTA Y BLOQUEO DE SEGURIDAD
 def login_miaa():
-    # Si ya está autenticado, salimos de la función inmediatamente para mostrar el resto del sistema
+    inicializar_sesion()
+
+    # Si ya está autenticado, inyectamos los parámetros en la URL y salimos
     if st.session_state.autenticado:
+        st.query_params["access"] = "granted"
+        st.query_params["role"] = st.session_state.rol
+        st.query_params["user"] = st.session_state.usuario
         return
 
-    # Contenedor para el intercambio visual
+    # Interfaz de Login
     placeholder = st.empty()
-    
     with placeholder.container():
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
@@ -71,13 +75,18 @@ def login_miaa():
             if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
                 rol = verificar_credenciales(user, password)
                 if rol:
-                    # --- GUARDAR ESTADO ANTES DEL INTRO ---
+                    # Guardar en sesión
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
                     st.session_state.usuario = user
                     
-                    # --- MOSTRAR INTRO FUTURISTA ---
-                    placeholder.empty() 
+                    # Guardar en URL para persistencia entre pestañas
+                    st.query_params["access"] = "granted"
+                    st.query_params["role"] = rol
+                    st.query_params["user"] = user
+
+                    # --- INTRO FUTURISTA ---
+                    placeholder.empty()
                     with placeholder.container():
                         st.markdown(f"""
                             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh;">
@@ -92,12 +101,9 @@ def login_miaa():
                             </div>
                             <style>
                                 .loader {{
-                                    border: 4px solid #0b1a29;
-                                    border-radius: 50%;
-                                    border-top: 4px solid #00d4ff;
-                                    border-right: 4px solid #00d4ff;
-                                    width: 80px; height: 80px;
-                                    animation: spin 1s linear infinite;
+                                    border: 4px solid #0b1a29; border-radius: 50%;
+                                    border-top: 4px solid #00d4ff; border-right: 4px solid #00d4ff;
+                                    width: 80px; height: 80px; animation: spin 1s linear infinite;
                                     box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
                                 }}
                                 @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
@@ -105,25 +111,21 @@ def login_miaa():
                             </style>
                         """, unsafe_allow_html=True)
                         
-                        time.sleep(1.0)
+                        time.sleep(1.2)
                         st.toast("Cargando Diccionario de Pozos...")
+                        time.sleep(1.0)
+                        st.toast("Sincronizando Telemetría MIAA...")
                         time.sleep(0.8)
-                        st.toast("Sincronizando Telemetría en Tiempo Real...")
-                        time.sleep(0.7)
                     
-                    # Forzar recarga para saltar al dashboard principal
                     st.rerun()
                 else:
-                    st.error("Credenciales no válidas para la red MIAA")
-        
-        # BLOQUEO TOTAL: Si no está autenticado, detiene la ejecución aquí
+                    st.error("Credenciales no válidas")
         st.stop()
 
-# EJECUCIÓN DEL FLUJO DE ACCESO
+# EJECUCIÓN
 login_miaa()
 
-# --- A PARTIR DE AQUÍ EL CÓDIGO SOLO SE EJECUTA SI YA SE AUTENTICÓ ---
-# Ya no es necesario poner condiciones extra en los mapas o tablas.
+# --- EL RESTO DEL CÓDIGO (MAPAS, SECTORES, ETC.) VA AQUÍ ABAJO ---
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
