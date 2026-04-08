@@ -24,7 +24,15 @@ st.set_page_config(
 
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
-# --- 1. MOVER ESTAS FUNCIONES AL PRINCIPIO (Para que Python las reconozca) ---
+# 2. INICIALIZACIÓN DE SESIÓN (Para que no se borre al navegar)
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+if 'rol' not in st.session_state:
+    st.session_state.rol = None
+if 'fase_carga' not in st.session_state:
+    st.session_state.fase_carga = False
+
+# --- FUNCIONES DE BASE DE DATOS ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -39,6 +47,7 @@ def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
         if engine is None: return None
+        # OJO: Cambié el query para que sea seguro
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
         if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
@@ -46,13 +55,6 @@ def verificar_credenciales(usuario_input, password_input):
         return None
     except:
         return None
-
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN CON CARGA DE DATOS --------------------------------------------------------------------
-
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
-if 'fase_carga' not in st.session_state:
-    st.session_state.fase_carga = False
 
 # --- CSS (Mantenemos tu estilo exacto) ---
 st.markdown("""
