@@ -16,10 +16,13 @@ import urllib.parse
 
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD FINAL --------------------------------------------------------------------
 
-# --- 1. CONFIGURACIÓN DE PÁGINA (Asegúrate de tener esto al principio del script) ---
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
+# --- 1. CONFIGURACIÓN DE PÁGINA ---
+# Debe ser la primera instrucción de Streamlit en el archivo
+if 'setup_done' not in st.session_state:
+    st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
+    st.session_state.setup_done = True
 
-# --- 2. LÓGICA DE ACCESO ---
+# --- 2. LÓGICA DE ACCESO INICIAL ---
 if 'autenticado' not in st.session_state:
     query_params = st.query_params
     if query_params.get("access") == "granted":
@@ -28,121 +31,112 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# --- 3. CSS PARA ACOMODO EXACTO (Elimina márgenes y centra) ---
+# --- 3. CSS PARA ACOMODO ---
 st.markdown("""
 <style>
-    /* Forzar fondo negro y eliminar padding de Streamlit */
     .stApp { background-color: #050a10 !important; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
     header, footer { visibility: hidden !important; }
     
-    /* Contenedor Principal HUD */
-    .main-hud-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        width: 100vw;
-        gap: 80px;
-        font-family: 'Orbitron', sans-serif;
-        background: radial-gradient(circle, #0a192f 0%, #050a10 100%);
-    }
-
-    /* Estilo del Círculo (Izquierda) */
-    .visual-core { position: relative; width: 350px; height: 350px; }
+    .visual-core { position: relative; width: 350px; height: 350px; margin: auto; }
     .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
     .r1 { width: 100%; height: 100%; border-top: 6px solid #00d4ff; border-bottom: 6px solid #00d4ff; --d: 4s; }
     .r2 { width: 75%; height: 75%; top: 12.5%; left: 12.5%; border: 2px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
-    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; }
+    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; font-family: 'Orbitron', sans-serif; }
 
-    /* Estilo del Panel de Login (Derecha) */
     .login-box {
         background: rgba(0, 212, 255, 0.05);
         border-left: 8px solid #00d4ff;
         padding: 40px;
-        width: 400px;
+        width: 100%;
+        max-width: 400px;
         box-shadow: -15px 0 35px rgba(0,0,0,0.5);
+        font-family: 'Orbitron', sans-serif;
     }
     
     @keyframes spin { 100% { transform: rotate(360deg); } }
-
-    /* Estilizar inputs para que no se vean blancos */
     .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
     .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; border-radius: 0; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. FLUJO DE LOGIN ---
+# --- 4. FLUJO DE LOGIN / CARGA ---
+# IMPORTANTE: El st.stop() solo ocurre si NO estamos autenticados
 if not st.session_state.autenticado:
-    if 'fase_carga' not in st.session_state: st.session_state.fase_carga = False
+    if 'fase_carga' not in st.session_state: 
+        st.session_state.fase_carga = False
     
-    # Contenedor que ocupa toda la pantalla
-    with st.container():
-        # Usamos columnas de Streamlit para asegurar el acomodo horizontal
-        col_espacio, col_visual, col_login, col_espacio2 = st.columns([1, 2, 2, 1])
-        
-        with col_visual:
-            st.markdown("""
-                <div style="height: 25vh;"></div> <div class="visual-core">
-                    <div class="ring r1"></div>
-                    <div class="ring r2"></div>
-                    <div class="center-logo">
-                        <h1 style="margin:0; font-size:40px;">MIAA</h1>
-                        <p style="margin:0; font-size:12px; letter-spacing:4px;">SCADA</p>
-                    </div>
+    # Contenedor principal con columnas para centrar
+    col_espacio1, col_visual, col_login, col_espacio2 = st.columns([0.5, 2, 2, 0.5])
+    
+    with col_visual:
+        st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div class="visual-core">
+                <div class="ring r1"></div><div class="ring r2"></div>
+                <div class="center-logo">
+                    <h1 style="margin:0; font-size:45px;">MIAA</h1>
+                    <p style="margin:0; font-size:12px; letter-spacing:4px;">SCADA_SYSTEM</p>
                 </div>
-            """, unsafe_allow_html=True)
+            </div>
+        """, unsafe_allow_html=True)
 
-        with col_login:
-            if not st.session_state.fase_carga:
-                st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
-                with st.container():
-                    st.markdown('<div class="login-box">', unsafe_allow_html=True)
-                    st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// LOGIN_SYSTEM</h2>', unsafe_allow_html=True)
-                    
-                    user = st.text_input("USUARIO", key="usr")
-                    pas = st.text_input("CONTRASEÑA", type="password", key="pwd")
-                    
-                    if st.button("INICIAR SCADA"):
-                        # Usamos tu función original (asegúrate que esté definida arriba)
-                        rol = verificar_credenciales(user, pas)
-                        if rol:
-                            st.session_state.fase_carga = True
-                            st.session_state.temp_rol = rol
-                            st.rerun()
-                        else:
-                            st.error("ACCESO DENEGADO")
-                    st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                # PANTALLA DE CARGA "RUNNING"
-                st.markdown('<div style="height: 25vh;"></div>', unsafe_allow_html=True)
-                st.markdown('<div class="login-box">', unsafe_allow_html=True)
-                st.markdown('<h2 style="color:#00d4ff;">// RUNNING_DATABASES...</h2>', unsafe_allow_html=True)
-                
-                status = st.empty()
-                prog = st.progress(0)
-                
-                # Ejecución de tus funciones reales
-                tareas = [
-                    ("SQL ENGINE", "get_mysql_telemetria_engine"),
-                    ("SECTORES (140)", "cargar_sectores_poligonos"),
-                    ("POZOS AGS", "cargar_mapa_pozos_desde_db"),
-                    ("TANQUES", "cargar_tanques_desde_db"),
-                    ("REBOMBEOS", "cargar_rebombeos_desde_db")
-                ]
-                
-                for i, (msg, func) in enumerate(tareas):
-                    status.markdown(f"<small>>>> {msg}</small>", unsafe_allow_html=True)
-                    if func in globals(): globals()[func]()
-                    prog.progress((i + 1) / len(tareas))
-                    time.sleep(0.3)
-                
-                st.session_state.autenticado = True
-                st.session_state.rol = st.session_state.temp_rol
-                st.query_params["access"] = "granted"
-                st.query_params["role"] = st.session_state.rol
-                st.rerun()
+    with col_login:
+        st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+        
+        if not st.session_state.fase_carga:
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px; margin-bottom:20px;">// ACCESO_REQUERIDO</h2>', unsafe_allow_html=True)
+            
+            u = st.text_input("USUARIO", key="usr_input")
+            p = st.text_input("CONTRASEÑA", type="password", key="pwd_input")
+            
+            if st.button("INICIAR SISTEMA"):
+                rol = verificar_credenciales(u, p)
+                if rol:
+                    st.session_state.temp_rol = rol
+                    st.session_state.fase_carga = True
+                    st.rerun()
+                else:
+                    st.error("CREDENCIALES INVÁLIDAS")
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        else:
+            # FASE DE CARGA REAL (Running)
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO_BASES_DATOS...</h2>', unsafe_allow_html=True)
+            
+            status = st.empty()
+            prog = st.progress(0)
+            
+            tareas = [
+                ("Motor SQL", "get_mysql_telemetria_engine"),
+                ("Sectores", "cargar_sectores_poligonos"),
+                ("Pozos", "cargar_mapa_pozos_desde_db"),
+                ("Tanques", "cargar_tanques_desde_db"),
+                ("Rebombeos", "cargar_rebombeos_desde_db")
+            ]
+            
+            for i, (msg, func) in enumerate(tareas):
+                status.markdown(f"<small style='color:#00d4ff;'>>>> {msg}</small>", unsafe_allow_html=True)
+                if func in globals():
+                    globals()[func]() # Ejecuta tu función real
+                prog.progress((i + 1) / len(tareas))
+                time.sleep(0.4)
+            
+            # Al terminar, liberamos el acceso
+            st.session_state.autenticado = True
+            st.session_state.rol = st.session_state.temp_rol
+            st.query_params["access"] = "granted"
+            st.query_params["role"] = st.session_state.rol
+            st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # ESTA LÍNEA ES LA CLAVE: Solo se detiene si no hemos pasado el login
     st.stop()
+
+# --- SI LLEGA AQUÍ, ES QUE YA ESTÁ AUTENTICADO Y EL MAPA SE DIBUJARÁ ---
+# (Aquí sigue el resto de tu código original: st_autorefresh, cargar_mapa, etc.)
 
 # --- EL RESTO DE TU CÓDIGO (EL MAPA) VA AQUÍ ABAJO ---
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
