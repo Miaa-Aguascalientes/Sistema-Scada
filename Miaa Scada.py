@@ -121,19 +121,19 @@ if not st.session_state.autenticado:
 
     with col_log:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
-    if not st.session_state.fase_carga:
-        st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE CREDENCIALES</h2>', unsafe_allow_html=True)
+        if not st.session_state.fase_carga:
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE CREDENCIALES</h2>', unsafe_allow_html=True)
         
         # Se crea un formulario para capturar la tecla Enter
-        with st.form("login_form", clear_on_submit=False):
-            u = st.text_input("USUARIO", key="u_login")
-            p = st.text_input("PASSWORD", type="password", key="p_login")
+            with st.form("login_form", clear_on_submit=False):
+                u = st.text_input("USUARIO", key="u_login")
+                p = st.text_input("PASSWORD", type="password", key="p_login")
             
             # El botón dentro de un formulario debe ser 'form_submit_button'
-            submit_button = st.form_submit_button("ACCEDER AL SISTEMA")
+                submit_button = st.form_submit_button("ACCEDER AL SISTEMA")
             
-            if submit_button:
+                if submit_button:
                 rol = verificar_credenciales(u, p)
                 if rol:
                     st.session_state.temp_rol = rol
@@ -141,7 +141,7 @@ if not st.session_state.autenticado:
                     st.rerun()
                 else:
                     st.error("❌ ACCESO DENEGADO")
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
             st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO SCADA...</h2>', unsafe_allow_html=True)
