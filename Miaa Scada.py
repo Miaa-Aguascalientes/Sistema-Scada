@@ -570,54 +570,40 @@ st.markdown("""
         }
         .sidebar-logo img { width: 80%; height: auto; }
 
-        /* 4. CONTENEDOR PRINCIPAL */
+        /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
         .stApp { background-color: #000000; color: white; }
         
         .block-container {
-            padding-top: 0rem !important;
+            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
             padding-bottom: 0rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-            margin-top: 100px !important;
+            margin-top: 100px !important;    /* Sube todo el contenido para cubrir el hueco del header */
         }
 
+        /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
         iframe {
-            margin-top: -110px !important;
+            margin-top: -110px !important; /* Margen negativo para succionar el mapa hacia arriba */
         }
 
         /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
-            left: 320px; /* Inicia después del sidebar */
-            right: 0px;
+            left: calc(50% + 160px); 
+            transform: translateX(-50%);
             z-index: 1000;
-            background-color: #000000;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center; /* Centra el título */
-            border-bottom: 1px solid #1f4068;
-        }
-
-        .titulo-texto {
             color: #00d4ff; 
             font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            margin: 0;
-        }
-
-        /* RELOJ A LA MERA DERECHA */
-        .reloj-superior {
-            position: absolute;
-            right: 25px;
-            color: #00d4ff;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.4rem;
-            font-weight: bold;
+            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f4068;
         }
 
         /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
@@ -630,7 +616,7 @@ st.markdown("""
             border-right: 2px solid #1f4068; 
         }
 
-        /* --- COMPONENTES DEL DASHBOARD --- */
+                /* --- COMPONENTES DEL DASHBOARD --- */
         [data-testid="column"] {
             width: 100% !important;
             flex: 1 1 auto !important;
@@ -663,33 +649,11 @@ st.markdown("""
             color: white; 
         }
 
+        /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
-
-    <div class="titulo-superior">
-        <div class="titulo-texto">SISTEMA SCADA</div>
-        <div id="reloj-vivo" class="reloj-superior">--:--:--</div>
-    </div>
 """, unsafe_allow_html=True)
-
-# SCRIPT PARA EL MOVIMIENTO DEL RELOJ (INMORTAL)
-st.components.v1.html("""
-    <script>
-    function actualizar() {
-        const ahora = new Date();
-        const tiempo = ahora.getHours().toString().padStart(2, '0') + ':' + 
-                       ahora.getMinutes().toString().padStart(2, '0') + ':' + 
-                       ahora.getSeconds().toString().padStart(2, '0');
-        const elemento = window.parent.document.getElementById('reloj-vivo');
-        if (elemento) {
-            elemento.innerText = tiempo;
-        }
-    }
-    setInterval(actualizar, 1000);
-    actualizar();
-    </script>
-""", height=0)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
 
 # 1. Carga de datos base
