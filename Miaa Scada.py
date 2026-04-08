@@ -533,6 +533,49 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
+
+        .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: rgba(17, 17, 17, 0.95);
+        padding: 10px 20px;
+        border-radius: 10px;
+        border-bottom: 2px solid #00d4ff;
+        margin-bottom: 20px;
+    }
+    .title-text {
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 0;
+    }
+    .time-text {
+        color: #00d4ff;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 20px;
+        font-weight: bold;
+    }
+    </style>
+    
+    <div class="header-container">
+        <div class="title-text">SISTEMA SCADA</div>
+        <div id="live-clock" class="time-text"></div>
+    </div>
+
+    <script>
+    function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timeString = hours + ':' + minutes + ':' + seconds;
+        document.getElementById('live-clock').textContent = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock(); // Llamada inicial
+    </script>
+    
         /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
