@@ -14,126 +14,137 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
-
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD --------------------------------------------------------------------
 
-# --- ESTILOS CSS PARA LA INTERFAZ HUD (Basado en la imagen) ---
-HUD_STYLE = """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-    
-    .stApp { background-color: #050a10; }
-    
-    .hud-main-container {
-        display: flex; align-items: center; justify-content: center;
-        height: 85vh; font-family: 'Orbitron', sans-serif; gap: 40px;
-    }
+# --- 1. DETECCIÓN DE ACCESO (Tu lógica original para acceso directo) ---
+query_params = st.query_params
 
-    /* Círculo HUD Tecnológico Animado */
-    .hud-visual { position: relative; width: 300px; height: 300px; }
-    
-    .ring-outer {
-        position: absolute; width: 100%; height: 100%;
-        border: 4px solid transparent; border-top: 4px solid #00d4ff;
-        border-bottom: 4px solid #00d4ff; border-radius: 50%;
-        animation: spin 3s linear infinite;
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
-    }
-    
-    .ring-inner {
-        position: absolute; top: 30px; left: 30px; right: 30px; bottom: 30px;
-        border: 2px dashed #00d4ff; border-radius: 50%;
-        opacity: 0.6; animation: spin 8s linear infinite reverse;
-    }
-
-    .hud-center-text {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        color: #00d4ff; text-align: center;
-    }
-
-    /* Contenedor de Inputs Lateral */
-    .login-box {
-        background: rgba(0, 212, 255, 0.05);
-        border-left: 5px solid #00d4ff; padding: 30px;
-        width: 350px; position: relative;
-    }
-
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    
-    .stTextInput input {
-        background-color: #0d1b2a !important; color: #00d4ff !important;
-        border: 1px solid #1f4068 !important; border-radius: 0 !important;
-    }
-    
-    .stButton button {
-        background: #00d4ff !important; color: #050a10 !important;
-        border: none !important; font-weight: bold !important; width: 100%;
-        box-shadow: 0 0 10px #00d4ff;
-    }
-</style>
-"""
-
-# DETECCIÓN DE ACCESO
 if 'autenticado' not in st.session_state:
-    query_params = st.query_params
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
     else:
         st.session_state.autenticado = False
 
-# INTERFAZ DE LOGIN
+# --- 2. FUNCIONES DE BASE DE DATOS (Tus funciones originales intactas) ---
+@st.cache_resource
+def get_mysql_telemetria_engine():
+    try:
+        c = st.secrets["mysql_telemetria"]
+        pwd = urllib.parse.quote_plus(c["password"])
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        return engine
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
+
+def verificar_credenciales(usuario_input, password_input):
+    try:
+        engine = get_mysql_telemetria_engine()
+        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
+        df_user = pd.read_sql(query, engine)
+        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
+            return df_user['tipo_usuario'].iloc[0]
+        return None
+    except: 
+        return None
+
+# --- 3. INTERFAZ VISUAL FUTURISTA (CSS) ---
+HUD_STYLE = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+    .stApp { background-color: #050a10; }
+    .hud-main-container {
+        display: flex; align-items: center; justify-content: center;
+        height: 85vh; font-family: 'Orbitron', sans-serif; gap: 50px;
+    }
+    /* El círculo de la imagen */
+    .hud-visual { position: relative; width: 320px; height: 320px; }
+    .ring-outer {
+        position: absolute; width: 100%; height: 100%;
+        border: 4px solid transparent; border-top: 4px solid #00d4ff;
+        border-bottom: 4px solid #00d4ff; border-radius: 50%;
+        animation: spin 4s linear infinite;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    }
+    .ring-inner {
+        position: absolute; top: 40px; left: 40px; right: 40px; bottom: 40px;
+        border: 2px dashed #00d4ff; border-radius: 50%;
+        opacity: 0.5; animation: spin 10s linear infinite reverse;
+    }
+    .hud-center-text {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        color: #00d4ff; text-align: center;
+    }
+    .login-box {
+        background: rgba(0, 212, 255, 0.03);
+        border-left: 4px solid #00d4ff; padding: 40px;
+        width: 380px; border-radius: 0 15px 15px 0;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .stTextInput input {
+        background-color: #0d1b2a !important; color: #00d4ff !important;
+        border: 1px solid #1f4068 !important; font-family: monospace;
+    }
+    .stButton button {
+        background: #00d4ff !important; color: #050a10 !important;
+        border: none !important; font-weight: bold !important; width: 100%;
+        box-shadow: 0 0 15px #00d4ff; margin-top: 20px;
+    }
+</style>
+"""
+
+# --- 4. LÓGICA DE LOGIN Y PRECARGA ---
 if not st.session_state.autenticado:
     st.markdown(HUD_STYLE, unsafe_allow_html=True)
     placeholder = st.empty()
     
     with placeholder.container():
-        # HTML del HUD y el Login
         st.markdown(f"""
             <div class="hud-main-container">
                 <div class="hud-visual">
                     <div class="ring-outer"></div>
                     <div class="ring-inner"></div>
                     <div class="hud-center-text">
-                        <h2 style="margin:0; font-size: 24px;">SCADA</h2>
-                        <p style="margin:0; font-size: 14px; color: #444;">MIAA v3.0</p>
+                        <h1 style="margin:0; font-size: 28px;">SCADA</h1>
+                        <p style="margin:0; color: #555;">MIAA MONITOR</p>
                     </div>
                 </div>
-                <div class="login-box" id="inputs">
-                    <h3 style="color: #00d4ff; margin-bottom: 25px;">WAITING ACCESS...</h3>
+                <div class="login-box">
+                    <h2 style="color: #00d4ff; font-size: 18px; margin-bottom: 30px;">PROTOCOL: AUTH_REQUIRED</h2>
         """, unsafe_allow_html=True)
         
-        u = st.text_input("ANONYMOUS_USER", key="u_field")
-        p = st.text_input("PASSKEY", type="password", key="p_field")
+        u = st.text_input("IDENTIFIER", key="u_field")
+        p = st.text_input("ACCESS_KEY", type="password", key="p_field")
         
-        if st.button("RUNNING SYSTEM"):
+        if st.button("EXECUTE STARTUP"):
             rol = verificar_credenciales(u, p)
             if rol:
-                # CAMBIAR A MODO CARGA
+                # MODO PRECARGA DE BASES DE DATOS
                 placeholder.empty()
                 with st.empty().container():
                     st.markdown(HUD_STYLE, unsafe_allow_html=True)
                     st.markdown('<div class="hud-main-container">', unsafe_allow_html=True)
+                    st.markdown('<div class="hud-visual"><div class="ring-outer"></div><div class="hud-center-text"><h3>SYNC</h3></div></div>', unsafe_allow_html=True)
                     
-                    # Definición de tareas reales para precarga
+                    # Tareas reales: aquí inyectas tus funciones de carga
                     tareas = [
-                        ("INIT POSTGRES_LINK", cargar_sectores_poligonos),
-                        ("SYNC WELL_DATA (AGS)", cargar_mapa_pozos_desde_db),
-                        ("MAP TANK_SYSTEM", cargar_tanques_desde_db),
-                        ("CONNECT REBOMBEOS", cargar_rebombeos_desde_db),
-                        ("READY TO ACCESS", None)
+                        ("INITIALIZING DATABASE ENGINES", get_mysql_telemetria_engine),
+                        ("LOADING SECTOR POLYGONS (140)", cargar_sectores_poligonos),
+                        ("FETCHING WELL DATA NODES", cargar_mapa_pozos_desde_db),
+                        ("SYNCING TANKS & PUMPS", cargar_tanques_desde_db),
+                        ("FINALIZING SCADA INTERFACE", cargar_rebombeos_desde_db)
                     ]
-                    
-                    st.markdown('<div class="hud-visual"><div class="ring-outer"></div><div class="hud-center-text"><h2>SYNCING</h2></div></div>', unsafe_allow_html=True)
                     
                     status_log = st.empty()
                     prog_bar = st.progress(0)
                     
                     for i, (msg, func) in enumerate(tareas):
-                        status_log.markdown(f"<p style='color:#00d4ff; font-family:monospace;'>>>> {msg}</p>", unsafe_allow_html=True)
-                        if func: func() # Aquí se cargan los datos reales en el caché
-                        time.sleep(0.5)
+                        status_log.markdown(f"<p style='color:#00d4ff; text-align:center; font-family:monospace;'>[SYSTEM]: {msg}...</p>", unsafe_allow_html=True)
+                        if func:
+                            try: func() # Ejecución real para llenar el caché
+                            except: pass
+                        time.sleep(0.6)
                         prog_bar.progress((i + 1) / len(tareas))
                     
                     st.session_state.autenticado = True
@@ -142,7 +153,7 @@ if not st.session_state.autenticado:
                     st.query_params["role"] = rol
                     st.rerun()
             else:
-                st.error("ACCESS DENIED")
+                st.error("INVALID CREDENTIALS")
         st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
