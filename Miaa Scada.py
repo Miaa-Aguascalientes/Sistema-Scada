@@ -119,7 +119,7 @@ if not st.session_state.autenticado:
             <div class="ring r1"></div><div class="ring r2"></div>
             <div class="center-logo">
                 <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg" class="logo-miaa">
-                <h2 style="color:#00d4ff; font-family:Orbitron; font-size:40px; letter-spacing:5px; margin-top:10px;"></h2>
+                <h2 style="color:#00d4ff; font-family:Orbitron; font-size:-40px; letter-spacing:5px; margin-top:10px;"></h2>
             </div>
         </div>
         ''', unsafe_allow_html=True)
