@@ -966,15 +966,14 @@ with col_mapa:
         """
 
 # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
-    if ver_sectores and sectores:
+   if ver_sectores and sectores:
         for s in sectores:
             try:
                 nombre_sec = s['sector']
                 
-                # --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
-                # Le pegamos el permiso de acceso y el rol actual a la URL de forma automática
-                url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+                # CONSTRUCCIÓN DINÁMICA: Pegamos la llave de acceso a la URL del sector
+                # Esto hará que al abrir el link, la Sección 0 de la nueva pestaña lo deje pasar.
+                url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.rol}"
                 
                 geo_data = json.loads(s['geo'])
                 
@@ -984,6 +983,8 @@ with col_mapa:
                     <a href="{url_sector}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #00d4ff; color: black; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top:5px;">🚀 Ver Detalles</a>
                 </div>
                 """
+                
+  
                 
                 # Aquí restauramos el estilo interactivo (Se queda igual)
                 folium.GeoJson(
