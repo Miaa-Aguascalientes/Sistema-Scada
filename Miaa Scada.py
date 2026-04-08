@@ -49,72 +49,116 @@ def verificar_credenciales(usuario_input, password_input):
     except: return None
 
 # LOGIN Y CARGA FUTURISTA DETALLADA
+# Estilos CSS para el HUD circular y la interfaz neón
+HUD_STYLE = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+    
+    .stApp { background-color: #050a10; } /* Fondo ultra oscuro */
+    
+    .login-container {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        height: 80vh; font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Círculo HUD Animado */
+    .hud-circle {
+        position: relative; width: 200px; height: 200px;
+        border-radius: 50%; border: 2px double #00d4ff;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        animation: spin 10s linear infinite; margin-bottom: 30px;
+    }
+    .hud-circle::before {
+        content: ''; position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px;
+        border-radius: 50%; border: 5px solid transparent; border-top: 5px solid #00d4ff;
+        animation: spin 2s linear infinite reverse;
+    }
+    .hud-circle::after {
+        content: 'MIAA'; position: absolute; top: 40%; left: 25%;
+        color: #00d4ff; font-weight: bold; font-size: 20px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; text-shadow: 0 0 10px #00d4ff; } 50% { opacity: 0.3; } }
+
+    /* Inputs Estilo Cyber */
+    .stTextInput>div>div>input {
+        background-color: rgba(0, 212, 255, 0.05) !important;
+        color: #00d4ff !important; border: 1px solid #00d4ff !important;
+        border-radius: 5px !important; text-shadow: 0 0 5px #00d4ff;
+    }
+    
+    /* Botón Neón */
+    .stButton>button {
+        background: transparent !important; color: #00d4ff !important;
+        border: 2px solid #00d4ff !important; border-radius: 0px !important;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        transition: 0.3s; width: 100%; font-weight: bold;
+    }
+    .stButton>button:hover {
+        background: #00d4ff !important; color: #050a10 !important;
+        box-shadow: 0 0 30px #00d4ff;
+    }
+</style>
+"""
+
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+
 if not st.session_state.autenticado:
+    st.markdown(HUD_STYLE, unsafe_allow_html=True)
+    
     placeholder = st.empty()
+    
     with placeholder.container():
-        col1, col2, col3 = st.columns([1, 1.5, 1])
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        st.markdown('<div class="hud-circle"></div>', unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown("<br><br><h2 style='text-align: center; color: #00d4ff;'>🔐 SCADA MIAA</h2>", unsafe_allow_html=True)
-            u = st.text_input("Usuario", key="login_u")
-            p = st.text_input("Contraseña", type="password", key="login_p")
+            st.markdown("<h3 style='text-align: center; color: #00d4ff; margin-bottom: 20px;'>ACCESO AL SCADA</h3>", unsafe_allow_html=True)
+            u = st.text_input("IDENTIFICADOR DE USUARIO", key="user_field")
+            p = st.text_input("CLAVE DE ENCRIPCIÓN", type="password", key="pass_field")
             
-            if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
+            if st.button("AUTENTICAR Y CARGAR DATOS"):
                 rol = verificar_credenciales(u, p)
                 if rol:
-                    # Guardamos llaves de acceso
-                    st.query_params["access"] = "granted"
-                    st.query_params["role"] = rol
+                    # Guardamos sesión temporalmente
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
                     
-                    # --- INICIO DEL INTRO FUTURISTA CON CARGA DINÁMICA ---
+                    # --- CICLO DE PRECARGA (Garantiza capas del mapa) ---
                     placeholder.empty()
-                    with placeholder.container():
-                        # Contenedor visual principal
-                        main_box = st.empty()
+                    with st.empty().container():
+                        st.markdown(HUD_STYLE, unsafe_allow_html=True)
+                        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+                        st.markdown('<div class="hud-circle"></div>', unsafe_allow_html=True)
                         
-                        # Pasos de carga que mencionaste
-                        pasos = [
-                            "Inyectando Protocolos de Seguridad...",
-                            "Cargando Polígonos de Sectores (140 Nodos)...",
-                            "Sincronizando Pozos de Aguascalientes...",
-                            "Mapeando Tanques y Rebombeos...",
-                            "Finalizando Enlace SCADA..."
+                        log_placeholder = st.empty()
+                        prog_bar = st.progress(0)
+                        
+                        tareas = [
+                            ("Sincronizando Pozos...", cargar_mapa_pozos_desde_db),
+                            ("Cargando Polígonos de Sectores...", cargar_sectores_poligonos),
+                            ("Descargando Telemetría de Tanques...", cargar_tanques_desde_db),
+                            ("Mapeando Estaciones Rebombeo...", cargar_rebombeos_desde_db),
+                            ("Finalizando Protocolo de Enlace...", None)
                         ]
                         
-                        for i, paso in enumerate(pasos):
-                            progreso = (i + 1) / len(pasos)
-                            main_box.markdown(f"""
-                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
-                                    <div class="loader"></div>
-                                    <h2 style="color: #00d4ff; font-family: 'Courier New', monospace; margin-top: 20px;" class="blink_me">
-                                        SISTEMA MIAA: CARGANDO
-                                    </h2>
-                                    <p style="color: #00d4ff; font-family: monospace; font-size: 14px; margin-top: 10px;">
-                                        >>> {paso}
-                                    </p>
-                                    <div style="width: 350px; height: 4px; background: #1f4068; margin-top: 20px; border-radius: 10px; overflow: hidden; border: 1px solid #00d4ff;">
-                                        <div style="width: {progreso*100}%; height: 100%; background: #00d4ff; box-shadow: 0 0 10px #00d4ff;"></div>
-                                    </div>
-                                    <p style="color: #444; font-family: monospace; font-size: 10px; margin-top: 10px;">STATUS: {int(progreso*100)}% COMPLETE</p>
-                                </div>
-                                <style>
-                                    .loader {{
-                                        border: 2px solid #0b1a29; border-top: 2px solid #00d4ff; border-right: 2px solid #00d4ff;
-                                        border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite;
-                                        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
-                                    }}
-                                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                    @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.4; }} }}
-                                    .blink_me {{ animation: blink 1.5s infinite; }}
-                                </style>
-                            """, unsafe_allow_html=True)
-                            time.sleep(0.7) # Tiempo visual para cada paso
+                        for i, (msg, func) in enumerate(tareas):
+                            log_placeholder.markdown(f"<p style='color:#00d4ff; text-align:center;'>>>> {msg}</p>", unsafe_allow_html=True)
+                            if func:
+                                func() # Ejecuta la función real de tu código
+                            time.sleep(0.6)
+                            prog_bar.progress((i + 1) / len(tareas))
                         
-                        st.balloons() # Pequeño toque de éxito al terminar
-                    st.rerun()
+                        st.success("SISTEMA LISTO")
+                        time.sleep(1)
+                        st.rerun()
                 else:
-                    st.error("Credenciales Incorrectas")
+                    st.error("ACCESO DENEGADO: Credenciales no válidas")
+        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
