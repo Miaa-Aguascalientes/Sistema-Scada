@@ -14,9 +14,9 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD --------------------------------------------------------------------
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD FINAL --------------------------------------------------------------------
 
-# --- 1. DETECCIÓN DE ACCESO (Mantiene tu lógica de entrada directa) ---
+# --- 1. LÓGICA DE ACCESO (Mantiene tu entrada directa por URL) ---
 if 'autenticado' not in st.session_state:
     query_params = st.query_params
     if query_params.get("access") == "granted":
@@ -48,15 +48,15 @@ def verificar_credenciales(usuario_input, password_input):
     except: 
         return None
 
-# --- 3. CSS PARA EL HUD (Estilo de tu imagen) ---
+# --- 3. CSS ESTILO HUD (Inspirado en tu imagen) ---
 HUD_STYLE = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
     .stApp { background: #050a10; }
     .hud-container { display: flex; align-items: center; justify-content: center; height: 85vh; gap: 50px; font-family: 'Orbitron', sans-serif; }
     .visual-core { position: relative; width: 300px; height: 300px; }
-    .ring { position: absolute; border-radius: 50%; border: 2px solid transparent; animation: spin var(--d) linear infinite; }
-    .r1 { width: 100%; height: 100%; border-top: 5px solid #00d4ff; border-bottom: 5px solid #00d4ff; --d: 3s; }
+    .ring { position: absolute; border-radius: 50%; border: 3px solid transparent; animation: spin var(--d) linear infinite; }
+    .r1 { width: 100%; height: 100%; border-top: 5px solid #00d4ff; border-bottom: 5px solid #00d4ff; --d: 3s; box-shadow: 0 0 20px rgba(0,212,255,0.4); }
     .r2 { width: 70%; height: 70%; top: 15%; left: 15%; border: 2px dashed #00d4ff; --d: 6s; animation-direction: reverse; opacity: 0.5; }
     .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; }
     .login-panel { background: rgba(0, 212, 255, 0.05); border-left: 6px solid #00d4ff; padding: 40px; width: 380px; }
@@ -66,70 +66,83 @@ HUD_STYLE = """
 </style>
 """
 
-# --- 4. FLUJO DE LOGIN Y CARGA ---
+# --- 4. FLUJO DE LOGIN Y CARGA CRÍTICA ---
 if not st.session_state.autenticado:
     st.markdown(HUD_STYLE, unsafe_allow_html=True)
-    placeholder = st.empty()
     
-    with placeholder.container():
-        st.markdown(f"""
-            <div class="hud-container">
-                <div class="visual-core">
-                    <div class="ring r1"></div>
-                    <div class="ring r2"></div>
-                    <div class="center-logo">
-                        <h1 style="font-size:30px; margin:0;">MIAA</h1>
-                        <p style="font-size:10px; letter-spacing:2px;">SCADA_LINK</p>
-                    </div>
-                </div>
-                <div class="login-panel">
-                    <h2 style="color:#00d4ff; font-size:16px; margin-bottom:25px;">// ACCESS_PROTOCOL</h2>
-        """, unsafe_allow_html=True)
-        
-        user_in = st.text_input("USER_ID")
-        pass_in = st.text_input("PASSWORD", type="password")
-        
-        if st.button("RUN STARTUP"):
-            rol = verificar_credenciales(user_in, pass_in)
-            if rol:
-                # REEMPLAZAR FORMULARIO POR INTERFAZ DE CARGA (Sin rerun todavía)
-                placeholder.empty()
-                with placeholder.container():
-                    st.markdown(HUD_STYLE, unsafe_allow_html=True)
-                    st.markdown('<div class="hud-container">', unsafe_allow_html=True)
-                    st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="center-logo"><h3>LOADING</h3></div></div>', unsafe_allow_html=True)
-                    st.markdown('<div class="login-panel"><h3 style="color:#00d4ff;">// RUNNING_DATABASE_SYNC</h3>', unsafe_allow_html=True)
-                    
-                    status = st.empty()
-                    bar = st.progress(0)
-                    
-                    # EJECUCIÓN CRÍTICA DE TUS BASES DE DATOS
-                    tareas = [
-                        ("VERIFYING NETWORK...", get_mysql_telemetria_engine),
-                        ("SYNCING SECTORS (140)...", cargar_sectores_poligonos),
-                        ("POZOS AGUASCALIENTES...", cargar_mapa_pozos_desde_db),
-                        ("TANKS & PUMP STATIONS...", cargar_tanques_desde_db),
-                        ("FINALIZING ENCRYPTION...", cargar_rebombeos_desde_db)
-                    ]
-                    
-                    for i, (msg, func) in enumerate(tareas):
-                        status.markdown(f"<p style='color:#00d4ff; font-family:monospace;'>[OK] {msg}</p>", unsafe_allow_html=True)
-                        if func:
-                            func() # <--- Aquí se llenan tus @st.cache_data
-                        time.sleep(0.5)
-                        bar.progress((i + 1) / len(tareas))
-                    
-                    # Actualizar estado y parámetros de URL antes del rerun final
-                    st.session_state.autenticado = True
-                    st.session_state.rol = rol
-                    st.query_params["access"] = "granted"
-                    st.query_params["role"] = rol
-                    st.rerun()
-            else:
-                st.error("INVALID_ACCESS_KEY")
-        st.markdown("</div></div>", unsafe_allow_html=True)
-    st.stop()
+    # Usamos un estado temporal para saber si ya pasamos la validación
+    if 'pre_autorizado' not in st.session_state:
+        st.session_state.pre_autorizado = False
 
+    placeholder = st.empty()
+
+    if not st.session_state.pre_autorizado:
+        # PANTALLA 1: FORMULARIO DE ACCESO
+        with placeholder.container():
+            st.markdown(f"""
+                <div class="hud-container">
+                    <div class="visual-core">
+                        <div class="ring r1"></div><div class="ring r2"></div>
+                        <div class="center-logo"><h1 style="font-size:30px; margin:0;">MIAA</h1><p style="font-size:10px; letter-spacing:2px;">SCADA_SYSTEM</p></div>
+                    </div>
+                    <div class="login-panel">
+                        <h2 style="color:#00d4ff; font-size:16px; margin-bottom:25px;">// AGUASCALIENTES_AUTH</h2>
+            """, unsafe_allow_html=True)
+            
+            u = st.text_input("USER_ID", key="user_id")
+            p = st.text_input("PASSWORD", type="password", key="password")
+            
+            if st.button("INICIALIZAR SISTEMA"):
+                rol = verificar_credenciales(u, p)
+                if rol:
+                    st.session_state.pre_autorizado = True
+                    st.session_state.temp_rol = rol
+                    st.rerun() # Recargamos para pasar a la fase de "Running"
+                else:
+                    st.error("ACCESO DENEGADO")
+            st.markdown("</div></div>", unsafe_allow_html=True)
+    
+    else:
+        # PANTALLA 2: EL "RUNNING" DE BASES DE DATOS (Pantalla de carga futurista)
+        with placeholder.container():
+            st.markdown(HUD_STYLE, unsafe_allow_html=True)
+            st.markdown(f"""
+                <div class="hud-container">
+                    <div class="visual-core">
+                        <div class="ring r1"></div>
+                        <div class="center-logo"><h3>CARGANDO</h3></div>
+                    </div>
+                    <div class="login-panel">
+                        <h2 style="color:#00d4ff; font-size:16px; margin-bottom:20px;">// SINCRONIZANDO CAPAS...</h2>
+            """, unsafe_allow_html=True)
+            
+            status_msg = st.empty()
+            prog_bar = st.progress(0)
+            
+            # LISTA DE TAREAS REALES (Aquí es donde ocurre la magia)
+            tareas = [
+                ("POSTGRESQL_ENGINE...", get_mysql_telemetria_engine),
+                ("POLÍGONOS SECTORES (140)...", cargar_sectores_poligonos),
+                ("NODOS DE POZOS...", cargar_mapa_pozos_desde_db),
+                ("NIVELES DE TANQUES...", cargar_tanques_desde_db),
+                ("ESTACIONES REBOMBEOS...", cargar_rebombeos_desde_db)
+            ]
+            
+            for i, (msg, func) in enumerate(tareas):
+                status_msg.markdown(f"<p style='color:#00d4ff; font-family:monospace;'>>>> {msg}</p>", unsafe_allow_html=True)
+                if func:
+                    func() # SE EJECUTA LA FUNCIÓN Y SE GUARDA EN CACHÉ
+                time.sleep(0.4)
+                prog_bar.progress((i + 1) / len(tareas))
+            
+            # TODO LISTO: PASAMOS AL SISTEMA
+            st.session_state.autenticado = True
+            st.session_state.rol = st.session_state.temp_rol
+            st.query_params["access"] = "granted"
+            st.query_params["role"] = st.session_state.rol
+            st.rerun()
+
+    st.stop()
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
 sector_seleccionado = params.get("sector", None)
