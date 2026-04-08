@@ -1072,7 +1072,7 @@ with col_mapa:
     Fullscreen().add_to(m)
 
     for s in st.session_state.geo_sectores:
-    folium.GeoJson(
+        folium.GeoJson(
         json.loads(s['geo']),
         style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1},
         tooltip=f"Sector: {s['sector']}"
