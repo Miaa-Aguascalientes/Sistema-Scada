@@ -534,146 +534,114 @@ if tag_a_graficar:
 
 st.markdown("""
     <style>
-        /* 1. CONFIGURACIÓN BASE Y CONTENEDOR PRINCIPAL */
+        /* 1. FONDO Y CONTENEDOR */
         .stApp { background-color: #000000; color: white; }
         
+        /* Eliminar el espacio superior por defecto de Streamlit */
         .block-container {
-            padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            margin-top: 60px !important; /* Ajuste para no chocar con la barra fija */
+            padding-top: 2rem !important;
+            margin-top: 50px !important;
         }
 
-        /* 2. ENCABEZADO PERSONALIZADO CON RELOJ A LA DERECHA */
+        /* 2. BARRA SUPERIOR FIJA */
         .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #000000;
-            padding: 10px 30px;
-            border-bottom: 1px solid #1f4068;
             position: fixed;
             top: 0;
-            left: 320px; /* Alineado después del sidebar */
+            left: 320px; /* Inicia después del sidebar */
             right: 0;
-            z-index: 1000;
-            height: 60px;
+            height: 65px;
+            background-color: #000000;
+            display: flex;
+            justify-content: center; /* Centra el título */
+            align-items: center;
+            border-bottom: 2px solid #1f4068;
+            z-index: 9999;
+            padding: 0 20px;
         }
         
         .title-text {
             color: #00d4ff;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            letter-spacing: 3px;
+            text-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
             margin: 0;
+            position: absolute; /* Para que el centrado sea perfecto respecto a la barra */
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* 3. RELOJ A LA MERA DERECHA */
+        .time-wrapper {
+            margin-left: auto; /* Empuja el reloj a la derecha */
+            z-index: 10000;
         }
 
         .time-text {
             color: #00d4ff;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             background: rgba(0, 212, 255, 0.1);
             padding: 5px 15px;
             border-radius: 5px;
-            border: 1px solid rgba(0, 212, 255, 0.3);
+            border: 1px solid #1f4068;
         }
 
-        /* 3. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
-        [data-testid="collapsedControl"], 
-        button[kind="headerNoPadding"], 
-        [data-testid="stSidebarCollapseButton"] {
-            display: none !important;
-        }
-
-        [data-testid="stSidebar"] {
-            min-width: 320px !important; 
-            max-width: 320px !important;
-            width: 320px !important;
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-
-        /* 4. LIMPIEZA DE INTERFAZ */
-        header { visibility: hidden !important; height: 0px !important; }
-        #MainMenu { visibility: hidden !important; }
+        /* 4. BLOQUEO DE INTERFAZ ORIGINAL */
+        header { visibility: hidden !important; }
+        [data-testid="collapsedControl"] { display: none !important; }
         footer { visibility: hidden !important; }
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
-            display: none !important;
-        }
 
-        /* 5. LOGO EN SIDEBAR */
+        /* 5. AJUSTES DEL SIDEBAR */
+        [data-testid="stSidebar"] {
+            min-width: 320px !important;
+            z-index: 10001; /* Por encima de la barra superior */
+        }
+        
         .sidebar-logo { 
             position: fixed;
-            top: 0px;
-            left: 0px;
-            width: 320px;
-            height: 100px;
-            z-index: 999999;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            background-color: #0b1a29; 
+            top: 0; left: 0;
+            width: 320px; height: 100px;
+            background-color: #0b1a29;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10002;
             border-bottom: 1px solid #1f4068;
         }
-        .sidebar-logo img { width: 80%; height: auto; }
-
-        [data-testid="stSidebarContent"] {
-            padding-top: 110px !important; 
-        }
-
-        /* 6. AJUSTE DE MAPA E IFRAMES */
-        iframe {
-            margin-top: 0px !important;
-        }
-
-        /* 7. COMPONENTES DEL DASHBOARD */
-        .resumen-card { 
-            background: #050505; 
-            border: 1px solid #1f4068; 
-            border-radius: 5px; 
-            padding: 15px; 
-            margin-bottom: 15px; 
-        }
-        
-        .status-tag { 
-            font-size: 10px; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            margin-left: 5px; 
-            font-weight: bold; 
-        }
-        
-        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
-        .status-err { background-color: #b71c1c; color: #ef9a9a; }
+        .sidebar-logo img { width: 80%; }
 
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
+""", unsafe_allow_html=True)
 
+# --- ESTRUCTURA HTML DEL HEADER Y SCRIPT DEL RELOJ ---
+st.markdown("""
     <div class="header-container">
-        <div class="title-text">SISTEMA SCADA</div>
-        <div id="live-clock" class="time-text">00:00:00</div>
+        <h1 class="title-text">SISTEMA SCADA</h1>
+        <div class="time-wrapper">
+            <div id="reloj-scada" class="time-text">--:--:--</div>
+        </div>
     </div>
 
     <script>
-    function updateClock() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const timeString = hours + ':' + minutes + ':' + seconds;
-        const clockElement = document.getElementById('live-clock');
-        if (clockElement) {
-            clockElement.textContent = timeString;
+    (function() {
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const el = document.getElementById('reloj-scada');
+            if (el) {
+                el.innerText = h + ':' + m + ':' + s;
+            }
         }
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+        // Forzar actualización inmediata y cada segundo
+        updateClock();
+        setInterval(updateClock, 1000);
+    })();
     </script>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
