@@ -966,7 +966,8 @@ with col_mapa:
         """
 
 # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
-   if ver_sectores and sectores:
+   # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
+    if ver_sectores and sectores:
         for s in sectores:
             try:
                 nombre_sec = s['sector']
@@ -983,6 +984,8 @@ with col_mapa:
                     <a href="{url_sector}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #00d4ff; color: black; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top:5px;">🚀 Ver Detalles</a>
                 </div>
                 """
+                
+                # ... (El resto de tu folium.GeoJson se queda exactamente igual) ...
                 
   
                 
