@@ -534,59 +534,44 @@ if tag_a_graficar:
 
 st.markdown("""
     <style>
-        /* 1. FONDO Y CONTENEDOR */
+        /* 1. CONFIGURACIÓN DE FONDO */
         .stApp { background-color: #000000; color: white; }
         
-        /* Eliminar el espacio superior por defecto de Streamlit */
-        .block-container {
-            padding-top: 2rem !important;
-            margin-top: 50px !important;
-        }
-
-        /* 2. BARRA SUPERIOR FIJA */
+        /* 2. BARRA SUPERIOR (HEADER) */
         .header-container {
             position: fixed;
             top: 0;
-            left: 320px; /* Inicia después del sidebar */
+            left: 0;
             right: 0;
-            height: 65px;
+            height: 60px;
             background-color: #000000;
             display: flex;
-            justify-content: center; /* Centra el título */
             align-items: center;
-            border-bottom: 2px solid #1f4068;
-            z-index: 9999;
-            padding: 0 20px;
+            justify-content: center; /* Centrado absoluto del título */
+            border-bottom: 1px solid #1f4068;
+            z-index: 1000;
         }
-        
-        .title-text {
-            color: #00d4ff;
-            font-size: 1.8rem;
+
+        .titulo-superior {
+            color: #00d4ff; /* Tu azul original */
+            font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 3px;
-            text-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
             margin: 0;
-            position: absolute; /* Para que el centrado sea perfecto respecto a la barra */
-            left: 50%;
-            transform: translateX(-50%);
+            padding: 0;
+            text-align: center;
         }
 
-        /* 3. RELOJ A LA MERA DERECHA */
-        .time-wrapper {
-            margin-left: auto; /* Empuja el reloj a la derecha */
-            z-index: 10000;
-        }
-
-        .time-text {
+        /* 3. RELOJ POSICIONADO A LA MERA DERECHA */
+        .reloj-container {
+            position: absolute;
+            right: 25px; /* Pegado a la derecha */
             color: #00d4ff;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 22px;
+            font-size: 1.4rem;
             font-weight: bold;
-            background: rgba(0, 212, 255, 0.1);
-            padding: 5px 15px;
-            border-radius: 5px;
-            border: 1px solid #1f4068;
         }
 
         /* 4. BLOQUEO DE INTERFAZ ORIGINAL */
@@ -594,10 +579,15 @@ st.markdown("""
         [data-testid="collapsedControl"] { display: none !important; }
         footer { visibility: hidden !important; }
 
-        /* 5. AJUSTES DEL SIDEBAR */
+        /* 5. AJUSTE DE CONTENIDO PARA QUE NO SE TRAPE CON EL HEADER */
+        .block-container {
+            padding-top: 70px !important;
+        }
+
+        /* 6. SIDEBAR (Ajuste para que empiece abajo del logo) */
         [data-testid="stSidebar"] {
             min-width: 320px !important;
-            z-index: 10001; /* Por encima de la barra superior */
+            background-color: #0b1a29 !important;
         }
         
         .sidebar-logo { 
@@ -606,7 +596,7 @@ st.markdown("""
             width: 320px; height: 100px;
             background-color: #0b1a29;
             display: flex; justify-content: center; align-items: center;
-            z-index: 10002;
+            z-index: 1001;
             border-bottom: 1px solid #1f4068;
         }
         .sidebar-logo img { width: 80%; }
@@ -615,32 +605,25 @@ st.markdown("""
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
-""", unsafe_allow_html=True)
 
-# --- ESTRUCTURA HTML DEL HEADER Y SCRIPT DEL RELOJ ---
-st.markdown("""
     <div class="header-container">
-        <h1 class="title-text">SISTEMA SCADA</h1>
-        <div class="time-wrapper">
-            <div id="reloj-scada" class="time-text">--:--:--</div>
-        </div>
+        <div class="titulo-superior">SISTEMA SCADA</div>
+        <div class="reloj-container" id="reloj-digital">00:00:00</div>
     </div>
 
     <script>
+    // Función autoejecutable para asegurar que el JS corra sin importar Streamlit
     (function() {
-        function updateClock() {
+        const updateTime = () => {
             const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            const el = document.getElementById('reloj-scada');
+            const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+            const el = document.getElementById('reloj-digital');
             if (el) {
-                el.innerText = h + ':' + m + ':' + s;
+                el.innerText = timeStr;
             }
-        }
-        // Forzar actualización inmediata y cada segundo
-        updateClock();
-        setInterval(updateClock, 1000);
+        };
+        updateTime();
+        setInterval(updateTime, 1000);
     })();
     </script>
 """, unsafe_allow_html=True)
