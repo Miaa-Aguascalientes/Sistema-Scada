@@ -42,7 +42,6 @@ def get_mysql_telemetria_engine():
     try:
         c = st.secrets["mysql_telemetria"]
         pwd = urllib.parse.quote_plus(c["password"])
-        # pool_pre_ping=True es vital para evitar que el mapa se quede en blanco por conexión muerta
         engine = create_engine(
             f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}",
             pool_recycle=3600,
@@ -57,23 +56,24 @@ def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
         if engine is None: return None
+        # Consulta directa para verificar usuario y contraseña
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
-            return df_user['tipo_usuario'].iloc[0]
+        
+        if not df_user.empty:
+            # Validación simple (puedes cambiar a bcrypt.checkpw si usas hashes)
+            if str(password_input) == str(df_user['password'].iloc[0]):
+                return df_user['tipo_usuario'].iloc[0]
         return None
     except Exception as e:
         st.error(f"Error al consultar usuario: {e}")
         return None
 
-import streamlit as st
-import time
-
+# --- C. ANIMACIÓN FUTURISTA DE APERTURA ---
 def animacion_apertura():
-    """Muestra una animación de cerradura circular abriéndose."""
+    """Muestra una animación de cerradura circular (Iris Gate) abriéndose."""
     placeholder = st.empty()
     
-    # HTML/CSS para la cerradura futurista
     cerradura_html = """
     <div id="iris-container">
         <div class="iris-wing" style="--r:0deg"></div>
@@ -109,7 +109,7 @@ def animacion_apertura():
             width: 100%; height: 2px;
             background: #00f2ff;
             box-shadow: 0 0 20px #00f2ff;
-            animation: scan 1s infinite alternate;
+            animation: scan 1.5s infinite alternate;
         }
         .access-text {
             position: absolute;
@@ -121,75 +121,97 @@ def animacion_apertura():
             animation: blink 0.5s infinite;
         }
         
-        /* Clase para disparar la apertura */
         .open .iris-wing {
             transform: rotate(var(--r)) translate(100%, 100%) scale(2);
             opacity: 0;
         }
         .open .access-text, .open .scanner-line { display: none; }
 
-        @keyframes scan { from { top: 0%; } to { top: 100%; } }
+        @keyframes scan { from { top: 10% ; } to { top: 90%; } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 
     <script>
         setTimeout(() => {
             document.getElementById('iris-container').classList.add('open');
-        }, 500);
+        }, 600);
     </script>
     """
     
-    placeholder.components.v1.html(cerradura_html, height=800)
-    time.sleep(2.5) # Duración de la animación antes de mostrar el dashboard
+    placeholder.components.v1.html(cerradura_html, height=1000)
+    time.sleep(2.8) 
     placeholder.empty()
 
-# --- MODIFICACIÓN EN TU LÓGICA DE LOGIN ---
+# --- D. INTERFAZ DE LOGIN Y FLUJO DE CARGA ---
 if not st.session_state.autenticado:
-    # (Aquí va tu código de login actual...)
-    with st.form("login_form"):
-        user = st.text_input("ID Operador")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("INICIAR SECUENCIA DE ACCESO")
+    # Estilo para el formulario de login futurista
+    st.markdown("""
+        <style>
+        div[data-testid="stForm"] {
+            border: 2px solid #00d4ff !important;
+            background-color: rgba(0, 10, 20, 0.8) !important;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+            padding: 30px;
+        }
+        .stTextInput input {
+            background-color: #050505 !important;
+            color: #00f2ff !important;
+            border: 1px solid #004455 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-        if submit:
-            # Reemplaza esto con tu validación de DB real
-            if user == "admin" and password == "123": 
-                st.session_state.autenticado = True
-                animacion_apertura() # <--- LLAMADA A LA ANIMACIÓN
-                st.rerun()
-            else:
-                st.error("ACCESO DENEGADO - CREDENCIALES INVÁLIDAS")
-            
-        else:
-            st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO SCADA...</h2>', unsafe_allow_html=True)
-            prog = st.progress(0)
-            status = st.empty()
-            
-            tareas = [
-                ("Conectando DB", "get_mysql_telemetria_engine"),
-                ("Sectores", "cargar_sectores_poligonos"),
-                ("Pozos", "cargar_mapa_pozos_desde_db"),
-                ("Tanques", "cargar_tanques_desde_db"),
-                ("Rebombeos", "cargar_rebombeos_desde_db")
-            ]
-            
-            for i, (nombre, func) in enumerate(tareas):
-                status.write(f"Cargando {nombre}...")
-                if func in globals():
-                    try:
-                        globals()[func]()
-                    except Exception as e:
-                        st.warning(f"Error en {nombre}: {e}")
-                prog.progress((i + 1) / len(tareas))
-                time.sleep(0.4)
-            
-            st.session_state.autenticado = True
-            st.session_state.rol = st.session_state.temp_rol
-            st.session_state.fase_carga = False
-            st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-            
+    if not st.session_state.fase_carga:
+        with st.form("login_form"):
+            st.markdown("<h1 style='text-align:center; color:#00d4ff; font-size:24px;'>SISTEMA SCADA MIAA</h1>", unsafe_allow_html=True)
+            user = st.text_input("ID OPERADOR")
+            password = st.text_input("PASSWORD", type="password")
+            submit = st.form_submit_button("INICIAR SECUENCIA DE ACCESO")
+
+            if submit:
+                rol = verificar_credenciales(user, password)
+                if rol:
+                    st.session_state.temp_rol = rol
+                    st.session_state.fase_carga = True
+                    st.rerun()
+                else:
+                    st.error("ACCESO DENEGADO - CREDENCIALES INVÁLIDAS")
+    
+    else:
+        # FASE DE CARGA HUD (Se activa tras login exitoso)
+        st.markdown('<div style="padding: 20px; border: 1px solid #00d4ff; border-radius:10px;">', unsafe_allow_html=True)
+        st.markdown('<h2 style="color:#00d4ff; font-size:18px; font-family:monospace;">// CARGANDO MÓDULOS DEL SISTEMA...</h2>', unsafe_allow_html=True)
+        
+        prog = st.progress(0)
+        status = st.empty()
+        
+        tareas = [
+            ("Estableciendo enlace de datos", "get_mysql_telemetria_engine"),
+            ("Sincronizando sectores hidráulicos", "cargar_sectores_poligonos"),
+            ("Mapeando infraestructura de pozos", "cargar_mapa_pozos_desde_db"),
+            ("Validando telemetría de tanques", "cargar_tanques_desde_db"),
+            ("Iniciando módulos de rebombeo", "cargar_rebombeos_desde_db")
+        ]
+        
+        for i, (nombre, func) in enumerate(tareas):
+            status.markdown(f"<code style='color:#00f2ff;'>{nombre}... OK</code>", unsafe_allow_html=True)
+            if func in globals():
+                try:
+                    globals()[func]()
+                except Exception as e:
+                    st.warning(f"Error en {nombre}: {e}")
+            prog.progress((i + 1) / len(tareas))
+            time.sleep(0.5)
+        
+        # Al terminar la carga, mostrar animación de apertura
+        animacion_apertura()
+        
+        st.session_state.autenticado = True
+        st.session_state.rol = st.session_state.temp_rol
+        st.session_state.fase_carga = False
+        st.rerun()
+
     st.stop()
 # --- A PARTIR DE AQUÍ COMIENZA EL MAPA ---
 # Si el script llega a este punto, significa que ya pasó el login y el mapa se dibujará.
