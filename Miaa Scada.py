@@ -42,6 +42,7 @@ def get_mysql_telemetria_engine():
     try:
         c = st.secrets["mysql_telemetria"]
         pwd = urllib.parse.quote_plus(c["password"])
+        # pool_pre_ping=True es vital para evitar que el mapa se quede en blanco por conexión muerta
         engine = create_engine(
             f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}",
             pool_recycle=3600,
@@ -56,162 +57,127 @@ def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
         if engine is None: return None
-        # Consulta directa para verificar usuario y contraseña
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        
-        if not df_user.empty:
-            # Validación simple (puedes cambiar a bcrypt.checkpw si usas hashes)
-            if str(password_input) == str(df_user['password'].iloc[0]):
-                return df_user['tipo_usuario'].iloc[0]
+        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
+            return df_user['tipo_usuario'].iloc[0]
         return None
     except Exception as e:
         st.error(f"Error al consultar usuario: {e}")
         return None
 
-# --- C. ANIMACIÓN FUTURISTA DE APERTURA ---
-def animacion_apertura():
-    """Muestra una animación de cerradura circular (Iris Gate) abriéndose."""
-    placeholder = st.empty()
+# --- C. ESTILO VISUAL HUD AJUSTADO ---
+st.markdown("""
+<style>
+    .stApp { background-color: #050a10 !important; }
+    .block-container { padding: 0 !important; max-width: 100% !important; }
+    header, footer { visibility: hidden !important; }
     
-    # Definimos el HTML como un f-string limpio
-    # El height debe ser suficiente para que no salgan barras de desplazamiento
-    cerradura_html = """
-    <div id="iris-container">
-        <div class="iris-wing" style="--r:0deg"></div>
-        <div class="iris-wing" style="--r:60deg"></div>
-        <div class="iris-wing" style="--r:120deg"></div>
-        <div class="iris-wing" style="--r:180deg"></div>
-        <div class="iris-wing" style="--r:240deg"></div>
-        <div class="iris-wing" style="--r:300deg"></div>
-        <div class="scanner-line"></div>
-        <div class="access-text">SISTEMA SCADA: ACCESO CONCEDIDO</div>
-    </div>
-    <style>
-        #iris-container {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000;
-            display: flex; align-items: center; justify-content: center;
-            z-index: 9999; overflow: hidden;
-        }
-        .iris-wing {
-            position: absolute;
-            width: 150vw; height: 150vw;
-            background: linear-gradient(45deg, #001a1a, #00d4ff);
-            clip-path: polygon(50% 50%, 100% 0, 100% 100%);
-            transform: rotate(var(--r)) scale(1.1);
-            transition: transform 1.8s cubic-bezier(0.85, 0, 0.15, 1);
-            border: 2px solid #00f2ff;
-            opacity: 0.9;
-        }
-        .scanner-line {
-            position: absolute;
-            width: 100%; height: 3px;
-            background: #00f2ff;
-            box-shadow: 0 0 25px #00f2ff;
-            animation: scan 1.2s infinite alternate;
-        }
-        .access-text {
-            position: absolute;
-            color: #00f2ff;
-            font-family: 'Courier New', monospace;
-            font-size: 28px;
-            letter-spacing: 8px;
-            text-shadow: 0 0 15px #00f2ff;
-            animation: blink 0.6s infinite;
-            z-index: 10000;
-        }
-        .open .iris-wing {
-            transform: rotate(var(--r)) translate(120%, 120%) scale(2.5);
-            opacity: 0;
-        }
-        .open .access-text, .open .scanner-line { opacity: 0; transition: 0.5s; }
-        @keyframes scan { from { top: 10%; } to { top: 90%; } }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-    </style>
-    <script>
-        setTimeout(() => {
-            document.getElementById('iris-container').classList.add('open');
-        }, 800);
-    </script>
-    """
+    .visual-core { position: relative; width: 480px; height: 480px; margin: auto; }
+    .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
+    .r1 { width: 100%; height: 100%; border-top: 8px solid #00d4ff; border-bottom: 8px solid #00d4ff; --d: 4s; }
+    .r2 { width: 78%; height: 78%; top: 11%; left: 11%; border: 3px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
+    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+    .logo-miaa { width: 190px; filter: drop-shadow(0 0 15px #00d4ff); }
     
-    # IMPORTANTE: El argumento debe ser html=cerradura_html
-    placeholder.components.v1.html(html=cerradura_html, height=1000, scrolling=False)
-    time.sleep(3.0) 
-    placeholder.empty()
+    .login-box { 
+        background: rgba(0, 212, 255, 0.05); 
+        border-left: 8px solid #00d4ff; 
+        padding: 30px; 
+        margin-top: 50px;
+        max-width: 320px;
+        margin-left: 0;
+    }
+    
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
+    /* Estilo para el botón de formulario */
+    .stButton button, div[data-testid="stForm"] button { 
+        background: #00d4ff !important; 
+        color: #050a10 !important; 
+        font-weight: bold !important; 
+        width: 100%; 
+        height: 45px; 
+        border: none !important;
+    }
+    /* Eliminar borde por defecto del formulario de Streamlit para mantener estética HUD */
+    div[data-testid="stForm"] {
+        border: none !important;
+        padding: 0 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# --- D. INTERFAZ DE LOGIN Y FLUJO DE CARGA ---
+# --- D. LÓGICA DE INTERFAZ (COLUMNAS AJUSTADAS) ---
 if not st.session_state.autenticado:
-    # Estilo para el formulario de login futurista
-    st.markdown("""
-        <style>
-        div[data-testid="stForm"] {
-            border: 2px solid #00d4ff !important;
-            background-color: rgba(0, 10, 20, 0.8) !important;
-            border-radius: 15px;
-            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
-            padding: 30px;
-        }
-        .stTextInput input {
-            background-color: #050505 !important;
-            color: #00f2ff !important;
-            border: 1px solid #004455 !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    if not st.session_state.fase_carga:
-        with st.form("login_form"):
-            st.markdown("<h1 style='text-align:center; color:#00d4ff; font-size:24px;'>SISTEMA SCADA MIAA</h1>", unsafe_allow_html=True)
-            user = st.text_input("ID OPERADOR")
-            password = st.text_input("PASSWORD", type="password")
-            submit = st.form_submit_button("INICIAR SECUENCIA DE ACCESO")
-
-            if submit:
-                rol = verificar_credenciales(user, password)
-                if rol:
-                    st.session_state.temp_rol = rol
-                    st.session_state.fase_carga = True
-                    st.rerun()
-                else:
-                    st.error("ACCESO DENEGADO - CREDENCIALES INVÁLIDAS")
+    col_esp1, col_vis, col_log, col_esp2 = st.columns([0.1, 1.8, 2, 1.1])
     
-    else:
-        # FASE DE CARGA HUD (Se activa tras login exitoso)
-        st.markdown('<div style="padding: 20px; border: 1px solid #00d4ff; border-radius:10px;">', unsafe_allow_html=True)
-        st.markdown('<h2 style="color:#00d4ff; font-size:18px; font-family:monospace;">// CARGANDO MÓDULOS DEL SISTEMA...</h2>', unsafe_allow_html=True)
-        
-        prog = st.progress(0)
-        status = st.empty()
-        
-        tareas = [
-            ("Estableciendo enlace de datos", "get_mysql_telemetria_engine"),
-            ("Sincronizando sectores hidráulicos", "cargar_sectores_poligonos"),
-            ("Mapeando infraestructura de pozos", "cargar_mapa_pozos_desde_db"),
-            ("Validando telemetría de tanques", "cargar_tanques_desde_db"),
-            ("Iniciando módulos de rebombeo", "cargar_rebombeos_desde_db")
-        ]
-        
-        for i, (nombre, func) in enumerate(tareas):
-            status.markdown(f"<code style='color:#00f2ff;'>{nombre}... OK</code>", unsafe_allow_html=True)
-            if func in globals():
-                try:
-                    globals()[func]()
-                except Exception as e:
-                    st.warning(f"Error en {nombre}: {e}")
-            prog.progress((i + 1) / len(tareas))
-            time.sleep(0.5)
-        
-        # Al terminar la carga, mostrar animación de apertura
-        animacion_apertura()
-        
-        st.session_state.autenticado = True
-        st.session_state.rol = st.session_state.temp_rol
-        st.session_state.fase_carga = False
-        st.rerun()
+    with col_vis:
+        st.markdown('<div style="height: 12vh;"></div>', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="visual-core">
+            <div class="ring r1"></div><div class="ring r2"></div>
+            <div class="center-logo">
+                <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg" class="logo-miaa">
+                <h2 style="color:#00d4ff; font-family:Orbitron; font-size:18px; letter-spacing:5px; margin-top:10px;">SCADA</h2>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
 
+    with col_log:
+        st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+        
+        if not st.session_state.fase_carga:
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE CREDENCIALES</h2>', unsafe_allow_html=True)
+            
+            # Formulario para habilitar la tecla ENTER
+            with st.form("login_form", clear_on_submit=False):
+                u = st.text_input("USUARIO", key="u_login")
+                p = st.text_input("PASSWORD", type="password", key="p_login")
+                
+                submit_button = st.form_submit_button("ACCEDER AL SISTEMA")
+                
+                if submit_button:
+                    rol = verificar_credenciales(u, p)
+                    if rol:
+                        st.session_state.temp_rol = rol
+                        st.session_state.fase_carga = True
+                        st.rerun()
+                    else:
+                        st.error("❌ ACCESO DENEGADO")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        else:
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO SCADA...</h2>', unsafe_allow_html=True)
+            prog = st.progress(0)
+            status = st.empty()
+            
+            tareas = [
+                ("Conectando DB", "get_mysql_telemetria_engine"),
+                ("Sectores", "cargar_sectores_poligonos"),
+                ("Pozos", "cargar_mapa_pozos_desde_db"),
+                ("Tanques", "cargar_tanques_desde_db"),
+                ("Rebombeos", "cargar_rebombeos_desde_db")
+            ]
+            
+            for i, (nombre, func) in enumerate(tareas):
+                status.write(f"Cargando {nombre}...")
+                if func in globals():
+                    try:
+                        globals()[func]()
+                    except Exception as e:
+                        st.warning(f"Error en {nombre}: {e}")
+                prog.progress((i + 1) / len(tareas))
+                time.sleep(0.4)
+            
+            st.session_state.autenticado = True
+            st.session_state.rol = st.session_state.temp_rol
+            st.session_state.fase_carga = False
+            st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
     st.stop()
 # --- A PARTIR DE AQUÍ COMIENZA EL MAPA ---
 # Si el script llega a este punto, significa que ya pasó el login y el mapa se dibujará.
