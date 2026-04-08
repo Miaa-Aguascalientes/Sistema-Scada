@@ -25,7 +25,7 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# --- 2. TUS FUNCIONES DE MOTOR SQL ---
+# --- 2. TUS FUNCIONES DE MOTOR SQL (Mantenemos tus secretos) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -48,28 +48,28 @@ def verificar_credenciales(usuario_input, password_input):
     except: 
         return None
 
-# --- 3. CSS PARA EL DISEÑO DE LA IMAGEN (HUD AVANZADO) ---
+# --- 3. CSS PARA REPLICAR TU IMAGEN (HUD HUD ESTILO SCADA) ---
 HUD_STYLE = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
     .stApp { background: radial-gradient(circle, #0a192f 0%, #050a10 100%); }
     
-    .hud-main-container {
+    .hud-container {
         display: flex; align-items: center; justify-content: center;
         height: 85vh; font-family: 'Orbitron', sans-serif; gap: 60px;
     }
 
-    /* Anillos HUD animados */
+    /* Anillos HUD animados de tu imagen */
     .visual-hud { position: relative; width: 340px; height: 340px; }
     
     .ring-layer {
-        position: absolute; border-radius: 50%; border: 2px solid transparent;
+        position: absolute; border-radius: 50%; border: 3px solid transparent;
         animation: spin var(--speed) linear infinite;
     }
     
     .r-out { width: 100%; height: 100%; border-top: 6px solid #00d4ff; border-bottom: 6px solid #00d4ff; --speed: 4s; box-shadow: 0 0 25px rgba(0,212,255,0.4); }
     .r-mid { width: 80%; height: 80%; top: 10%; left: 10%; border: 2px dashed #00d4ff; --speed: 8s; animation-direction: reverse; opacity: 0.5; }
-    .r-in { width: 60%; height: 60%; top: 20%; left: 20%; border-left: 10px solid #00d4ff; --speed: 2s; opacity: 0.8; }
+    .r-in { width: 60%; height: 60%; top: 20%; left: 20%; border-left: 12px solid #00d4ff; --speed: 2.5s; opacity: 0.8; }
 
     .hud-logo {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -91,97 +91,97 @@ HUD_STYLE = """
     .stButton button { 
         background: #00d4ff !important; color: #050a10 !important; 
         font-weight: bold !important; border-radius: 0 !important; width: 100%;
-        box-shadow: 0 0 20px rgba(0,212,255,0.4);
+        box-shadow: 0 0 20px rgba(0,212,255,0.4); margin-top: 20px;
     }
 </style>
 """
 
-# --- 4. FLUJO DE CARGA BLINDADO ---
+# --- 4. FLUJO DE CARGA GARANTIZADO ---
 if not st.session_state.autenticado:
     st.markdown(HUD_STYLE, unsafe_allow_html=True)
     
-    # Estado intermedio para el "Running" de bases de datos
+    # Estado intermedio para el "Running" de las bases de datos
     if 'fase_carga' not in st.session_state:
         st.session_state.fase_carga = False
 
     placeholder = st.empty()
 
     if not st.session_state.fase_carga:
-        # PANTALLA A: LOGIN
+        # PANTALLA 1: INGRESO DE CREDENCIALES
         with placeholder.container():
             st.markdown(f"""
-                <div class="hud-main-container">
+                <div class="hud-container">
                     <div class="visual-hud">
                         <div class="ring-layer r-out"></div><div class="ring-layer r-mid"></div><div class="ring-layer r-in"></div>
                         <div class="hud-logo"><h1 style="font-size:38px; margin:0;">MIAA</h1><p style="font-size:11px; letter-spacing:4px;">SCADA_AUTH</p></div>
                     </div>
                     <div class="login-panel">
-                        <h2 style="color:#00d4ff; font-size:18px; margin-bottom:30px;">// SYSTEM ACCESS REQUIRED</h2>
+                        <h2 style="color:#00d4ff; font-size:18px; margin-bottom:30px;">// SYSTEM_ACCESS_LEVEL: 0</h2>
             """, unsafe_allow_html=True)
             
             u = st.text_input("IDENTIFIER", key="uid")
             p = st.text_input("PASSKEY", type="password", key="pwd")
             
-            if st.button("RUN INITIALIZATION"):
+            if st.button("EXECUTE SYSTEM RUN"):
                 rol = verificar_credenciales(u, p)
                 if rol:
                     st.session_state.fase_carga = True
                     st.session_state.temp_rol = rol
-                    st.rerun() # Pasamos a la pantalla de carga real
+                    st.rerun() # Pasamos a la fase de "Running" de bases de datos
                 else:
-                    st.error("ACCESS DENIED: Credenciales incorrectas")
+                    st.error("ACCESS_DENIED: Credenciales incorrectas")
             st.markdown("</div></div>", unsafe_allow_html=True)
     
     else:
-        # PANTALLA B: CARGA REAL (El "Running" de las bases de datos)
+        # PANTALLA 2: EL "RUNNING" DE BASES DE DATOS (Fuerza la precarga)
         with placeholder.container():
             st.markdown(HUD_STYLE, unsafe_allow_html=True)
             st.markdown(f"""
-                <div class="hud-main-container">
+                <div class="hud-container">
                     <div class="visual-hud">
                         <div class="ring-layer r-out"></div>
                         <div class="hud-logo"><h3>CARGANDO</h3></div>
                     </div>
                     <div class="login-panel">
-                        <h2 style="color:#00d4ff; font-size:16px; margin-bottom:20px;">// SINCRONIZANDO DATOS...</h2>
+                        <h2 style="color:#00d4ff; font-size:16px; margin-bottom:20px;">// SINCRONIZANDO CAPAS SCADA...</h2>
             """, unsafe_allow_html=True)
             
             log_status = st.empty()
             p_bar = st.progress(0)
             
-            # Ejecución secuencial para garantizar que no haya "fallas"
+            # Ejecución secuencial obligatoria de tus funciones de carga
             try:
-                # 1. Motor
-                log_status.markdown("<p style='color:#00d4ff;'>[OK] ENLACE MYSQL_TELEMETRIA...</p>", unsafe_allow_html=True)
+                # 1. Motor MySQL
+                log_status.markdown("<p style='color:#00d4ff;'>[1/5] VERIFYING TELEMETRIA ENGINE...</p>", unsafe_allow_html=True)
                 get_mysql_telemetria_engine()
                 p_bar.progress(20)
                 time.sleep(0.4)
                 
-                # 2. Polígonos (Crítico para las capas)
-                log_status.markdown("<p style='color:#00d4ff;'>[OK] CARGANDO 140 SECTORES (POSTGRES)...</p>", unsafe_allow_html=True)
+                # 2. Polígonos (Crítico para los 140 sectores)
+                log_status.markdown("<p style='color:#00d4ff;'>[2/5] LOADING 140 SECTOR POLYGONS...</p>", unsafe_allow_html=True)
                 cargar_sectores_poligonos()
                 p_bar.progress(40)
                 time.sleep(0.4)
                 
                 # 3. Pozos
-                log_status.markdown("<p style='color:#00d4ff;'>[OK] MAPEO DE POZOS AGUASCALIENTES...</p>", unsafe_allow_html=True)
+                log_status.markdown("<p style='color:#00d4ff;'>[3/5] MAPPING WATER WELLS (AGS)...</p>", unsafe_allow_html=True)
                 cargar_mapa_pozos_desde_db()
                 p_bar.progress(60)
                 time.sleep(0.4)
                 
                 # 4. Tanques
-                log_status.markdown("<p style='color:#00d4ff;'>[OK] TELEMETRÍA DE TANQUES...</p>", unsafe_allow_html=True)
+                log_status.markdown("<p style='color:#00d4ff;'>[4/5] SYNCING TANK TELEMETRY...</p>", unsafe_allow_html=True)
                 cargar_tanques_desde_db()
                 p_bar.progress(80)
                 time.sleep(0.4)
                 
                 # 5. Rebombeos
-                log_status.markdown("<p style='color:#00d4ff;'>[OK] ESTACIONES DE REBOMBEO...</p>", unsafe_allow_html=True)
+                log_status.markdown("<p style='color:#00d4ff;'>[5/5] CONNECTING PUMP STATIONS...</p>", unsafe_allow_html=True)
                 cargar_rebombeos_desde_db()
                 p_bar.progress(100)
                 time.sleep(0.6)
                 
-                # FINALIZACIÓN
+                # ACCESO CONCEDIDO
                 st.session_state.autenticado = True
                 st.session_state.rol = st.session_state.temp_rol
                 st.query_params["access"] = "granted"
@@ -190,7 +190,7 @@ if not st.session_state.autenticado:
                 
             except Exception as e:
                 st.error(f"Falla crítica en la precarga: {e}")
-                if st.button("REINTENTAR"):
+                if st.button("REBOOT STARTUP"):
                     st.session_state.fase_carga = False
                     st.rerun()
 
