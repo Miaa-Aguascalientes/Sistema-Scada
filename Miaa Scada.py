@@ -24,15 +24,16 @@ st.set_page_config(
 
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
-# 2. INICIALIZACIÓN DE SESIÓN (Para que no se borre al navegar)
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
-if 'rol' not in st.session_state:
-    st.session_state.rol = None
-if 'fase_carga' not in st.session_state:
-    st.session_state.fase_carga = False
+query_params = st.query_params
 
-# --- FUNCIONES DE BASE DE DATOS ---
+if 'autenticado' not in st.session_state:
+    if query_params.get("access") == "granted":
+        st.session_state.autenticado = True
+        st.session_state.rol = query_params.get("role", "usuario")
+    else:
+        st.session_state.autenticado = False
+
+# FUNCIONES DE BASE DE DATOS (Mantenemos las tuyas) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -41,20 +42,18 @@ def get_mysql_telemetria_engine():
         engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
         return engine
     except Exception as e:
+        st.error(f"Error de conexión: {e}")
         return None
 
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
-        if engine is None: return None
-        # OJO: Cambié el query para que sea seguro
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
+        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
             return df_user['tipo_usuario'].iloc[0]
         return None
-    except:
-        return None
+    except: return None
 
 # --- CSS (Mantenemos tu estilo exacto) ---
 st.markdown("""
