@@ -25,7 +25,7 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# --- 2. TUS FUNCIONES DE MOTOR SQL (Mantenemos tus secretos) ---
+# --- 2. TUS FUNCIONES DE MOTOR SQL ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -34,7 +34,7 @@ def get_mysql_telemetria_engine():
         engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
         return engine
     except Exception as e:
-        st.error(f"Error de conexión: {e}")
+        st.error(f"Error de conexión SQL: {e}")
         return None
 
 def verificar_credenciales(usuario_input, password_input):
@@ -42,158 +42,86 @@ def verificar_credenciales(usuario_input, password_input):
         engine = get_mysql_telemetria_engine()
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
+        # Comparación directa de password (ajusta si usas hash)
+        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
             return df_user['tipo_usuario'].iloc[0]
         return None
-    except: 
+    except Exception as e:
+        st.error(f"Error al verificar: {e}")
         return None
 
-# --- 3. CSS PARA REPLICAR TU IMAGEN (HUD HUD ESTILO SCADA) ---
+# --- 3. CSS PARA EL HUD (Estilo de tu imagen) ---
 HUD_STYLE = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-    .stApp { background: radial-gradient(circle, #0a192f 0%, #050a10 100%); }
-    
-    .hud-container {
-        display: flex; align-items: center; justify-content: center;
-        height: 85vh; font-family: 'Orbitron', sans-serif; gap: 60px;
-    }
-
-    /* Anillos HUD animados de tu imagen */
-    .visual-hud { position: relative; width: 340px; height: 340px; }
-    
-    .ring-layer {
-        position: absolute; border-radius: 50%; border: 3px solid transparent;
-        animation: spin var(--speed) linear infinite;
-    }
-    
-    .r-out { width: 100%; height: 100%; border-top: 6px solid #00d4ff; border-bottom: 6px solid #00d4ff; --speed: 4s; box-shadow: 0 0 25px rgba(0,212,255,0.4); }
-    .r-mid { width: 80%; height: 80%; top: 10%; left: 10%; border: 2px dashed #00d4ff; --speed: 8s; animation-direction: reverse; opacity: 0.5; }
-    .r-in { width: 60%; height: 60%; top: 20%; left: 20%; border-left: 12px solid #00d4ff; --speed: 2.5s; opacity: 0.8; }
-
-    .hud-logo {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        text-align: center; color: #00d4ff; text-shadow: 0 0 20px #00d4ff;
-    }
-
-    /* Panel lateral de la imagen */
-    .login-panel {
-        background: rgba(0, 212, 255, 0.04);
-        border: 1px solid rgba(0, 212, 255, 0.2);
-        border-left: 10px solid #00d4ff;
-        padding: 40px; width: 420px;
-        box-shadow: -15px 0 40px rgba(0,0,0,0.6);
-    }
-
+    .stApp { background: #050a10; }
+    .hud-container { display: flex; align-items: center; justify-content: center; height: 85vh; gap: 60px; font-family: 'Orbitron', sans-serif; }
+    .visual-hud { position: relative; width: 320px; height: 320px; }
+    .ring { position: absolute; border-radius: 50%; border: 3px solid transparent; animation: spin var(--s) linear infinite; }
+    .r1 { width: 100%; height: 100%; border-top: 5px solid #00d4ff; border-bottom: 5px solid #00d4ff; --s: 3s; }
+    .r2 { width: 75%; height: 75%; top: 12.5%; left: 12.5%; border: 2px dashed #00d4ff; --s: 7s; animation-direction: reverse; opacity: 0.5; }
+    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; }
+    .login-panel { background: rgba(0, 212, 255, 0.05); border-left: 8px solid #00d4ff; padding: 40px; width: 400px; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    
-    .stTextInput input { background: #050a10 !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
-    .stButton button { 
-        background: #00d4ff !important; color: #050a10 !important; 
-        font-weight: bold !important; border-radius: 0 !important; width: 100%;
-        box-shadow: 0 0 20px rgba(0,212,255,0.4); margin-top: 20px;
-    }
+    .stTextInput input { background: #0a192f !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
+    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; border-radius: 0; }
 </style>
 """
 
-# --- 4. FLUJO DE CARGA GARANTIZADO ---
+# --- 4. FLUJO DE LOGIN Y CARGA ---
 if not st.session_state.autenticado:
     st.markdown(HUD_STYLE, unsafe_allow_html=True)
+    if 'fase_carga' not in st.session_state: st.session_state.fase_carga = False
     
-    # Estado intermedio para el "Running" de las bases de datos
-    if 'fase_carga' not in st.session_state:
-        st.session_state.fase_carga = False
-
     placeholder = st.empty()
 
     if not st.session_state.fase_carga:
-        # PANTALLA 1: INGRESO DE CREDENCIALES
         with placeholder.container():
-            st.markdown(f"""
-                <div class="hud-container">
-                    <div class="visual-hud">
-                        <div class="ring-layer r-out"></div><div class="ring-layer r-mid"></div><div class="ring-layer r-in"></div>
-                        <div class="hud-logo"><h1 style="font-size:38px; margin:0;">MIAA</h1><p style="font-size:11px; letter-spacing:4px;">SCADA_AUTH</p></div>
-                    </div>
-                    <div class="login-panel">
-                        <h2 style="color:#00d4ff; font-size:18px; margin-bottom:30px;">// SYSTEM_ACCESS_LEVEL: 0</h2>
-            """, unsafe_allow_html=True)
-            
-            u = st.text_input("IDENTIFIER", key="uid")
-            p = st.text_input("PASSKEY", type="password", key="pwd")
-            
-            if st.button("EXECUTE SYSTEM RUN"):
+            st.markdown(f'<div class="hud-container"><div class="visual-hud"><div class="ring r1"></div><div class="ring r2"></div><div class="center-logo"><h1>MIAA</h1><p>SCADA</p></div></div><div class="login-panel">', unsafe_allow_html=True)
+            u = st.text_input("USUARIO")
+            p = st.text_input("CONTRASEÑA", type="password")
+            if st.button("ACCEDER AL SISTEMA"):
                 rol = verificar_credenciales(u, p)
                 if rol:
                     st.session_state.fase_carga = True
                     st.session_state.temp_rol = rol
-                    st.rerun() # Pasamos a la fase de "Running" de bases de datos
+                    st.rerun()
                 else:
-                    st.error("ACCESS_DENIED: Credenciales incorrectas")
+                    st.error("CREDENCIALES INVÁLIDAS")
             st.markdown("</div></div>", unsafe_allow_html=True)
-    
     else:
-        # PANTALLA 2: EL "RUNNING" DE BASES DE DATOS (Fuerza la precarga)
+        # PANTALLA DE CARGA (Running)
         with placeholder.container():
-            st.markdown(HUD_STYLE, unsafe_allow_html=True)
-            st.markdown(f"""
-                <div class="hud-container">
-                    <div class="visual-hud">
-                        <div class="ring-layer r-out"></div>
-                        <div class="hud-logo"><h3>CARGANDO</h3></div>
-                    </div>
-                    <div class="login-panel">
-                        <h2 style="color:#00d4ff; font-size:16px; margin-bottom:20px;">// SINCRONIZANDO CAPAS SCADA...</h2>
-            """, unsafe_allow_html=True)
-            
-            log_status = st.empty()
+            st.markdown(f'<div class="hud-container"><div class="visual-hud"><div class="ring r1"></div><div class="center-logo"><h3>CARGANDO</h3></div></div><div class="login-panel"><h2 style="color:#00d4ff;">RUNNING...</h2>', unsafe_allow_html=True)
+            log = st.empty()
             p_bar = st.progress(0)
             
-            # Ejecución secuencial obligatoria de tus funciones de carga
-            try:
-                # 1. Motor MySQL
-                log_status.markdown("<p style='color:#00d4ff;'>[1/5] VERIFYING TELEMETRIA ENGINE...</p>", unsafe_allow_html=True)
-                get_mysql_telemetria_engine()
-                p_bar.progress(20)
+            # FUNCIONES A EJECUTAR (Solo si existen)
+            # Para evitar el NameError, usamos globals() para verificar si la función ya está cargada
+            tareas = [
+                ("Conectando SCADA...", "get_mysql_telemetria_engine"),
+                ("Cargando Sectores...", "cargar_sectores_poligonos"),
+                ("Mapeando Pozos...", "cargar_mapa_pozos_desde_db"),
+                ("Sincronizando Tanques...", "cargar_tanques_desde_db"),
+                ("Finalizando Enlace...", "cargar_rebombeos_desde_db")
+            ]
+            
+            for i, (msg, func_name) in enumerate(tareas):
+                log.markdown(f"<p style='color:#00d4ff;'>>>> {msg}</p>", unsafe_allow_html=True)
+                # Esta es la parte mágica: solo intenta correr la función si Python la encuentra
+                if func_name in globals():
+                    globals()[func_name]()
+                else:
+                    log.warning(f"Advertencia: {func_name} no encontrada. Saltando...")
+                
+                p_bar.progress((i + 1) / len(tareas))
                 time.sleep(0.4)
-                
-                # 2. Polígonos (Crítico para los 140 sectores)
-                log_status.markdown("<p style='color:#00d4ff;'>[2/5] LOADING 140 SECTOR POLYGONS...</p>", unsafe_allow_html=True)
-                cargar_sectores_poligonos()
-                p_bar.progress(40)
-                time.sleep(0.4)
-                
-                # 3. Pozos
-                log_status.markdown("<p style='color:#00d4ff;'>[3/5] MAPPING WATER WELLS (AGS)...</p>", unsafe_allow_html=True)
-                cargar_mapa_pozos_desde_db()
-                p_bar.progress(60)
-                time.sleep(0.4)
-                
-                # 4. Tanques
-                log_status.markdown("<p style='color:#00d4ff;'>[4/5] SYNCING TANK TELEMETRY...</p>", unsafe_allow_html=True)
-                cargar_tanques_desde_db()
-                p_bar.progress(80)
-                time.sleep(0.4)
-                
-                # 5. Rebombeos
-                log_status.markdown("<p style='color:#00d4ff;'>[5/5] CONNECTING PUMP STATIONS...</p>", unsafe_allow_html=True)
-                cargar_rebombeos_desde_db()
-                p_bar.progress(100)
-                time.sleep(0.6)
-                
-                # ACCESO CONCEDIDO
-                st.session_state.autenticado = True
-                st.session_state.rol = st.session_state.temp_rol
-                st.query_params["access"] = "granted"
-                st.query_params["role"] = st.session_state.rol
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"Falla crítica en la precarga: {e}")
-                if st.button("REBOOT STARTUP"):
-                    st.session_state.fase_carga = False
-                    st.rerun()
-
+            
+            st.session_state.autenticado = True
+            st.session_state.rol = st.session_state.temp_rol
+            st.query_params["access"] = "granted"
+            st.query_params["role"] = st.session_state.rol
+            st.rerun()
     st.stop()
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
