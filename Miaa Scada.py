@@ -15,11 +15,13 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-# 1. DETECCIÓN DE ACCESO (URL O SESIÓN)
+
+
+# 1. DETECCIÓN AUTOMÁTICA DE PERMISO (Para que sectores y tanques entren directo)
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
-    # Si la URL ya tiene el permiso (como al abrir un sector), saltamos el login
+    # Si la URL ya trae "?access=granted", el sistema NO pide contraseña
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
@@ -42,70 +44,53 @@ def verificar_credenciales(usuario_input, password_input):
         engine = get_mysql_telemetria_engine()
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        if not df_user.empty:
-           if password_input == str(df_user['password'].iloc[0]):
-               return df_user['tipo_usuario'].iloc[0]
+        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
+            return df_user['tipo_usuario'].iloc[0]
         return None
     except: return None
 
-# 2. INTERFAZ DE LOGIN Y LOADING FUTURISTA
+# 2. BLOQUE DE LOGIN Y EFECTO FUTURISTA
 if not st.session_state.autenticado:
     placeholder = st.empty()
-    
     with placeholder.container():
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 ACCESO SCADA MIAA</h2>", unsafe_allow_html=True)
-            u = st.text_input("Usuario", key="u_main")
-            p = st.text_input("Contraseña", type="password", key="p_main")
+            st.markdown("<br><br><h2 style='text-align: center; color: #00d4ff;'>🔐 SCADA MIAA</h2>", unsafe_allow_html=True)
+            u = st.text_input("Usuario", key="login_u")
+            p = st.text_input("Contraseña", type="password", key="login_p")
             
             if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
                 rol = verificar_credenciales(u, p)
                 if rol:
-                    # Guardamos permiso en URL ANTES del efecto visual
+                    # Inyectamos el permiso en la URL actual
                     st.query_params["access"] = "granted"
                     st.query_params["role"] = rol
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
                     
-                    # --- INICIO DEL LOADING FUTURISTA ---
+                    # --- INTRO FUTURISTA ---
                     placeholder.empty()
                     with placeholder.container():
                         st.markdown(f"""
-                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; background-color: #0e1117;">
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
                                 <div class="loader"></div>
-                                <h2 style="color: #00d4ff; font-family: 'Courier New', Courier, monospace; margin-top: 25px;" class="blink_me">
-                                    ESTABLECIENDO ENLACE SCADA...
-                                </h2>
-                                <p style="color: #1f4068; font-family: monospace; letter-spacing: 2px;">AUTORIZACIÓN: {rol.upper()}</p>
-                                <div style="width: 300px; height: 2px; background: #1f4068; margin-top: 15px; border-radius: 5px; overflow: hidden;">
-                                    <div style="width: 100%; height: 100%; background: #00d4ff; animation: load 2s ease-in-out;"></div>
-                                </div>
+                                <h2 style="color: #00d4ff; font-family: monospace; margin-top: 20px;" class="blink_me">ENLACE ESTABLECIDO</h2>
+                                <p style="color: #444; font-family: monospace;">Sincronizando Nodo: {u.upper()}</p>
                             </div>
                             <style>
                                 .loader {{
-                                    border: 4px solid #0b1a29; border-top: 4px solid #00d4ff; border-right: 4px solid #00d4ff;
-                                    border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite;
-                                    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+                                    border: 4px solid #0b1a29; border-top: 4px solid #00d4ff;
+                                    border-radius: 50%; width: 70px; height: 70px; animation: spin 1s linear infinite;
+                                    box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
                                 }}
                                 @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                @keyframes load {{ 0% {{ width: 0%; }} 100% {{ width: 100%; }} }}
-                                @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
-                                .blink_me {{ animation: blink 1.2s infinite; }}
+                                .blink_me {{ animation: opacity 1s infinite; }}
                             </style>
                         """, unsafe_allow_html=True)
-                        
-                        time.sleep(1.0)
-                        st.toast("Cargando Infraestructura MIAA...")
-                        time.sleep(0.8)
-                        st.toast("Sincronizando Telemetría...")
-                        time.sleep(0.7)
-                    # --- FIN DEL LOADING ---
-                    
+                        time.sleep(2.0)
                     st.rerun()
                 else:
-                    st.error("Credenciales no válidas")
+                    st.error("Acceso denegado")
     st.stop()
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
