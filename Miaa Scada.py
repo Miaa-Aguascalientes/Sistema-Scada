@@ -126,7 +126,10 @@ if not st.session_state.autenticado:
             st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE CREDENCIALES</h2>', unsafe_allow_html=True)
             u = st.text_input("USUARIO", key="u_login")
             p = st.text_input("PASSWORD", type="password", key="p_login")
-            if st.button("ACCEDER AL SISTEMA"):
+            
+            submit_button = st.form_submit_button("ACCEDER AL SISTEMA")
+            
+            if st.button:
                 rol = verificar_credenciales(u, p)
                 if rol:
                     st.session_state.temp_rol = rol
