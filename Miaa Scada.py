@@ -13,6 +13,7 @@ import hashlib
 import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
+
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
 # DETECCIÓN DE ACCESO (Para que los 140 sectores entren directo)
@@ -115,7 +116,6 @@ if not st.session_state.autenticado:
                 else:
                     st.error("Credenciales Incorrectas")
     st.stop()
-    
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
@@ -132,89 +132,9 @@ st.set_page_config(
     layout="wide", 
     initial_sidebar_state="expanded"
 )
-
-# --- ESTO ES LO QUE SOLUCIONA LA DESAPARICIÓN DE CAPAS ---
-# Inicializamos los contenedores de datos en la memoria de la sesión
-if 'capas_cargadas' not in st.session_state:
-    st.session_state.capas_cargadas = False
-    st.session_state.geo_sectores = []
-    st.session_state.datos_pozos = []
-    st.session_state.datos_tanques = []
-    st.session_state.datos_rebombeos = []
-
-# Autorefresh (5 minutos)
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
 
-# Función que carga todo UNA SOLA VEZ
-def inicializar_datos_estaticos():
-    # Solo entra aquí si las capas no han sido cargadas previamente
-    if not st.session_state.capas_cargadas:
-        with st.spinner("Cargando infraestructura de agua..."):
-            # 1. Cargar Polígonos de Sectores (Postgres)
-            try:
-                conn = psycopg2.connect(**st.secrets["postgres"])
-                # Importante: ST_AsGeoJSON convierte la geometría para que Folium la entienda directo
-                query_sec = 'SELECT sector, ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo FROM "Sectorizacion"."Sectores_hidr"'
-                st.session_state.geo_sectores = pd.read_sql(query_sec, conn).to_dict('records')
-                conn.close()
-            except Exception as e:
-                st.warning(f"Sectores no disponibles: {e}")
-
-            # 2. Cargar Diccionarios de infraestructura (MySQL)
-            try:
-                engine = get_mysql_telemetria_engine() # Asegúrate que esta función esté definida en la Sec 0 o antes
-                st.session_state.datos_pozos = pd.read_sql("SELECT * FROM Diccionario_de_pozos", engine).to_dict('records')
-                st.session_state.datos_tanques = pd.read_sql("SELECT * FROM Diccionario_de_tanques", engine).to_dict('records')
-                st.session_state.datos_rebombeos = pd.read_sql("SELECT * FROM Diccionario_de_rebombeos", engine).to_dict('records')
-                
-                # Marcamos como cargado para que no lo vuelva a hacer en el próximo refresh
-                st.session_state.capas_cargadas = True
-            except Exception as e:
-                st.error(f"Error cargando bases de datos: {e}")
-
-# Llamamos a la carga de datos
-inicializar_datos_estaticos()
-
 # 2  SECCION------------------------------------------------------------------------------2. FUNCIONES DE CONEXIÓN ------------------------------------------------------------------------------------------------------
-
-@st.cache_resource
-def get_mysql_engine(key):
-    try:
-        c = st.secrets[key]
-        pwd = urllib.parse.quote_plus(c["password"])
-        return create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-    except: return None
-
-def inicializar_datos_infraestructura():
-    """Carga los datos una sola vez en la sesión para evitar que desaparezcan"""
-    if not st.session_state.capas_cargadas:
-        with st.spinner("Sincronizando Infraestructura MIAA..."):
-            # 1. Sectores (PostgreSQL)
-            try:
-                conn = psycopg2.connect(**st.secrets["postgres"])
-                query = 'SELECT sector, ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo FROM "Sectorizacion"."Sectores_hidr"'
-                st.session_state.geo_sectores = pd.read_sql(query, conn).to_dict('records')
-                conn.close()
-            except: pass
-
-            # 2. Diccionarios (MySQL Telemetría)
-            engine = get_mysql_engine("mysql_telemetria")
-            if engine:
-                try:
-                    p = pd.read_sql("SELECT * FROM Diccionario_de_pozos", engine)
-                    st.session_state.dic_pozos = {row['Pozos']: row.to_dict() for _, row in p.iterrows()}
-                    t = pd.read_sql("SELECT * FROM Diccionario_de_tanques", engine)
-                    st.session_state.dic_tanques = {row['TQ']: row.to_dict() for _, row in t.iterrows()}
-                    r = pd.read_sql("SELECT * FROM Diccionario_de_rebombeos", engine)
-                    st.session_state.dic_rebombeos = {row['Rebombeo']: row.to_dict() for _, row in r.iterrows()}
-                    st.session_state.capas_cargadas = True
-                except: pass
-
-inicializar_datos_infraestructura()
-
-
-
-
 @st.cache_resource
 def get_mysql_scada_engine():
     try:
@@ -549,17 +469,6 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-
-
-        .main { background-color: #000000; }
-        .stApp { background-color: #000000; }
-        [data-testid="stSidebar"] { background-color: #050505; border-right: 1px solid #1f1f1f; }
-        h2 { color: #00d4ff; font-family: 'Courier New', monospace; text-shadow: 2px 2px #000; }
-        
-        
-        
-        
-        
         /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
@@ -681,33 +590,7 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
-
-st.markdown("<h2 style='text-align: center;'>MIAA - MONITOR DE INFRAESTRUCTURA</h2>", unsafe_allow_html=True)
-
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
-
-def obtener_datos_scada():
-    engine = get_mysql_engine("mysql_scada")
-    if not engine: return {}
-    
-    # Recolectar todos los tags necesarios de los diccionarios en sesión
-    tags = []
-    for p in st.session_state.dic_pozos.values():
-        tags.extend([p.get('bomba'), p.get('caudal'), p.get('presion')])
-    for r in st.session_state.dic_rebombeos.values():
-        tags.extend([r.get('presion'), r.get('nivel_tanque')])
-    
-    tags_limpios = list(set([str(t).strip() for t in tags if t and str(t) not in ['0', 'None', 'Sin telemetria']]))
-    
-    try:
-        tags_str = "', '".join(tags_limpios)
-        query = f"SELECT r.NAME, h.VALUE, h.FECHA FROM VfiTagNumHistory_Ultimo h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_str}')"
-        df = pd.read_sql(query, engine)
-        return {row['NAME']: (row['VALUE'], row['FECHA']) for _, row in df.iterrows()}
-    except: return {}
-
-data_scada = obtener_datos_scada()
-
 
 # 1. Carga de datos base
 sectores = cargar_sectores_poligonos()
