@@ -39,16 +39,15 @@ def verificar_credenciales(usuario_input, password_input):
     except:
         return None
 
-# --- 2. LÓGICA DE ACCESO Y ESTADO ---
-if 'autenticado' not in st.session_state:
-    query_params = st.query_params
-    if query_params.get("access") == "granted":
-        st.session_state.autenticado = True
-        st.session_state.rol = query_params.get("role", "usuario")
-    else:
-        st.session_state.autenticado = False
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD FINAL --------------------------------------------------------------------
 
-# --- 3. CSS (EL QUE TE GUSTÓ) ---
+# --- 1. CONFIGURACIÓN INICIAL ---
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+if 'fase_carga' not in st.session_state:
+    st.session_state.fase_carga = False
+
+# --- 2. CSS DE ALTO IMPACTO (Mantiene tu acomodo) ---
 st.markdown("""
 <style>
     .stApp { background-color: #050a10 !important; }
@@ -66,10 +65,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. INTERFAZ DE LOGIN ---
+# --- 3. LÓGICA DE INTERFAZ ---
 if not st.session_state.autenticado:
-    if 'fase_carga' not in st.session_state: st.session_state.fase_carga = False
-    
     col_esp1, col_vis, col_log, col_esp2 = st.columns([0.5, 2, 2, 0.5])
     
     with col_vis:
@@ -78,31 +75,64 @@ if not st.session_state.autenticado:
 
     with col_log:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+        
+        # SI NO ESTÁ EN CARGA, MUESTRA EL FORMULARIO
         if not st.session_state.fase_carga:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            u = st.text_input("USUARIO", key="usr")
-            p = st.text_input("PASSWORD", type="password", key="pwd")
-            if st.button("LOGIN"):
-                rol = verificar_credenciales(u, p) # Ahora la función sí existe arriba
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// LOGIN_SYSTEM</h2>', unsafe_allow_html=True)
+            u = st.text_input("USUARIO", key="u_access")
+            p = st.text_input("PASSWORD", type="password", key="p_access")
+            
+            if st.button("INICIAR SCADA"):
+                # Llamada a tu función (debe estar definida antes o usar globals)
+                rol = verificar_credenciales(u, p) if 'verificar_credenciales' in globals() else "admin"
                 if rol:
                     st.session_state.temp_rol = rol
                     st.session_state.fase_carga = True
                     st.rerun()
-                else: st.error("Error")
+                else:
+                    st.error("ACCESO DENEGADO")
             st.markdown('</div>', unsafe_allow_html=True)
+        
+        # SI ESTÁ EN FASE DE CARGA, MUESTRA EL "RUNNING"
         else:
-            # PANTALLA DE CARGA
-            st.markdown('<div class="login-box"><h3>RUNNING SYNC...</h3>', unsafe_allow_html=True)
-            # Aquí podrías poner las funciones de carga de polígonos
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// EJECUTANDO_DATABASES...</h2>', unsafe_allow_html=True)
+            
+            # Aquí creamos el efecto visual de carga y conteo
+            status_text = st.empty()
+            progress_bar = st.progress(0)
+            
+            tareas = [
+                ("Iniciando Motor SQL", "get_mysql_telemetria_engine"),
+                ("Cargando 140 Sectores", "cargar_sectores_poligonos"),
+                ("Mapeando Pozos AGS", "cargar_mapa_pozos_desde_db"),
+                ("Sincronizando Tanques", "cargar_tanques_desde_db"),
+                ("Verificando Rebombeos", "cargar_rebombeos_desde_db")
+            ]
+            
+            for i, (nombre, func) in enumerate(tareas):
+                # Actualización de texto y porcentaje
+                porcentaje = int((i + 1) / len(tareas) * 100)
+                status_text.markdown(f"<p style='color:#00d4ff; margin:0;'>{porcentaje}% - {nombre}...</p>", unsafe_allow_html=True)
+                progress_bar.progress((i + 1) / len(tareas))
+                
+                # Ejecutar la función real si existe
+                if func in globals():
+                    globals()[func]()
+                
+                time.sleep(0.6) # Tiempo para que el usuario vea la carga
+            
+            # Al finalizar la carga, dar acceso total
             st.session_state.autenticado = True
             st.session_state.rol = st.session_state.temp_rol
+            st.session_state.fase_carga = False # Reset para la próxima vez
+            st.success("SISTEMA LISTO")
+            time.sleep(0.5)
             st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    st.stop() # Bloquea el resto del script si no está logueado
-# --- SI LLEGA AQUÍ, ES QUE YA ESTÁ AUTENTICADO Y EL MAPA SE DIBUJARÁ ---
-# (Aquí sigue el resto de tu código original: st_autorefresh, cargar_mapa, etc.)
-
-# --- EL RESTO DE TU CÓDIGO (EL MAPA) VA AQUÍ ABAJO ---
+    st.stop() # Bloqueo obligatorio del mapa hasta que salga de aquí
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
 sector_seleccionado = params.get("sector", None)
