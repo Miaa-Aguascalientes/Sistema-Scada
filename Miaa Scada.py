@@ -684,33 +684,53 @@ if sector_seleccionado:
     
     datos_s = next((s for s in sectores if s['sector'] == sector_seleccionado), None)
     
-    if datos_s:
-        st.markdown("""
-            <style>
-                .block-container { padding-top: 3.5rem !important; }
-                .micro-card {
-                    background: #0b1a29; border: 1px solid #1f4068;
-                    border-radius: 5px; padding: 8px; text-align: center;
-                    margin-top: -10px; margin-bottom: 5px;
-                }
-                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
-                .micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }
-                hr { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
-            </style>
-        """, unsafe_allow_html=True)
+# --- DENTRO DE: if sector_seleccionado: ---
+if datos_s:
+    st.markdown("""
+        <style>
+            /* Ajuste específico para que las métricas respiren y no se oculten */
+            .block-container { 
+                padding-top: 5rem !important; 
+                margin-top: 0px !important; 
+            }
+            
+            .metrics-container {
+                position: relative;
+                z-index: 9999;
+                background: #000000;
+                padding-bottom: 20px;
+            }
 
-        def micro_metric(label, value):
-            st.markdown(f'<div class="micro-card"><div class="micro-label">{label}</div><div class="micro-value">{value}</div></div>', unsafe_allow_html=True)
+            .micro-card {
+                background: #0b1a29; 
+                border: 1px solid #1f4068;
+                border-radius: 5px; 
+                padding: 10px; 
+                text-align: center;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            }
+            .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+            .micro-value { color: #00d4ff; font-size: 16px; font-weight: bold; }
+            
+            /* Evitamos que el iframe del mapa suba sobre las métricas en esta vista */
+            .stApp3 iframe {
+                margin-top: 10px !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
-        with c1: micro_metric("Población", f"{datos_s.get('Poblacion', 0):,.0f}")
-        with c2: micro_metric("U. Totales", f"{datos_s.get('U_Tot', 0):,.0f}")
-        with c3: micro_metric("U. Domésticos", f"{datos_s.get('U_Domesticos', 0):,.0f}")
-        with c4: micro_metric("Consumo m³", f"{datos_s.get('Cons_m3', 0):,.1f}")
-        with c5: micro_metric("Dotación", f"{datos_s.get('Dotacion', 0):,.1f}")
-        with c6: micro_metric("Balance", f"{datos_s.get('Balance_Estimado', 0):,.1f}%")
-
-        st.divider()
+    # Envolvemos las métricas en un div para control de capas
+    st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
+    
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
+    with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
+    with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
         # --- MAPA DEL SECTOR ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
