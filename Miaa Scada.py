@@ -1050,50 +1050,51 @@ def get_sector_style(feature, visible):
         'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
     }
 
-# 1. Cargamos los datos usando tu función con caché
+# 1. Cargamos los datos con tu función de caché
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
-    # Creamos un FeatureGroup para controlar la capa completa
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", z_index=1)
     
     for s in sectores_data:
         try:
-            # Validamos que el GeoJSON exista
-            if not s.get('geo'):
-                continue
+            if not s.get('geo'): continue
             
             nombre_sec = s['sector']
-            # Convertimos el string de ST_AsGeoJSON a un diccionario de Python
             geo_dict = json.loads(s['geo'])
             
-            # 2. Preparamos el HTML del Popup con tus nuevos campos numéricos
-            # Usamos .get(campo, 0) para evitar errores si hay nulos en Postgres
+            # 2. Reconstrucción del enlace de acceso (Botón)
+            # Usamos quote para manejar espacios o caracteres especiales en el nombre del sector
+            sector_encoded = urllib.parse.quote(nombre_sec)
+            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.rol}"
+            
+            # 3. Popup con diseño y botón restaurado
             html_popup = f"""
-            <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff;">
-                <h4 style="margin:0; color:#00d4ff; border-bottom:1px solid #333;">{nombre_sec}</h4>
-                <table style="width:100%; font-size: 11px; margin-top: 5px; border-collapse: collapse;">
+            <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
+                <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
+                <table style="width:100%; font-size: 11px; margin-bottom: 10px; border-collapse: collapse;">
                     <tr><td><b>Población:</b></td><td style="text-align:right;">{s.get('Poblacion', 0):,.0f}</td></tr>
                     <tr><td><b>Pozos:</b></td><td style="text-align:right;">{s.get('Pozos_Sector', 0)}</td></tr>
-                    <tr><td><b>Consumo m3:</b></td><td style="text-align:right;">{s.get('Cons_m3', 0):,.1f}</td></tr>
-                    <tr><td><b>Fugas Totales:</b></td><td style="text-align:right; color:#ff4b4b;">{s.get('Fugas_Tot', 0)}</td></tr>
-                    <tr><td><b>Recaudación:</b></td><td style="text-align:right; color:#00ff00;">${s.get('Recaudacion', 0):,.2f}</td></tr>
+                    <tr><td><b>Fugas:</b></td><td style="text-align:right; color:#ff4b4b;">{s.get('Fugas_Tot', 0)}</td></tr>
                 </table>
-                <hr style="border:0.5px solid #333;">
-                <p style="font-size:10px; margin:0; opacity:0.8;">Dotación: {s.get('Dotacion', 0)} L/hab/día</p>
+                
+                <a href="{url_acceso}" target="_blank" 
+                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
+                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
+                          border-radius: 5px; transition: 0.3s;">
+                   🚀 ABRIR SECTOR
+                </a>
             </div>
             """
 
-            # 3. Estilo Lógico: Si ver_sectores es False, no borramos el objeto,
-            # solo lo hacemos transparente. Esto evita que el mapa "parpadee".
+            # 4. Lógica de visibilidad (Siempre presentes en el código)
             estilo = {
                 'fillColor': '#00d4ff',
                 'color': '#00d4ff' if ver_sectores else 'transparent',
                 'weight': 1.5 if ver_sectores else 0,
-                'fillOpacity': 0.12 if ver_sectores else 0.0001 # Casi cero pero presente
+                'fillOpacity': 0.12 if ver_sectores else 0.0001 # Invisible pero "clicable"
             }
 
-            # 4. Añadimos el objeto al grupo
             folium.GeoJson(
                 geo_dict,
                 style_function=lambda x, stl=estilo: stl,
@@ -1104,14 +1105,12 @@ if sectores_data:
                     'fillOpacity': 0.4
                 },
                 tooltip=f"Sector: {nombre_sec}",
-                popup=folium.Popup(html_popup, max_width=250)
+                popup=folium.Popup(html_popup, max_width=260)
             ).add_to(fg_sectores)
 
         except Exception:
-            # Si un sector falla (JSON corrupto), saltamos al siguiente
             continue
 
-    # 5. Agregamos todo el grupo al mapa de una sola vez
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
