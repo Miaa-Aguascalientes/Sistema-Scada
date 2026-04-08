@@ -17,25 +17,20 @@ import urllib.parse
 
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-import time
-import urllib.parse
-from sqlalchemy import create_engine
-import pandas as pd
-import streamlit as st
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-# 1. FUNCIÓN PARA EL MOTOR DE BASE DE DATOS
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
         c = st.secrets["mysql_telemetria"]
         pwd = urllib.parse.quote_plus(c["password"])
         engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        with engine.connect() as conn: pass 
         return engine
     except Exception as e:
         st.error(f"Error de conexión: {e}")
         return None
 
-# 2. VERIFICACIÓN DE CREDENCIALES
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
@@ -48,69 +43,42 @@ def verificar_credenciales(usuario_input, password_input):
         return None
     except: return None
 
-# 3. INTERFAZ DE LOGIN CON PERSISTENCIA TOTAL
 def login_miaa():
-    # REVISAR SI YA HAY ACCESO EN LA URL (Para nuevas pestañas/sectores)
-    parametros = st.query_params
+    # 1. Recuperar parámetros de la URL
+    params = st.query_params
     
+    # 2. Inicializar estado si no existe
     if 'autenticado' not in st.session_state:
-        if parametros.get("access") == "granted":
+        # Intentar auto-login si la URL trae el permiso
+        if params.get("access") == "granted":
             st.session_state.autenticado = True
-            st.session_state.rol = parametros.get("role", "usuario")
-            st.session_state.usuario = parametros.get("user", "desconocido")
+            st.session_state.rol = params.get("role", "usuario")
         else:
             st.session_state.autenticado = False
+            st.session_state.rol = None
 
-    # SI NO ESTÁ AUTENTICADO, MOSTRAR LOGIN
+    # 3. Si NO está autenticado, mostrar formulario
     if not st.session_state.autenticado:
-        placeholder = st.empty()
-        with placeholder.container():
-            col1, col2, col3 = st.columns([1, 1.5, 1])
-            with col2:
-                st.markdown("<br><br><h2 style='text-align: center; color: #00d4ff;'>🔐 SISTEMA SCADA MIAA</h2>", unsafe_allow_html=True)
-                u = st.text_input("Usuario", key="u_main")
-                p = st.text_input("Contraseña", type="password", key="p_main")
-                
-                if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
-                    rol = verificar_credenciales(u, p)
-                    if rol:
-                        # Guardar en la sesión local
-                        st.session_state.autenticado = True
-                        st.session_state.rol = rol
-                        st.session_state.usuario = u
-                        
-                        # GUARDAR EN LA URL (Esto es lo que evita que pida login en otras pestañas)
-                        st.query_params["access"] = "granted"
-                        st.query_params["role"] = rol
-                        st.query_params["user"] = u
-                        
-                        # --- INTRO FUTURISTA ---
-                        placeholder.empty()
-                        with placeholder.container():
-                            st.markdown(f"""
-                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
-                                    <div class="loader"></div>
-                                    <h2 style="color: #00d4ff; font-family: monospace;" class="blink_me">ACCESO CONCEDIDO</h2>
-                                    <p style="color: #444; font-family: monospace;">CARGANDO INTERFAZ SCADA...</p>
-                                </div>
-                                <style>
-                                    .loader {{
-                                        border: 4px solid #0b1a29; border-top: 4px solid #00d4ff;
-                                        border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;
-                                        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
-                                    }}
-                                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                    @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
-                                    .blink_me {{ animation: blink 1s infinite; }}
-                                </style>
-                            """, unsafe_allow_html=True)
-                            time.sleep(1.8)
-                        st.rerun()
-                    else:
-                        st.error("Credenciales incorrectas")
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            st.markdown("<h2 style='text-align: center; color: #00d4ff;'>🔐 SISTEMA SCADA MIAA</h2>", unsafe_allow_html=True)
+            user = st.text_input("Usuario", key="user_login")
+            password = st.text_input("Contraseña", type="password", key="pass_login")
+            
+            if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
+                rol = verificar_credenciales(user, password)
+                if rol:
+                    st.session_state.autenticado = True
+                    st.session_state.rol = rol
+                    # Inyectar el permiso en la URL para que persista al abrir sectores
+                    st.query_params["access"] = "granted"
+                    st.query_params["role"] = rol
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
         st.stop()
 
-# EJECUCIÓN
+# EJECUCIÓN DEL LOGIN
 login_miaa()
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
