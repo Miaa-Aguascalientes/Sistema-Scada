@@ -27,84 +27,9 @@ st.set_page_config(
 # --- A. LÓGICA DE PERSISTENCIA Y PARÁMETROS URL ---
 query_params = st.query_params
 
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
-
-# --- A. INICIALIZACIÓN DE ESTADOS ---
-if 'autenticado' not in st.session_state:
-    query_params = st.query_params
-    if query_params.get("access") == "granted":
-        st.session_state.autenticado = True
-        st.session_state.rol = query_params.get("role", "usuario")
-    else:
-        st.session_state.autenticado = False
-
-if 'fase_carga' not in st.session_state:
-    st.session_state.fase_carga = False
-
-# --- B. FUNCIONES DE BASE DE DATOS (REFORZADAS) ---
-@st.cache_resource
-def get_mysql_telemetria_engine():
-    try:
-        c = st.secrets["mysql_telemetria"]
-        pwd = urllib.parse.quote_plus(c["password"])
-        # pool_pre_ping=True es vital para evitar que el mapa se quede en blanco por conexión muerta
-        engine = create_engine(
-            f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}",
-            pool_recycle=3600,
-            pool_pre_ping=True
-        )
-        return engine
-    except Exception as e:
-        st.error(f"⚠️ ERROR CRÍTICO DE CONEXIÓN: {e}")
-        return None
-
-def verificar_credenciales(usuario_input, password_input):
-    try:
-        engine = get_mysql_telemetria_engine()
-        if engine is None: return None
-        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
-        df_user = pd.read_sql(query, engine)
-        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
-            return df_user['tipo_usuario'].iloc[0]
-        return None
-    except Exception as e:
-        st.error(f"Error al consultar usuario: {e}")
-        return None
-
-# --- C. ESTILO VISUAL HUD AJUSTADO ---
-st.markdown("""
-<style>
-    .stApp { background-color: #050a10 !important; }
-    .block-container { padding: 0 !important; max-width: 100% !important; }
-    header, footer { visibility: hidden !important; }
-    
-    .visual-core { position: relative; width: 480px; height: 480px; margin: auto; }
-    .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
-    .r1 { width: 100%; height: 100%; border-top: 8px solid #00d4ff; border-bottom: 8px solid #00d4ff; --d: 4s; }
-    .r2 { width: 78%; height: 78%; top: 11%; left: 11%; border: 3px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
-    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
-    .logo-miaa { width: 190px; filter: drop-shadow(0 0 15px #00d4ff); }
-    
-    /* AJUSTE: login-box más estrecha y movida */
-    .login-box { 
-        background: rgba(0, 212, 255, 0.05); 
-        border-left: 8px solid #00d4ff; 
-        padding: 30px; 
-        margin-top: 50px;
-        max-width: 320px; /* Antes 400px - Ahora es más corta */
-        margin-left: 0;   /* Asegura que pegue a la izquierda de su columna */
-    }
-    
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
-    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; height: 45px; }
-</style>
-""", unsafe_allow_html=True)
-
-# --- D. LÓGICA DE INTERFAZ (COLUMNAS AJUSTADAS) ---
+# --- D. LÓGICA DE INTERFAZ (BLOQUE COMPLETO) ---
 if not st.session_state.autenticado:
-    # AJUSTE: Se cambió la proporción de [0.3, 2.5, 2, 0.3] a [0.1, 1.8, 2, 1.1] 
-    # Esto empuja el contenido hacia la izquierda y deja más aire a la derecha.
+    # Definición de columnas para centrar el visual y el login
     col_esp1, col_vis, col_log, col_esp2 = st.columns([0.1, 1.8, 2, 1.1])
     
     with col_vis:
@@ -119,19 +44,20 @@ if not st.session_state.autenticado:
         </div>
         ''', unsafe_allow_html=True)
 
-with col_log:
+    with col_log:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
         
+        # --- CASO 1: FORMULARIO DE ACCESO ---
         if not st.session_state.fase_carga:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
             st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE CREDENCIALES</h2>', unsafe_allow_html=True)
             
-            # Formulario para capturar la tecla Enter
+            # El uso de st.form permite que la tecla ENTER envíe los datos
             with st.form("login_form", clear_on_submit=False):
                 u = st.text_input("USUARIO", key="u_login")
                 p = st.text_input("PASSWORD", type="password", key="p_login")
                 
-                # Botón obligatorio para st.form
+                # En un formulario, st.button se reemplaza por st.form_submit_button
                 submit_button = st.form_submit_button("ACCEDER AL SISTEMA")
                 
                 if submit_button:
@@ -145,13 +71,12 @@ with col_log:
             
             st.markdown('</div>', unsafe_allow_html=True)
             
+        # --- CASO 2: SECUENCIA DE CARGA ---
         else:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
             st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// CARGANDO SCADA...</h2>', unsafe_allow_html=True)
             prog = st.progress(0)
             status = st.empty()
-            # Aquí continuaría tu lógica de la barra de progreso
-            st.markdown('</div>', unsafe_allow_html=True)
             
             tareas = [
                 ("Conectando DB", "get_mysql_telemetria_engine"),
@@ -171,15 +96,15 @@ with col_log:
                 prog.progress((i + 1) / len(tareas))
                 time.sleep(0.4)
             
+            # Finalización de carga y actualización de estados
             st.session_state.autenticado = True
             st.session_state.rol = st.session_state.temp_rol
             st.session_state.fase_carga = False
             st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
-    # MUY IMPORTANTE: El st.stop() debe estar AQUÍ, dentro del if de no autenticado.
-    st.stop() 
-
+    # Detener la ejecución del resto del script si no está autenticado
+    st.stop()
 # --- A PARTIR DE AQUÍ COMIENZA EL MAPA ---
 # Si el script llega a este punto, significa que ya pasó el login y el mapa se dibujará.
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
