@@ -966,7 +966,6 @@ with st.sidebar:
 # 9  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
 # DASHBOARD
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
-
 # Proporción ultra-ancha para el mapa (90% mapa, 10% capas)
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
