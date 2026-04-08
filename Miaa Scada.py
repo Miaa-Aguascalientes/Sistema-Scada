@@ -1040,68 +1040,64 @@ with col_mapa:
         """
 
 # -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------- 
-# RENDERIZADO DE SECTORES (SIEMPRE PRESENTES)
-# -------------------------------------------------------------------------------------- 
-# -------------------------------------------------------------------------------------- 
-# RENDERIZADO DE SECTORES - SIEMPRE PRESENTES Y SEGUROS
-# -------------------------------------------------------------------------------------- 
+
+# 1. Definimos una función de estilo estática para evitar cálculos pesados en el loop
+def get_sector_style(feature, visible):
+    return {
+        'fillColor': '#00d4ff',
+        'color': '#00d4ff' if visible else 'transparent',
+        'weight': 1.5 if visible else 0,
+        'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
+    }
 
 if sectores:
+    # Creamos un FeatureGroup específico para los polígonos
+    # Esto asegura que Folium los maneje como una capa independiente
+    fg_sectores = folium.FeatureGroup(name="Capa de Sectores", z_index=1)
+
     for s in sectores:
         try:
-            # 1. Validación de datos mínimos para evitar mapa en blanco
-            if not s.get('geo') or not s.get('sector'):
+            # Validación estricta de datos
+            if not s.get('geo') or s['geo'] is None:
                 continue
-
+                
             nombre_sec = s['sector']
+            geo_data = json.loads(s['geo']) # Intenta parsear el JSON de Postgres
             
-            # 2. Limpieza y carga del GeoJSON
-            # Usamos json.loads con manejo de errores para evitar que un sector mal formado rompa todo
-            try:
-                geo_data = json.loads(s['geo'])
-            except (ValueError, TypeError):
-                continue # Si el JSON está mal, salta a este sector pero no rompe el mapa
-
-            # 3. Configuración de URL y Popup
+            # URL de acceso directo
             url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.rol}"
             
-            html_sector = f"""
-            <div style="font-family: Arial; text-align: center; color: white; background: #0b1a29; padding: 8px; border-radius: 5px;">
-                <strong style="color: #00d4ff;">{nombre_sec}</strong><br>
-                <a href="{url_sector}" target="_blank" style="color: #00d4ff; text-decoration: underline; font-size: 11px;">Abrir Panel</a>
+            pop_html = f"""
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 160px; background-color: #0b1a29; color: white; padding: 10px; border-radius: 5px; border: 1px solid #00d4ff;">
+                <h5 style="margin: 0 0 5px 0; color: #00d4ff;">{nombre_sec}</h5>
+                <hr style="border: 0.5px solid #333;">
+                <a href="{url_sector}" target="_blank" style="text-decoration: none; color: white; background: #00d4ff22; padding: 4px 8px; border: 1px solid #00d4ff; border-radius: 3px; font-size: 12px; display: block; text-align: center;">Ver Detalles</a>
             </div>
             """
 
-            # 4. Estilo dinámico pero persistente
-            # Siempre se dibuja, pero la opacidad cambia según el checkbox
-            opacidad_relleno = 0.15 if ver_sectores else 0.0  # 0.0 lo hace invisible pero presente
-            color_borde = '#00d4ff' if ver_sectores else 'transparent'
-
+            # RENDERIZADO SIEMPRE ACTIVO
             folium.GeoJson(
                 geo_data,
-                style_function=lambda x, op=opacidad_relleno, cb=color_borde: {
-                    'fillColor': '#00d4ff',
-                    'color': cb,
-                    'weight': 1.5,
-                    'fillOpacity': op,
-                },
+                name=f"Sector_{nombre_sec}",
+                style_function=lambda x: get_sector_style(x, ver_sectores),
                 highlight_function=lambda x: {
-                    'fillColor': '#00d4ff',
-                    'color': '#ffffff',
-                    'weight': 3,
+                    'fillColor': '#00d4ff', 
+                    'color': '#ffffff', 
+                    'weight': 3, 
                     'fillOpacity': 0.4
                 },
-                tooltip=folium.Tooltip(f"Sector: {nombre_sec}"),
-                popup=folium.Popup(html_sector, max_width=200),
-                embed=False # Esto ayuda a que mapas grandes no saturen el navegador
-            ).add_to(m)
+                tooltip=folium.Tooltip(f"Sector: {nombre_sec}", sticky=True),
+                popup=folium.Popup(pop_html, max_width=200),
+                embed=True # Cambiar a False si tienes +500 polígonos para mejorar velocidad
+            ).add_to(fg_sectores)
 
         except Exception as e:
-            # Si un sector falla, lo ignoramos silenciosamente para que el mapa principal cargue
-            st.error(f"Error en sector {s.get('sector', 'Desconocido')}") # Solo para debug, luego quitar
+            # Si un polígono está corrupto, lo ignoramos para que no se ponga la pantalla en blanco
             continue
 
+    # Añadimos el grupo completo al mapa
+    fg_sectores.add_to(m)
+    
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
     # Usamos solo 'ver_pozos' para controlar ambas cosas
     for id_p, info in mapa_pozos_dict.items():
