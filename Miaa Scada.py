@@ -1181,9 +1181,14 @@ with col_mapa:
                 n_max = info['nivel_max'] if info['nivel_max'] else 1.0
                 porcentaje = (val_nivel / n_max) * 100
                 
-# URL que apunta a la misma app con el nuevo parámetro
-                # Usamos target="_blank" para que sea en pestaña nueva
-                url_grafico = f"?graficar_tanque={info['tag_nivel']}&nombre={info['nombre'].replace(' ', '%20')}"
+                # --- CAMBIO CLAVE: Pegamos la "llave" de acceso a la URL del gráfico ---
+                # Esto permite que al abrir el histórico, la Sección 0 detecte el permiso y no pida login.
+                url_grafico = (
+                    f"?graficar_tanque={info['tag_nivel']}"
+                    f"&nombre={info['nombre'].replace(' ', '%20')}"
+                    f"&access=granted"
+                    f"&role={st.session_state.get('rol', 'usuario')}"
+                )
 
                 html_popup_tq = f"""
                 <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 250px; border: 2px solid #00d4ff; font-family: sans-serif;">
