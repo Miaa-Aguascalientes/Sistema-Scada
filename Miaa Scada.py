@@ -1051,51 +1051,45 @@ def get_sector_style(feature, visible):
     }
 
 if sectores:
-    # Creamos un FeatureGroup específico para los polígonos
-    # Esto asegura que Folium los maneje como una capa independiente
-    fg_sectores = folium.FeatureGroup(name="Capa de Sectores", z_index=1)
-
+    # 1. Creamos un grupo para los sectores
+    fg_sectores = folium.FeatureGroup(name="Sectores", z_index=1)
+    
     for s in sectores:
+        # 2. Saltamos cualquier dato que no tenga geometría o nombre
+        if not s.get('geo') or not s.get('sector'):
+            continue
+            
         try:
-            # Validación estricta de datos
-            if not s.get('geo') or s['geo'] is None:
-                continue
-                
-            nombre_sec = s['sector']
-            geo_data = json.loads(s['geo']) # Intenta parsear el JSON de Postgres
-            
-            # URL de acceso directo
-            url_sector = f"/?sector={urllib.parse.quote(nombre_sec)}&access=granted&role={st.session_state.rol}"
-            
-            pop_html = f"""
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 160px; background-color: #0b1a29; color: white; padding: 10px; border-radius: 5px; border: 1px solid #00d4ff;">
-                <h5 style="margin: 0 0 5px 0; color: #00d4ff;">{nombre_sec}</h5>
-                <hr style="border: 0.5px solid #333;">
-                <a href="{url_sector}" target="_blank" style="text-decoration: none; color: white; background: #00d4ff22; padding: 4px 8px; border: 1px solid #00d4ff; border-radius: 3px; font-size: 12px; display: block; text-align: center;">Ver Detalles</a>
-            </div>
-            """
+            # 3. Limpiamos el JSON por si trae caracteres extraños
+            geo_raw = s['geo']
+            if isinstance(geo_raw, str):
+                geo_data = json.loads(geo_raw)
+            else:
+                geo_data = geo_raw # Ya es un dict
 
-            # RENDERIZADO SIEMPRE ACTIVO
+            nombre_sec = s['sector']
+            
+            # 4. Estilo: si ver_sectores es False, solo lo hacemos invisible al ojo
+            # pero el objeto SIGUE existiendo para que Folium no se confunda
+            opacidad = 0.15 if ver_sectores else 0.0001
+            color_linea = '#00d4ff' if ver_sectores else 'transparent'
+
             folium.GeoJson(
                 geo_data,
-                name=f"Sector_{nombre_sec}",
-                style_function=lambda x: get_sector_style(x, ver_sectores),
-                highlight_function=lambda x: {
-                    'fillColor': '#00d4ff', 
-                    'color': '#ffffff', 
-                    'weight': 3, 
-                    'fillOpacity': 0.4
+                style_function=lambda x, op=opacidad, cl=color_linea: {
+                    'fillColor': '#00d4ff',
+                    'color': cl,
+                    'weight': 1,
+                    'fillOpacity': op
                 },
-                tooltip=folium.Tooltip(f"Sector: {nombre_sec}", sticky=True),
-                popup=folium.Popup(pop_html, max_width=200),
-                embed=True # Cambiar a False si tienes +500 polígonos para mejorar velocidad
+                tooltip=f"Sector: {nombre_sec}"
             ).add_to(fg_sectores)
 
-        except Exception as e:
-            # Si un polígono está corrupto, lo ignoramos para que no se ponga la pantalla en blanco
+        except Exception:
+            # Si un sector específico falla, 'continue' evita que el mapa se rompa
             continue
-
-    # Añadimos el grupo completo al mapa
+    
+    # 5. Agregamos el grupo al mapa SOLO SI tiene contenido
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
