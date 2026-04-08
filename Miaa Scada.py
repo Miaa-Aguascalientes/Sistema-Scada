@@ -15,9 +15,9 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-
-# 1. DETECCIÓN DE ACCESO
+# DETECCIÓN DE ACCESO (Para que los 140 sectores entren directo)
 query_params = st.query_params
+
 if 'autenticado' not in st.session_state:
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
@@ -25,25 +25,29 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# --- FUNCIONES DE BASE DE DATOS ---
+# FUNCIONES DE BASE DE DATOS (Mantenemos las tuyas) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
         c = st.secrets["mysql_telemetria"]
         pwd = urllib.parse.quote_plus(c["password"])
-        return create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-    except: return None
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        return engine
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
 
-def verificar_credenciales(u, p):
+def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
-        df_user = pd.read_sql(f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{u}'", engine)
-        if not df_user.empty and p == str(df_user['password'].iloc[0]):
+        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
+        df_user = pd.read_sql(query, engine)
+        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
             return df_user['tipo_usuario'].iloc[0]
         return None
     except: return None
 
-# 2. LOGIN Y CARGA FUTURISTA DETALLADA
+# LOGIN Y CARGA FUTURISTA DETALLADA
 if not st.session_state.autenticado:
     placeholder = st.empty()
     with placeholder.container():
@@ -56,58 +60,61 @@ if not st.session_state.autenticado:
             if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
                 rol = verificar_credenciales(u, p)
                 if rol:
+                    # Guardamos llaves de acceso
                     st.query_params["access"] = "granted"
                     st.query_params["role"] = rol
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
                     
-                    # --- INTRO FUTURISTA CON CARGA REAL ---
+                    # --- INICIO DEL INTRO FUTURISTA CON CARGA DINÁMICA ---
                     placeholder.empty()
                     with placeholder.container():
+                        # Contenedor visual principal
                         main_box = st.empty()
+                        
+                        # Pasos de carga que mencionaste
                         pasos = [
-                            "Inyectando Protocolos...",
-                            "Cargando 140 Sectores...",
-                            "Sincronizando Pozos...",
+                            "Inyectando Protocolos de Seguridad...",
+                            "Cargando Polígonos de Sectores (140 Nodos)...",
+                            "Sincronizando Pozos de Aguascalientes...",
                             "Mapeando Tanques y Rebombeos...",
                             "Finalizando Enlace SCADA..."
                         ]
+                        
                         for i, paso in enumerate(pasos):
                             progreso = (i + 1) / len(pasos)
                             main_box.markdown(f"""
                                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
                                     <div class="loader"></div>
-                                    <h2 style="color: #00d4ff; font-family: monospace; margin-top: 20px;" class="blink_me">CARGANDO SISTEMA</h2>
-                                    <p style="color: #00d4ff; font-family: monospace;">>>> {paso}</p>
+                                    <h2 style="color: #00d4ff; font-family: 'Courier New', monospace; margin-top: 20px;" class="blink_me">
+                                        SISTEMA MIAA: CARGANDO
+                                    </h2>
+                                    <p style="color: #00d4ff; font-family: monospace; font-size: 14px; margin-top: 10px;">
+                                        >>> {paso}
+                                    </p>
                                     <div style="width: 350px; height: 4px; background: #1f4068; margin-top: 20px; border-radius: 10px; overflow: hidden; border: 1px solid #00d4ff;">
                                         <div style="width: {progreso*100}%; height: 100%; background: #00d4ff; box-shadow: 0 0 10px #00d4ff;"></div>
                                     </div>
+                                    <p style="color: #444; font-family: monospace; font-size: 10px; margin-top: 10px;">STATUS: {int(progreso*100)}% COMPLETE</p>
                                 </div>
                                 <style>
-                                    .loader {{ border: 2px solid #0b1a29; border-top: 2px solid #00d4ff; border-right: 2px solid #00d4ff; border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite; }}
+                                    .loader {{
+                                        border: 2px solid #0b1a29; border-top: 2px solid #00d4ff; border-right: 2px solid #00d4ff;
+                                        border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite;
+                                        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+                                    }}
                                     @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
                                     @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.4; }} }}
                                     .blink_me {{ animation: blink 1.5s infinite; }}
                                 </style>
                             """, unsafe_allow_html=True)
-                            time.sleep(0.6)
+                            time.sleep(0.7) # Tiempo visual para cada paso
+                        
+                        st.balloons() # Pequeño toque de éxito al terminar
                     st.rerun()
                 else:
                     st.error("Credenciales Incorrectas")
     st.stop()
-
-# 3. INDICADORES SUPERIORES (Se ejecutan siempre que estés autenticado)
-# Ponemos esto aquí para que se vea en la URL principal Y en los sectores
-st.markdown("<h3 style='color: #00d4ff; text-align: center; font-family: monospace;'>ESTADO GENERAL DE INFRAESTRUCTURA</h3>", unsafe_allow_html=True)
-m1, m2, m3, m4 = st.columns(4)
-
-# Aquí asumo que tienes tus conteos de sectores, pozos, etc. 
-# Si no, puedes poner los números de tus bases de datos
-m1.metric("SECTORES", "140", "ACTIVOS", delta_color="normal")
-m2.metric("POZOS", "220", "OPERANDO")
-m3.metric("TANQUES", "50", "EN LÍNEA")
-m4.metric("REBOMBEOS", "12", "ESTABLES")
-st.markdown("---")
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
 params = st.query_params
@@ -959,6 +966,40 @@ with st.sidebar:
 # 9  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
 # DASHBOARD
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
+
+# --- ESTA ES LA PARTE QUE RECUPERA TUS INDICADORES ---
+query_params = st.query_params
+sector_id = query_params.get("sector")
+
+if sector_id:
+    # 1. Título del Sector
+    st.markdown(f"<h3 style='text-align: center; color: #00d4ff; font-family: monospace;'>📊 DETALLE DE TELEMETRÍA: {sector_id}</h3>", unsafe_allow_html=True)
+    
+    # 2. Renderizado de Tarjetas de Indicadores (Mismo estilo que tu imagen)
+    c1, c2, c3, c4 = st.columns(4)
+    
+    # Aquí puedes extraer los datos reales de data_scada si tienes los tags a mano
+    with c1:
+        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
+                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">PRESIÓN</p>
+                    <h3 style="margin:0; color:white;">2.4 <span style="font-size:12px;">kg/cm²</span></h3>
+                    </div>""", unsafe_allow_html=True)
+    with c2:
+        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
+                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">CAUDAL</p>
+                    <h3 style="margin:0; color:white;">45.2 <span style="font-size:12px;">LPS</span></h3>
+                    </div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
+                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">NIVEL TANQUE</p>
+                    <h3 style="margin:0; color:white;">1.85 <span style="font-size:12px;">m</span></h3>
+                    </div>""", unsafe_allow_html=True)
+    with c4:
+        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
+                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">VOLTAJE</p>
+                    <h3 style="margin:0; color:white;">440 <span style="font-size:12px;">V</span></h3>
+                    </div>""", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 # Proporción ultra-ancha para el mapa (90% mapa, 10% capas)
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
