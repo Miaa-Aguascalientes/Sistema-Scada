@@ -967,39 +967,6 @@ with st.sidebar:
 # DASHBOARD
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
 
-# --- ESTA ES LA PARTE QUE RECUPERA TUS INDICADORES ---
-query_params = st.query_params
-sector_id = query_params.get("sector")
-
-if sector_id:
-    # 1. Título del Sector
-    st.markdown(f"<h3 style='text-align: center; color: #00d4ff; font-family: monospace;'>📊 DETALLE DE TELEMETRÍA: {sector_id}</h3>", unsafe_allow_html=True)
-    
-    # 2. Renderizado de Tarjetas de Indicadores (Mismo estilo que tu imagen)
-    c1, c2, c3, c4 = st.columns(4)
-    
-    # Aquí puedes extraer los datos reales de data_scada si tienes los tags a mano
-    with c1:
-        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
-                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">PRESIÓN</p>
-                    <h3 style="margin:0; color:white;">2.4 <span style="font-size:12px;">kg/cm²</span></h3>
-                    </div>""", unsafe_allow_html=True)
-    with c2:
-        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
-                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">CAUDAL</p>
-                    <h3 style="margin:0; color:white;">45.2 <span style="font-size:12px;">LPS</span></h3>
-                    </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
-                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">NIVEL TANQUE</p>
-                    <h3 style="margin:0; color:white;">1.85 <span style="font-size:12px;">m</span></h3>
-                    </div>""", unsafe_allow_html=True)
-    with c4:
-        st.markdown("""<div style="background:#0b1a29; border:1px solid #00d4ff; padding:10px; border-radius:8px; text-align:center;">
-                    <p style="color:#00d4ff; margin:0; font-size:12px; font-weight:bold;">VOLTAJE</p>
-                    <h3 style="margin:0; color:white;">440 <span style="font-size:12px;">V</span></h3>
-                    </div>""", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
 # Proporción ultra-ancha para el mapa (90% mapa, 10% capas)
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
