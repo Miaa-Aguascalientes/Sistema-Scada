@@ -15,39 +15,19 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-# AL PRINCIPIO DE LA SECCIÓN 0
+# 1. Recuperar parámetros de la URL de forma inmediata
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
-    # Si el link trae la llave, le damos paso directo sin preguntar nada
+    # Si la URL trae la llave, el sistema entra directo (Bypass para los 190 sectores/tanques)
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
+    else:
+        st.session_state.autenticado = False
 
+# ... (Tus funciones get_mysql_telemetria_engine y verificar_credenciales se quedan igual) ...
 
-
-@st.cache_resource
-def get_mysql_telemetria_engine():
-    try:
-        c = st.secrets["mysql_telemetria"]
-        pwd = urllib.parse.quote_plus(c["password"])
-        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-        return engine
-    except Exception as e:
-        st.error(f"Error de conexión: {e}")
-        return None
-
-def verificar_credenciales(usuario_input, password_input):
-    try:
-        engine = get_mysql_telemetria_engine()
-        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
-        df_user = pd.read_sql(query, engine)
-        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
-            return df_user['tipo_usuario'].iloc[0]
-        return None
-    except: return None
-
-# 2. BLOQUE DE LOGIN Y EFECTO FUTURISTA
 if not st.session_state.autenticado:
     placeholder = st.empty()
     with placeholder.container():
@@ -60,7 +40,7 @@ if not st.session_state.autenticado:
             if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
                 rol = verificar_credenciales(u, p)
                 if rol:
-                    # Inyectamos el permiso en la URL actual
+                    # Guardamos permiso en URL y Sesión
                     st.query_params["access"] = "granted"
                     st.query_params["role"] = rol
                     st.session_state.autenticado = True
@@ -73,7 +53,6 @@ if not st.session_state.autenticado:
                             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
                                 <div class="loader"></div>
                                 <h2 style="color: #00d4ff; font-family: monospace; margin-top: 20px;" class="blink_me">ENLACE ESTABLECIDO</h2>
-                                <p style="color: #444; font-family: monospace;">Sincronizando Nodo: {u.upper()}</p>
                             </div>
                             <style>
                                 .loader {{
@@ -82,13 +61,14 @@ if not st.session_state.autenticado:
                                     box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
                                 }}
                                 @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                .blink_me {{ animation: opacity 1s infinite; }}
+                                @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
+                                .blink_me {{ animation: blink 1s infinite; }}
                             </style>
                         """, unsafe_allow_html=True)
                         time.sleep(2.0)
                     st.rerun()
                 else:
-                    st.error("Acceso denegado")
+                    st.error("Credenciales incorrectas")
     st.stop()
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
