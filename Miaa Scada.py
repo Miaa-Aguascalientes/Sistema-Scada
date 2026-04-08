@@ -33,7 +33,9 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# FUNCIONES DE BASE DE DATOS (Mantenemos las tuyas) ---
+
+
+# --- 1. MOVER ESTAS FUNCIONES AL PRINCIPIO (Para que Python las reconozca) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -42,18 +44,26 @@ def get_mysql_telemetria_engine():
         engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
         return engine
     except Exception as e:
-        st.error(f"Error de conexión: {e}")
         return None
 
 def verificar_credenciales(usuario_input, password_input):
     try:
         engine = get_mysql_telemetria_engine()
+        if engine is None: return None
         query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
         df_user = pd.read_sql(query, engine)
-        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
+        if not df_user.empty and str(password_input) == str(df_user['password'].iloc[0]):
             return df_user['tipo_usuario'].iloc[0]
         return None
-    except: return None
+    except:
+        return None
+
+
+
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+if 'fase_carga' not in st.session_state:
+    st.session_state.fase_carga = False
 
 # --- CSS (Mantenemos tu estilo exacto) ---
 st.markdown("""
