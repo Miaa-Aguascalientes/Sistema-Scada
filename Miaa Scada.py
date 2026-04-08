@@ -14,9 +14,9 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
-# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD --------------------------------------------------------------------
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-# --- 1. DETECCIÓN DE ACCESO (Tu lógica original para acceso directo) ---
+# DETECCIÓN DE ACCESO (Para que los 140 sectores entren directo)
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
@@ -26,7 +26,7 @@ if 'autenticado' not in st.session_state:
     else:
         st.session_state.autenticado = False
 
-# --- 2. FUNCIONES DE BASE DE DATOS (Tus funciones originales intactas) ---
+# FUNCIONES DE BASE DE DATOS (Mantenemos las tuyas) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -46,115 +46,75 @@ def verificar_credenciales(usuario_input, password_input):
         if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
             return df_user['tipo_usuario'].iloc[0]
         return None
-    except: 
-        return None
+    except: return None
 
-# --- 3. INTERFAZ VISUAL FUTURISTA (CSS) ---
-HUD_STYLE = """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-    .stApp { background-color: #050a10; }
-    .hud-main-container {
-        display: flex; align-items: center; justify-content: center;
-        height: 85vh; font-family: 'Orbitron', sans-serif; gap: 50px;
-    }
-    /* El círculo de la imagen */
-    .hud-visual { position: relative; width: 320px; height: 320px; }
-    .ring-outer {
-        position: absolute; width: 100%; height: 100%;
-        border: 4px solid transparent; border-top: 4px solid #00d4ff;
-        border-bottom: 4px solid #00d4ff; border-radius: 50%;
-        animation: spin 4s linear infinite;
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-    }
-    .ring-inner {
-        position: absolute; top: 40px; left: 40px; right: 40px; bottom: 40px;
-        border: 2px dashed #00d4ff; border-radius: 50%;
-        opacity: 0.5; animation: spin 10s linear infinite reverse;
-    }
-    .hud-center-text {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        color: #00d4ff; text-align: center;
-    }
-    .login-box {
-        background: rgba(0, 212, 255, 0.03);
-        border-left: 4px solid #00d4ff; padding: 40px;
-        width: 380px; border-radius: 0 15px 15px 0;
-    }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .stTextInput input {
-        background-color: #0d1b2a !important; color: #00d4ff !important;
-        border: 1px solid #1f4068 !important; font-family: monospace;
-    }
-    .stButton button {
-        background: #00d4ff !important; color: #050a10 !important;
-        border: none !important; font-weight: bold !important; width: 100%;
-        box-shadow: 0 0 15px #00d4ff; margin-top: 20px;
-    }
-</style>
-"""
-
-# --- 4. LÓGICA DE LOGIN Y PRECARGA ---
+# LOGIN Y CARGA FUTURISTA DETALLADA
 if not st.session_state.autenticado:
-    st.markdown(HUD_STYLE, unsafe_allow_html=True)
     placeholder = st.empty()
-    
     with placeholder.container():
-        st.markdown(f"""
-            <div class="hud-main-container">
-                <div class="hud-visual">
-                    <div class="ring-outer"></div>
-                    <div class="ring-inner"></div>
-                    <div class="hud-center-text">
-                        <h1 style="margin:0; font-size: 28px;">SCADA</h1>
-                        <p style="margin:0; color: #555;">MIAA MONITOR</p>
-                    </div>
-                </div>
-                <div class="login-box">
-                    <h2 style="color: #00d4ff; font-size: 18px; margin-bottom: 30px;">PROTOCOL: AUTH_REQUIRED</h2>
-        """, unsafe_allow_html=True)
-        
-        u = st.text_input("IDENTIFIER", key="u_field")
-        p = st.text_input("ACCESS_KEY", type="password", key="p_field")
-        
-        if st.button("EXECUTE STARTUP"):
-            rol = verificar_credenciales(u, p)
-            if rol:
-                # MODO PRECARGA DE BASES DE DATOS
-                placeholder.empty()
-                with st.empty().container():
-                    st.markdown(HUD_STYLE, unsafe_allow_html=True)
-                    st.markdown('<div class="hud-main-container">', unsafe_allow_html=True)
-                    st.markdown('<div class="hud-visual"><div class="ring-outer"></div><div class="hud-center-text"><h3>SYNC</h3></div></div>', unsafe_allow_html=True)
-                    
-                    # Tareas reales: aquí inyectas tus funciones de carga
-                    tareas = [
-                        ("INITIALIZING DATABASE ENGINES", get_mysql_telemetria_engine),
-                        ("LOADING SECTOR POLYGONS (140)", cargar_sectores_poligonos),
-                        ("FETCHING WELL DATA NODES", cargar_mapa_pozos_desde_db),
-                        ("SYNCING TANKS & PUMPS", cargar_tanques_desde_db),
-                        ("FINALIZING SCADA INTERFACE", cargar_rebombeos_desde_db)
-                    ]
-                    
-                    status_log = st.empty()
-                    prog_bar = st.progress(0)
-                    
-                    for i, (msg, func) in enumerate(tareas):
-                        status_log.markdown(f"<p style='color:#00d4ff; text-align:center; font-family:monospace;'>[SYSTEM]: {msg}...</p>", unsafe_allow_html=True)
-                        if func:
-                            try: func() # Ejecución real para llenar el caché
-                            except: pass
-                        time.sleep(0.6)
-                        prog_bar.progress((i + 1) / len(tareas))
-                    
-                    st.session_state.autenticado = True
-                    st.session_state.rol = rol
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            st.markdown("<br><br><h2 style='text-align: center; color: #00d4ff;'>🔐 SCADA MIAA</h2>", unsafe_allow_html=True)
+            u = st.text_input("Usuario", key="login_u")
+            p = st.text_input("Contraseña", type="password", key="login_p")
+            
+            if st.button("INICIALIZAR PROTOCOLO", use_container_width=True):
+                rol = verificar_credenciales(u, p)
+                if rol:
+                    # Guardamos llaves de acceso
                     st.query_params["access"] = "granted"
                     st.query_params["role"] = rol
+                    st.session_state.autenticado = True
+                    st.session_state.rol = rol
+                    
+                    # --- INICIO DEL INTRO FUTURISTA CON CARGA DINÁMICA ---
+                    placeholder.empty()
+                    with placeholder.container():
+                        # Contenedor visual principal
+                        main_box = st.empty()
+                        
+                        # Pasos de carga que mencionaste
+                        pasos = [
+                            "Inyectando Protocolos de Seguridad...",
+                            "Cargando Polígonos de Sectores (140 Nodos)...",
+                            "Sincronizando Pozos de Aguascalientes...",
+                            "Mapeando Tanques y Rebombeos...",
+                            "Finalizando Enlace SCADA..."
+                        ]
+                        
+                        for i, paso in enumerate(pasos):
+                            progreso = (i + 1) / len(pasos)
+                            main_box.markdown(f"""
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
+                                    <div class="loader"></div>
+                                    <h2 style="color: #00d4ff; font-family: 'Courier New', monospace; margin-top: 20px;" class="blink_me">
+                                        SISTEMA MIAA: CARGANDO
+                                    </h2>
+                                    <p style="color: #00d4ff; font-family: monospace; font-size: 14px; margin-top: 10px;">
+                                        >>> {paso}
+                                    </p>
+                                    <div style="width: 350px; height: 4px; background: #1f4068; margin-top: 20px; border-radius: 10px; overflow: hidden; border: 1px solid #00d4ff;">
+                                        <div style="width: {progreso*100}%; height: 100%; background: #00d4ff; box-shadow: 0 0 10px #00d4ff;"></div>
+                                    </div>
+                                    <p style="color: #444; font-family: monospace; font-size: 10px; margin-top: 10px;">STATUS: {int(progreso*100)}% COMPLETE</p>
+                                </div>
+                                <style>
+                                    .loader {{
+                                        border: 2px solid #0b1a29; border-top: 2px solid #00d4ff; border-right: 2px solid #00d4ff;
+                                        border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite;
+                                        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+                                    }}
+                                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                                    @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.4; }} }}
+                                    .blink_me {{ animation: blink 1.5s infinite; }}
+                                </style>
+                            """, unsafe_allow_html=True)
+                            time.sleep(0.7) # Tiempo visual para cada paso
+                        
+                        st.balloons() # Pequeño toque de éxito al terminar
                     st.rerun()
-            else:
-                st.error("INVALID CREDENTIALS")
-        st.markdown("</div></div>", unsafe_allow_html=True)
+                else:
+                    st.error("Credenciales Incorrectas")
     st.stop()
 
 # 1  SECCION---------------------------------------------------------------------------1. CONFIGURACIÓN DE PÁGINA ----------------------------------------------------------------------------------------------------------
