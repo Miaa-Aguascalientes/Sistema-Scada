@@ -534,10 +534,13 @@ if tag_a_graficar:
 
 st.markdown("""
     <style>
-        /* 1. CONFIGURACIÓN DE FONDO */
+        /* 1. CONFIGURACIÓN DE FONDO Y ELIMINAR TÍTULOS NATIVOS */
         .stApp { background-color: #000000; color: white; }
         
-        /* 2. BARRA SUPERIOR (HEADER) */
+        /* Oculta cualquier h1 o h2 que Streamlit ponga automáticamente y que esté causando el doble título */
+        .main h1, .main h2 { display: none !important; }
+
+        /* 2. BARRA SUPERIOR ÚNICA (HEADER) */
         .header-container {
             position: fixed;
             top: 0;
@@ -547,59 +550,53 @@ st.markdown("""
             background-color: #000000;
             display: flex;
             align-items: center;
-            justify-content: center; /* Centrado absoluto del título */
-            border-bottom: 1px solid #1f4068;
-            z-index: 1000;
+            justify-content: center;
+            border-bottom: 2px solid #1f4068;
+            z-index: 999999; /* Máxima prioridad */
         }
 
-        .titulo-superior {
-            color: #00d4ff; /* Tu azul original */
-            font-size: 1.5rem;
+        .titulo-scada-unico {
+            color: #00d4ff;
+            font-size: 1.8rem;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
             margin: 0;
-            padding: 0;
-            text-align: center;
         }
 
-        /* 3. RELOJ POSICIONADO A LA MERA DERECHA */
-        .reloj-container {
+        /* 3. RELOJ A LA MERA DERECHA */
+        .reloj-scada {
             position: absolute;
-            right: 25px; /* Pegado a la derecha */
+            right: 30px;
             color: #00d4ff;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: bold;
         }
 
-        /* 4. BLOQUEO DE INTERFAZ ORIGINAL */
-        header { visibility: hidden !important; }
+        /* 4. LIMPIEZA TOTAL DE INTERFAZ ST */
+        header { visibility: hidden !important; height: 0px !important; }
         [data-testid="collapsedControl"] { display: none !important; }
         footer { visibility: hidden !important; }
 
-        /* 5. AJUSTE DE CONTENIDO PARA QUE NO SE TRAPE CON EL HEADER */
+        /* 5. AJUSTE DE CONTENIDO */
         .block-container {
-            padding-top: 70px !important;
+            padding-top: 80px !important; /* Espacio para que el mapa no quede debajo del título */
         }
 
-        /* 6. SIDEBAR (Ajuste para que empiece abajo del logo) */
-        [data-testid="stSidebar"] {
-            min-width: 320px !important;
-            background-color: #0b1a29 !important;
-        }
-        
+        /* 6. LOGO Y SIDEBAR */
         .sidebar-logo { 
             position: fixed;
             top: 0; left: 0;
             width: 320px; height: 100px;
             background-color: #0b1a29;
             display: flex; justify-content: center; align-items: center;
-            z-index: 1001;
+            z-index: 1000000;
             border-bottom: 1px solid #1f4068;
         }
-        .sidebar-logo img { width: 80%; }
+        
+        [data-testid="stSidebar"] { min-width: 320px !important; }
 
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
@@ -607,23 +604,24 @@ st.markdown("""
     </style>
 
     <div class="header-container">
-        <div class="titulo-superior">SISTEMA SCADA</div>
-        <div class="reloj-container" id="reloj-digital">00:00:00</div>
+        <div class="titulo-scada-unico">SISTEMA SCADA</div>
+        <div id="reloj-display" class="reloj-scada">--:--:--</div>
     </div>
 
     <script>
-    // Función autoejecutable para asegurar que el JS corra sin importar Streamlit
     (function() {
-        const updateTime = () => {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
-            const el = document.getElementById('reloj-digital');
-            if (el) {
-                el.innerText = timeStr;
+        function actualizarReloj() {
+            const fecha = new Date();
+            const h = String(fecha.getHours()).padStart(2, '0');
+            const m = String(fecha.getMinutes()).padStart(2, '0');
+            const s = String(fecha.getSeconds()).padStart(2, '0');
+            const display = document.getElementById('reloj-display');
+            if (display) {
+                display.innerText = h + ":" + m + ":" + s;
             }
-        };
-        updateTime();
-        setInterval(updateTime, 1000);
+        }
+        actualizarReloj();
+        setInterval(actualizarReloj, 1000);
     })();
     </script>
 """, unsafe_allow_html=True)
