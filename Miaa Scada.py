@@ -16,17 +16,16 @@ import urllib.parse
 
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD --------------------------------------------------------------------
 
-# --- 1. LÓGICA DE ACCESO ORIGINAL (No tocar) ---
-query_params = st.query_params
-
+# --- 1. DETECCIÓN DE ACCESO (Mantiene tu lógica de entrada directa) ---
 if 'autenticado' not in st.session_state:
+    query_params = st.query_params
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
     else:
         st.session_state.autenticado = False
 
-# --- 2. TUS FUNCIONES DE MOTOR SQL ---
+# --- 2. FUNCIONES DE BASE DE DATOS (Tus originales) ---
 @st.cache_resource
 def get_mysql_telemetria_engine():
     try:
@@ -49,55 +48,25 @@ def verificar_credenciales(usuario_input, password_input):
     except: 
         return None
 
-# --- 3. CSS AVANZADO PARA REPLICAR TU IMAGEN ---
+# --- 3. CSS PARA EL HUD (Estilo de tu imagen) ---
 HUD_STYLE = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-    
-    .stApp { background: radial-gradient(circle, #0a192f 0%, #050a10 100%); }
-    
-    .hud-container {
-        display: flex; align-items: center; justify-content: center;
-        height: 80vh; gap: 60px; font-family: 'Orbitron', sans-serif;
-    }
-
-    /* Anillos HUD animados de tu imagen */
-    .visual-core { position: relative; width: 350px; height: 350px; }
-    
-    .ring {
-        position: absolute; border-radius: 50%; border: 2px solid transparent;
-        animation: spin var(--d) linear infinite;
-    }
-    
-    .r1 { width: 100%; height: 100%; border-top: 6px solid #00d4ff; border-bottom: 6px solid #00d4ff; --d: 4s; opacity: 0.8; }
-    .r2 { width: 80%; height: 80%; top: 10%; left: 10%; border: 2px dashed #00d4ff; --d: 8s; opacity: 0.4; animation-direction: reverse; }
-    .r3 { width: 60%; height: 60%; top: 20%; left: 20%; border-left: 10px solid #00d4ff; --d: 2s; opacity: 0.6; }
-
-    .center-logo {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        text-align: center; color: #00d4ff; text-shadow: 0 0 15px #00d4ff;
-    }
-
-    /* Panel de Datos Lateral */
-    .login-panel {
-        background: rgba(0, 212, 255, 0.05);
-        border: 1px solid rgba(0, 212, 255, 0.2);
-        border-left: 8px solid #00d4ff;
-        padding: 40px; width: 400px;
-        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-    }
-
+    .stApp { background: #050a10; }
+    .hud-container { display: flex; align-items: center; justify-content: center; height: 85vh; gap: 50px; font-family: 'Orbitron', sans-serif; }
+    .visual-core { position: relative; width: 300px; height: 300px; }
+    .ring { position: absolute; border-radius: 50%; border: 2px solid transparent; animation: spin var(--d) linear infinite; }
+    .r1 { width: 100%; height: 100%; border-top: 5px solid #00d4ff; border-bottom: 5px solid #00d4ff; --d: 3s; }
+    .r2 { width: 70%; height: 70%; top: 15%; left: 15%; border: 2px dashed #00d4ff; --d: 6s; animation-direction: reverse; opacity: 0.5; }
+    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; }
+    .login-panel { background: rgba(0, 212, 255, 0.05); border-left: 6px solid #00d4ff; padding: 40px; width: 380px; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    
-    .stTextInput input { background: #050a10 !important; color: #00d4ff !important; border: 1px solid #00d4ff !important; }
-    .stButton button { 
-        background: #00d4ff !important; color: #050a10 !important; 
-        font-weight: bold !important; border-radius: 0 !important; width: 100%;
-    }
+    .stTextInput input { background: #0a192f !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
+    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; border-radius: 0; box-shadow: 0 0 15px #00d4ff; }
 </style>
 """
 
-# --- 4. LÓGICA DE INTERFAZ ---
+# --- 4. FLUJO DE LOGIN Y CARGA ---
 if not st.session_state.autenticado:
     st.markdown(HUD_STYLE, unsafe_allow_html=True)
     placeholder = st.empty()
@@ -108,54 +77,56 @@ if not st.session_state.autenticado:
                 <div class="visual-core">
                     <div class="ring r1"></div>
                     <div class="ring r2"></div>
-                    <div class="ring r3"></div>
                     <div class="center-logo">
-                        <h1 style="font-size:35px; margin:0;">MIAA</h1>
-                        <p style="font-size:12px; letter-spacing:3px;">SCADA_SYSTEM</p>
+                        <h1 style="font-size:30px; margin:0;">MIAA</h1>
+                        <p style="font-size:10px; letter-spacing:2px;">SCADA_LINK</p>
                     </div>
                 </div>
                 <div class="login-panel">
-                    <h2 style="color:#00d4ff; font-size:16px; margin-bottom:30px;">// INGRESE CREDENCIALES</h2>
+                    <h2 style="color:#00d4ff; font-size:16px; margin-bottom:25px;">// ACCESS_PROTOCOL</h2>
         """, unsafe_allow_html=True)
         
-        u = st.text_input("USUARIO_ID", key="user")
-        p = st.text_input("PASSWORD", type="password", key="pass")
+        user_in = st.text_input("USER_ID")
+        pass_in = st.text_input("PASSWORD", type="password")
         
-        if st.button("INICIAR SECUENCIA"):
-            rol = verificar_credenciales(u, p)
+        if st.button("RUN STARTUP"):
+            rol = verificar_credenciales(user_in, pass_in)
             if rol:
-                # CAMBIO A MODO DE CARGA DE DATOS REAL
+                # REEMPLAZAR FORMULARIO POR INTERFAZ DE CARGA (Sin rerun todavía)
                 placeholder.empty()
-                with st.empty().container():
+                with placeholder.container():
                     st.markdown(HUD_STYLE, unsafe_allow_html=True)
                     st.markdown('<div class="hud-container">', unsafe_allow_html=True)
-                    st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="center-logo"><h2>CARGANDO</h2></div></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="center-logo"><h3>LOADING</h3></div></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="login-panel"><h3 style="color:#00d4ff;">// RUNNING_DATABASE_SYNC</h3>', unsafe_allow_html=True)
                     
-                    # AQUÍ ES DONDE SE CARGAN TUS BASES DE DATOS
+                    status = st.empty()
+                    bar = st.progress(0)
+                    
+                    # EJECUCIÓN CRÍTICA DE TUS BASES DE DATOS
                     tareas = [
-                        ("CONECTANDO MYSQL...", get_mysql_telemetria_engine),
-                        ("DESCARGANDO SECTORES...", cargar_sectores_poligonos),
-                        ("SINCRONIZANDO POZOS...", cargar_mapa_pozos_desde_db),
-                        ("MAPA DE TANQUES...", cargar_tanques_desde_db),
-                        ("ESTACIONES REBOMBEO...", cargar_rebombeos_desde_db)
+                        ("VERIFYING NETWORK...", get_mysql_telemetria_engine),
+                        ("SYNCING SECTORS (140)...", cargar_sectores_poligonos),
+                        ("POZOS AGUASCALIENTES...", cargar_mapa_pozos_desde_db),
+                        ("TANKS & PUMP STATIONS...", cargar_tanques_desde_db),
+                        ("FINALIZING ENCRYPTION...", cargar_rebombeos_desde_db)
                     ]
                     
-                    log = st.empty()
-                    barra = st.progress(0)
-                    
                     for i, (msg, func) in enumerate(tareas):
-                        log.markdown(f"<p style='color:#00d4ff; text-align:center;'>{msg}</p>", unsafe_allow_html=True)
-                        if func: func() # EJECUCIÓN REAL PARA EL CACHÉ
+                        status.markdown(f"<p style='color:#00d4ff; font-family:monospace;'>[OK] {msg}</p>", unsafe_allow_html=True)
+                        if func:
+                            func() # <--- Aquí se llenan tus @st.cache_data
                         time.sleep(0.5)
-                        barra.progress((i + 1) / len(tareas))
+                        bar.progress((i + 1) / len(tareas))
                     
+                    # Actualizar estado y parámetros de URL antes del rerun final
                     st.session_state.autenticado = True
                     st.session_state.rol = rol
                     st.query_params["access"] = "granted"
                     st.query_params["role"] = rol
                     st.rerun()
             else:
-                st.error("ACCESO DENEGADO")
+                st.error("INVALID_ACCESS_KEY")
         st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
