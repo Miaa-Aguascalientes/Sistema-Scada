@@ -14,20 +14,48 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 # 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
+# 0 SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN --------------------------------------------------------------------
 
-# 1. Recuperar parámetros de la URL de forma inmediata
+import time
+import urllib.parse
+from sqlalchemy import create_engine
+import pandas as pd
+import streamlit as st
+
+# 1. DETECCIÓN AUTOMÁTICA (La "llave" para sectores y tanques)
 query_params = st.query_params
 
 if 'autenticado' not in st.session_state:
-    # Si la URL trae la llave, el sistema entra directo (Bypass para los 190 sectores/tanques)
+    # Si la URL trae el permiso, entramos directo (Bypass para sectores)
     if query_params.get("access") == "granted":
         st.session_state.autenticado = True
         st.session_state.rol = query_params.get("role", "usuario")
     else:
         st.session_state.autenticado = False
 
-# ... (Tus funciones get_mysql_telemetria_engine y verificar_credenciales se quedan igual) ...
+# --- TUS FUNCIONES DE MOTOR Y CREDENCIALES ---
+@st.cache_resource
+def get_mysql_telemetria_engine():
+    try:
+        c = st.secrets["mysql_telemetria"]
+        pwd = urllib.parse.quote_plus(c["password"])
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        return engine
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
 
+def verificar_credenciales(usuario_input, password_input):
+    try:
+        engine = get_mysql_telemetria_engine()
+        query = f"SELECT password, tipo_usuario FROM usuarios WHERE usuario = '{usuario_input}'"
+        df_user = pd.read_sql(query, engine)
+        if not df_user.empty and password_input == str(df_user['password'].iloc[0]):
+            return df_user['tipo_usuario'].iloc[0]
+        return None
+    except: return None
+
+# 2. LÓGICA DE LOGIN CON INTRO FUTURISTA
 if not st.session_state.autenticado:
     placeholder = st.empty()
     with placeholder.container():
@@ -52,17 +80,20 @@ if not st.session_state.autenticado:
                         st.markdown(f"""
                             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;">
                                 <div class="loader"></div>
-                                <h2 style="color: #00d4ff; font-family: monospace; margin-top: 20px;" class="blink_me">ENLACE ESTABLECIDO</h2>
+                                <h2 style="color: #00d4ff; font-family: monospace; margin-top: 25px;" class="blink_me">ENLACE ESTABLECIDO</h2>
+                                <div style="width: 250px; height: 2px; background: #1f4068; margin-top: 15px; overflow: hidden;">
+                                    <div style="width: 100%; height: 100%; background: #00d4ff; animation: load 2s ease-in-out;"></div>
+                                </div>
                             </div>
                             <style>
                                 .loader {{
                                     border: 4px solid #0b1a29; border-top: 4px solid #00d4ff;
                                     border-radius: 50%; width: 70px; height: 70px; animation: spin 1s linear infinite;
-                                    box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
                                 }}
                                 @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                                @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
+                                @keyframes load {{ 0% {{ width: 0%; }} 100% {{ width: 100%; }} }}
                                 .blink_me {{ animation: blink 1s infinite; }}
+                                @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
                             </style>
                         """, unsafe_allow_html=True)
                         time.sleep(2.0)
