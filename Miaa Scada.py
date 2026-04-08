@@ -14,10 +14,10 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
-# ESTO TIENE QUE IR PRIMERO QUE TODO
+
 st.set_page_config(
     page_title="Sistema Scada", 
-    page_icon="https://www.miaa.mx/favicon.ico", # Puedes poner un emoji o un link a un .png
+    page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -32,7 +32,6 @@ if 'autenticado' not in st.session_state:
         st.session_state.rol = query_params.get("role", "usuario")
     else:
         st.session_state.autenticado = False
-
 
 
 # --- 1. MOVER ESTAS FUNCIONES AL PRINCIPIO (Para que Python las reconozca) ---
@@ -71,15 +70,50 @@ st.markdown("""
     .stApp { background-color: #050a10 !important; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
     header, footer { visibility: hidden !important; }
+    
+    /* Contenedor del Núcleo Visual */
     .visual-core { position: relative; width: 350px; height: 350px; margin: auto; }
     .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
     .r1 { width: 100%; height: 100%; border-top: 6px solid #00d4ff; border-bottom: 6px solid #00d4ff; --d: 4s; }
     .r2 { width: 75%; height: 75%; top: 12.5%; left: 12.5%; border: 2px dashed #00d4ff; --d: 8s; animation-direction: reverse; }
-    .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff; text-align: center; font-family: 'Orbitron'; }
-    .login-box { background: rgba(0, 212, 255, 0.05); border-left: 8px solid #00d4ff; padding: 40px; width: 100%; max-width: 400px; }
+    
+    /* Logo de la Empresa en el Centro */
+    .center-logo { 
+        position: absolute; 
+        top: 50%; 
+        left: 50%; 
+        transform: translate(-50%, -50%); 
+        text-align: center; 
+    }
+    .logo-svg {
+        width: 120px;
+        filter: drop-shadow(0 0 10px #00d4ff);
+    }
+
+    /* Caja de Login */
+    .login-box { 
+        background: rgba(0, 212, 255, 0.05); 
+        border-left: 8px solid #00d4ff; 
+        padding: 40px; 
+        width: 100%; 
+        max-width: 400px; 
+        box-shadow: -20px 0 50px rgba(0,0,0,0.5);
+    }
+    
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; }
-    .stButton button { background: #00d4ff !important; color: #050a10 !important; font-weight: bold !important; width: 100%; border-radius: 0; }
+    
+    /* Inputs y Botones Estilo SCADA */
+    .stTextInput input { background-color: #0d1b2a !important; color: #00d4ff !important; border: 1px solid #1f4068 !important; border-radius: 0; }
+    .stButton button { 
+        background: #00d4ff !important; 
+        color: #050a10 !important; 
+        font-weight: bold !important; 
+        width: 100%; 
+        border-radius: 0; 
+        border: none;
+        transition: 0.3s;
+    }
+    .stButton button:hover { background: #ffffff !important; box-shadow: 0 0 20px #00d4ff; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -88,7 +122,17 @@ if not st.session_state.autenticado:
     
     with col_vis:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="visual-core"><div class="ring r1"></div><div class="ring r2"></div><div class="center-logo"><h1>MIAA</h1><p>SCADA</p></div></div>', unsafe_allow_html=True)
+        # Aquí insertamos el logo dentro de los anillos animados
+        st.markdown(f'''
+        <div class="visual-core">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="center-logo">
+                <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg" class="logo-svg">
+                <h3 style="color:#00d4ff; font-family:Orbitron; margin-top:10px; font-size:14px; letter-spacing:3px;">SISTEMA SCADA</h3>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
 
     with col_log:
         st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
