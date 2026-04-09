@@ -652,36 +652,13 @@ st.markdown("""
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
-
         
-        /* 1. ELIMINAR EL PIE DE PÁGINA Y EL BADGE DE STREAMLIT */
-        /* Atacamos el footer, el contenedor de badges y cualquier elemento de estatus */
-        footer {display: none !important;}
-        [data-testid="stStatusWidget"] {display: none !important;}
+        
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .viewerBadge_container__1QS1n {display: none !important;}
         .stAppDeployButton {display: none !important;}
-        header {display: none !important;}
-
-        /* 2. ELIMINAR EL CUADRO DE "MADE WITH STREAMLIT" Y OTROS FLOTANTES */
-        /* Usamos selectores universales por si las clases cambian */
-        #MainMenu {visibility: hidden !important;}
-        .viewerBadge_container__1QSob {display: none !important;}
-        
-        /* Esta línea es para las versiones más nuevas de Streamlit */
-        [data-testid="stDecoration"] {display: none !important;}
-        
-        /* 3. FORZAR EL CONTENEDOR PRINCIPAL A OCUPAR TODO EL ESPACIO */
-        /* Esto empuja cualquier residuo fuera de la vista */
-        .main .block-container {
-            padding-bottom: 0rem !important;
-            margin-bottom: -5rem !important;
-        }
-
-        /* 4. QUITAR EL MARGEN BLANCO/GRIS AL FINAL */
-        .stApp {
-            bottom: 0px !important;
-            height: 100vh !important;
-            overflow: hidden !important;
-        }
 
 
     </style>
