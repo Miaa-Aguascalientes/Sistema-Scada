@@ -429,10 +429,10 @@ def cargar_registradores_desde_db():
                 nuevo_mapa_reg[serie_id] = {
                     "serie": serie_id,
                     "coord": (lat, lon),
-                    "sector": str(row['sector']),
-                    "tag_presion": row['presion'],
-                    "tag_presion2": row['presion2'],
-                    "tag_caudal": row['caudal']
+                    "sector": str(row['Sector']),
+                    "tag_presion": row['Presion_1'],
+                    "tag_presion2": row['Presion_2'],
+                    "tag_caudal": row['Caudal']
                 }
             except: continue
         return nuevo_mapa_reg
@@ -993,20 +993,22 @@ if sector_seleccionado:
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
 
-    # --- RENDERIZAR REGISTRADORES EN EL MAPA DEL SECTOR ----------------------------------------------------------------------------------------------------------------------
+# --- RENDERIZAR REGISTRADORES EN EL MAPA DEL SECTOR ---
         mapa_registradores_dict = cargar_registradores_desde_db()
         
         for serie, info_reg in mapa_registradores_dict.items():
-            # Filtrar por el sector que el usuario tiene abierto
-            if info_reg['sector'] == sector_seleccionado:
-                
-                # Obtener telemetría en tiempo real
+            # LIMPIEZA DE COMPARACIÓN:
+            # Quitamos espacios y convertimos a string para asegurar coincidencia
+            sector_db = str(info_reg.get('sector', '')).strip()
+            sector_hud = str(sector_seleccionado).strip()
+
+            if sector_db == sector_hud:
+                # Obtener telemetría
                 d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
                 p1_v, p1_s = d_reg(info_reg['tag_presion'])
                 p2_v, p2_s = d_reg(info_reg['tag_presion2'])
                 q_v, q_s = d_reg(info_reg['tag_caudal'])
 
-                # Diseño del Popup (Doble Presión + Caudal)
                 html_reg = f"""
                 <div style="background: #000; color: #fff; padding: 12px; border-radius: 8px; border: 1.5px solid #00d4ff; width: 250px; font-family: 'Courier New', monospace;">
                     <div style="border-bottom: 1px solid #1f4068; padding-bottom: 5px; margin-bottom: 8px;">
@@ -1030,7 +1032,6 @@ if sector_seleccionado:
                 </div>
                 """
 
-                # Marcador de Diamante Azul para los registradores
                 folium.RegularPolygonMarker(
                     location=info_reg['coord'],
                     number_of_sides=4,
@@ -1042,7 +1043,6 @@ if sector_seleccionado:
                     popup=folium.Popup(html_reg, max_width=300)
                 ).add_to(m_sec)
 
-                # Etiqueta de texto con el número de serie
                 folium.Marker(
                     location=info_reg['coord'],
                     icon=folium.DivIcon(
