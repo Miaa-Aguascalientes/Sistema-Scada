@@ -653,26 +653,28 @@ st.markdown("""
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
         
-        /* 1. Ocultar el footer por completo */
-        footer {
-        visibility: hidden;
-        height: 0%;
-        position: absolute;
+/* Ocultar TODO lo que esté en el pie de página */
+    footer {
+        display: none !important;
     }
     
-    /* 2. Elminar el texto "Made with Streamlit" y el contenedor del fondo */
-    .st-emotion-cache-q3228v {
+    /* Atacar el contenedor de la marca de agua por atributo, no por clase */
+    [data-testid="stStatusWidget"], 
+    [data-testid="stFooter"],
+    .viewerBadge_container__1QS1n,
+    .stAppDeployButton {
         display: none !important;
+        visibility: hidden !important;
     }
 
-    /* 3. Selector universal por si cambian el ID del cache */
-    div[data-testid="stFooter"] {
-        display: none !important;
+    /* Eliminar el pseudo-elemento que a veces queda flotando */
+    footer:after {
+        content: none !important;
     }
 
-    /* 4. Ajustar el margen inferior para que no quede un hueco blanco */
-    .main .block-container {
-        padding-bottom: 0rem;
+    /* Forzar que el contenedor principal ocupe todo el espacio sin dejar hueco abajo */
+    #root > div:nth-child(1) > div.withScreencast > div > div > div > section > div.block-container {
+        padding-bottom: 0rem !important;
     }
         
         
