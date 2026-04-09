@@ -658,41 +658,18 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
         
 
-        [data-testid="stHeader"], footer, [data-testid="stAppDeployButton"], .viewerBadge_container__1QS1n {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-        }
+    /* Ocultar el footer y el espacio que ocupa */
+    footer {visibility: hidden;}
+    [data-testid="stStatusWidget"] {visibility: hidden;}
+    
+    /* Eliminar el badge de Streamlit que flota abajo a la derecha */
+    .viewerBadge_container__1QS1n {display: none !important;}
         
         
     </style>
 """, unsafe_allow_html=True)
 
-components.html("""
-<script>
-    const removeElements = () => {
-        // Borrar el footer (Made with Streamlit)
-        const footer = window.parent.document.querySelector('footer');
-        if (footer) footer.style.display = 'none';
 
-        // Borrar la corona y botones de arriba
-        const header = window.parent.document.querySelector('header');
-        if (header) header.style.display = 'none';
-
-        // Borrar el badge de Streamlit/GitHub (el gatito)
-        const badges = window.parent.document.querySelectorAll('[class*="viewerBadge"]');
-        badges.forEach(badge => badge.style.display = 'none');
-        
-        // Borrar botones de Deploy
-        const deployBtn = window.parent.document.querySelector('[data-testid="stAppDeployButton"]');
-        if (deployBtn) deployBtn.style.display = 'none';
-    };
-
-    // Ejecutar inmediatamente y luego cada segundo por si Streamlit intenta revivirlos
-    removeElements();
-    setInterval(removeElements, 1000);
-</script>
-""", height=0)
 
 
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
