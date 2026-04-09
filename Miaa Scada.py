@@ -993,17 +993,16 @@ if sector_seleccionado:
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
 
-# --- RENDERIZAR REGISTRADORES EN EL MAPA DEL SECTOR ---
+# --- RENDERIZAR REGISTRADORES ---
         mapa_registradores_dict = cargar_registradores_desde_db()
         
         for serie, info_reg in mapa_registradores_dict.items():
-            # LIMPIEZA DE COMPARACIÓN:
-            # Quitamos espacios y convertimos a string para asegurar coincidencia
-            sector_db = str(info_reg.get('sector', '')).strip()
-            sector_hud = str(sector_seleccionado).strip()
+            # Forzamos a mayúsculas y quitamos espacios para que la comparación sea infalible
+            sector_db = str(info_reg.get('sector', '')).strip().upper()
+            sector_hud = str(sector_seleccionado).strip().upper()
 
             if sector_db == sector_hud:
-                # Obtener telemetría
+                # Extraer telemetría
                 d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
                 p1_v, p1_s = d_reg(info_reg['tag_presion'])
                 p2_v, p2_s = d_reg(info_reg['tag_presion2'])
@@ -1026,12 +1025,10 @@ if sector_seleccionado:
                         <span style="color: #888;">Caudal:</span>
                         <b style="color: #00ff00;">{q_v:.2f} L/s</b>
                     </div>
-                    <div style="font-size: 8px; color: #FFFF00; margin-top: 8px; text-align: right; opacity: 0.7;">
-                        ESTADO: {p1_s}
-                    </div>
                 </div>
                 """
 
+                # Marcador Diamante Cyan
                 folium.RegularPolygonMarker(
                     location=info_reg['coord'],
                     number_of_sides=4,
@@ -1043,6 +1040,7 @@ if sector_seleccionado:
                     popup=folium.Popup(html_reg, max_width=300)
                 ).add_to(m_sec)
 
+                # Etiqueta SN
                 folium.Marker(
                     location=info_reg['coord'],
                     icon=folium.DivIcon(
