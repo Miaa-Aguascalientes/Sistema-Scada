@@ -408,36 +408,6 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
-# --- DICCIONARIO DE REGISTRADORES (USANDO NUM_SERIE) ---
-@st.cache_data(ttl=600)
-def cargar_registradores_desde_db():
-    engine = get_mysql_telemetria_engine() # Usa tu función de conexión
-    if not engine: return {}
-    try:
-        query = "SELECT * FROM Diccionario_registradores"
-        df_reg = pd.read_sql(query, engine)
-        
-        nuevo_mapa_reg = {}
-        for _, row in df_reg.iterrows():
-            try:
-                # 1. Extraer coordenadas del campo 'Coord'
-                c_raw = str(row['Coord']).strip().replace('(', '').replace(')', '')
-                lat, lon = map(float, c_raw.split(','))
-                
-                # 2. Usar Num_serie como llave
-                serie_id = str(row['Num_serie']).strip()
-                nuevo_mapa_reg[serie_id] = {
-                    "serie": serie_id,
-                    "coord": (lat, lon),
-                    "Sector": str(row['Sector']).strip(), # Guardamos con mayúscula
-                    "Presion": row['Presion'],
-                    "Presion2": row['Presion2'],
-                    "Caudal": row['Caudal']
-                }
-            except: continue
-        return nuevo_mapa_reg
-    except: return {}
-
 
 # 4 SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
 params = st.query_params
@@ -990,72 +960,9 @@ if sector_seleccionado:
         except: pass
 
         folium_static(m_sec, width=None, height=750)
-
-# --- LÓGICA DE REGISTRADORES EN SECCIÓN 7 ---
-        mapa_registradores_dict = cargar_registradores_desde_db()
-        
-        # 1. Contar cuántos registradores pertenecen a este sector
-        # Usamos normalización (.strip().upper()) para que no fallen las comparaciones
-        registradores_del_sector = [
-            (serie, info) for serie, info in mapa_registradores_dict.items()
-            if str(info.get('sector', '')).strip().upper() == str(sector_seleccionado).strip().upper()
-        ]
-        
-        cantidad_reg = len(registradores_del_sector)
-
-        # 2. Mostrar aviso visual de cuántos se encontraron
-        if cantidad_reg > 0:
-            st.success(f"📡 Se detectaron {cantidad_reg} registradores en el {sector_seleccionado}")
-        else:
-            st.warning(f"⚠️ No se encontraron registradores vinculados al {sector_seleccionado} en la base de datos.")
-
-        # 3. Dibujar los registradores encontrados
-        for serie, info_reg in registradores_del_sector:
-            # Extraer telemetría
-            d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
-            p1_v, _ = d_reg(info_reg['tag_presion'])
-            p2_v, _ = d_reg(info_reg['tag_presion2'])
-            q_v, _ = d_reg(info_reg['tag_caudal'])
-
-            # Popup con información y el total del sector
-            html_reg = f"""
-            <div style="background: #000; color: #fff; padding: 10px; border-radius: 8px; border: 1.5px solid #00d4ff; width: 230px; font-family: monospace;">
-                <b style="color: #00d4ff; font-size: 13px;">📡 SN: {serie}</b><br>
-                <span style="font-size: 9px; color: #888;">Sector: {sector_seleccionado} (Total: {cantidad_reg})</span>
-                <hr style="opacity:0.2; margin:5px 0;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>P. Ent:</span> <b style="color:#00ff00;">{p1_v:.2f} kg</b>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>P. Sal:</span> <b style="color:#00ff00;">{p2_v:.2f} kg</b>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Caudal:</span> <b style="color:#00ff00;">{q_v:.2f} L/s</b>
-                </div>
-            </div>
-            """
-
-            folium.RegularPolygonMarker(
-                location=info_reg['coord'],
-                number_of_sides=4,
-                radius=10,
-                color='#00d4ff',
-                fill=True,
-                fill_color='#00d4ff',
-                fill_opacity=0.8,
-                popup=folium.Popup(html_reg, max_width=300)
-            ).add_to(m_sec)
-
-            folium.Marker(
-                location=info_reg['coord'],
-                icon=folium.DivIcon(
-                    icon_anchor=(-15, 15),
-                    html=f'<div style="font-size: 10px; color: #00d4ff; font-weight: bold; text-shadow: 2px 2px #000;">SN_{serie}</div>'
-                )
-            ).add_to(m_sec)
-    
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
+    
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
