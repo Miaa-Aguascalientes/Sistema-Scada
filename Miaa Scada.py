@@ -653,31 +653,30 @@ st.markdown("""
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
         
-        
-    /* Ocultar la barra superior completa (donde está la corona) */
-    [data-testid="stHeader"] {
-        display: none !important;
-    }
-
-    /* Ocultar el pie de página (footer) */
-    footer {
-        display: none !important;
-    }
-
-    /* Ocultar el botón de "Deploy" específicamente por su atributo de test */
-    [data-testid="stAppDeployButton"] {
-        display: none !important;
-    }
-
-    /* Ocultar el menú de opciones (hamburguesa) si fuera necesario */
-    #MainMenu {
+        /* 1. Ocultar el footer por completo */
+        footer {
         visibility: hidden;
+        height: 0%;
+        position: absolute;
+    }
+    
+    /* 2. Elminar el texto "Made with Streamlit" y el contenedor del fondo */
+    .st-emotion-cache-q3228v {
+        display: none !important;
     }
 
-    /* Quitar el espacio en blanco que queda arriba al ocultar el header */
-    .block-container {
-        padding-top: 2rem;
+    /* 3. Selector universal por si cambian el ID del cache */
+    div[data-testid="stFooter"] {
+        display: none !important;
     }
+
+    /* 4. Ajustar el margen inferior para que no quede un hueco blanco */
+    .main .block-container {
+        padding-bottom: 0rem;
+    }
+        
+        
+
 
 
     </style>
