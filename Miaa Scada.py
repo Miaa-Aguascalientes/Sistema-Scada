@@ -663,6 +663,17 @@ st.markdown("""
 
     </style>
 """, unsafe_allow_html=True)
+
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .viewerBadge_container__1QS1n {display: none !important;}
+            .stAppDeployButton {display: none !important;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
 
 # 1. Carga de datos base
