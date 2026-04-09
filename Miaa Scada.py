@@ -1430,37 +1430,4 @@ if sectores_data:
     # --- RENDERIZADO FINAL DEL MAPA (FUERA DE LOS IF) ---
     folium_static(m, width=None, height=750)
 
-    import streamlit as st
-import streamlit.components.v1 as components
-
-# Este script busca los elementos fuera del iframe de tu app y los destruye cada segundo
-components.html(
-    """
-    <script>
-        function cleanup() {
-            // 1. Buscar en el documento principal (parent)
-            const parentDoc = window.parent.document;
-            
-            // 2. Selectores específicos para la corona y el badge de la captura
-            const selectors = [
-                'header', 
-                'footer', 
-                '.stAppDeployButton', 
-                '[data-testid="stStatusWidget"]',
-                '.viewerBadge_container__1QS1n',
-                '[class^="viewerBadge"]',
-                '[class^="StyledExternalLink"]'
-            ];
-            
-            selectors.forEach(selector => {
-                const elements = parentDoc.querySelectorAll(selector);
-                elements.forEach(el => el.style.display = 'none');
-            });
-        }
-
-        // Ejecutar varias veces para asegurar que los borre tras la carga
-        setInterval(cleanup, 500);
-    </script>
-    """,
-    height=0,
-)
+   
