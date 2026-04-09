@@ -268,7 +268,7 @@ def obtener_historia_7_dias(tag_name):
     except:
         return pd.DataFrame()
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
     conn = get_postgres_conn()
     if not conn: return []
@@ -317,7 +317,7 @@ def get_blink_icon(color):
 
 # 3 SECCION -------------------------------------------------------------------------------- 3. CARGA DE DATOS DE DICCIONARIOS -------------------------------------------------------------------------------------------
 # DICCIONARIO POZOS
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600)
 def cargar_mapa_pozos_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
@@ -352,7 +352,7 @@ def cargar_mapa_pozos_desde_db():
         return {}
 
 # DICCIONARIO DE TANQUES
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600)
 def cargar_tanques_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
@@ -383,7 +383,7 @@ def cargar_tanques_desde_db():
     except: return {}
         
 # DICCIONARIO DE REBOMBEOS
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600)
 def cargar_rebombeos_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
@@ -409,6 +409,39 @@ def cargar_rebombeos_desde_db():
             except: continue
         return nuevo_mapa_rb
     except: return {}
+
+# --- DICCIONARIO DE REGISTRADORES (NUEVO) ---
+@st.cache_data(ttl=3600)
+def cargar_registradores_desde_db():
+    engine = get_mysql_telemetria_engine()
+    if not engine: 
+        return {}
+    try:
+        # Consulta a la tabla de registradores
+        query = "SELECT * FROM Diccionario_de_registradores"
+        df_reg = pd.read_sql(query, engine)
+        
+        nuevo_mapa_reg = {}
+        for _, row in df_reg.iterrows():
+            try:
+                # Limpieza y conversión de coordenadas
+                coords_str = str(row['coord']).strip().replace('(', '').replace(')', '')
+                lat, lon = map(float, coords_str.split(','))
+                
+                # Construcción del diccionario indexado por el ID del Registrador
+                # He añadido 'sector' que es la clave para que solo aparezcan en la Vista de Detalles
+                nuevo_mapa_reg[row['Registrador']] = {
+                    "nombre": row.get('Nombre_registrador', f"REG {row['Registrador']}"),
+                    "coord": (lat, lon),
+                    "sector": row['Sector'],  # Campo crucial para filtrar en la sección 7
+                    "tag_presion": row['presion'],
+                    "tag_caudal": row['caudal']
+                }
+            except Exception as e:
+                continue
+        return nuevo_mapa_reg
+    except Exception as e:
+        return {}
 
 
 # 4 SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
