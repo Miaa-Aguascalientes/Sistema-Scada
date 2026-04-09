@@ -15,43 +15,45 @@ import time # Necesario para controlar la duración del intro
 import urllib.parse
 
 import streamlit as st
+import streamlit.components.v1 as components
 
-st.markdown(
-    """
+# 1. Fuerza el CSS más agresivo posible
+st.markdown("""
     <style>
-    /* 1. Elimina el header (la corona y el menú) */
-    [data-testid="stHeader"] {
+    [data-testid="stHeader"], footer, [data-testid="stAppDeployButton"], .viewerBadge_container__1QS1n {
         display: none !important;
-    }
-
-    /* 2. Elimina el footer y el botón de Made in Streamlit */
-    footer {
-        display: none !important;
-    }
-    
-    /* 3. Elimina el botón de Deploy y el Toolbar de la derecha */
-    [data-testid="stAppDeployButton"], 
-    .stAppToolbar, 
-    [data-testid="stToolbar"] {
-        display: none !important;
-    }
-
-    /* 4. ELIMINAR EL ICONO DE GITHUB / CLOUD (El gato/badge) */
-    /* Este es el que suele dar más lata */
-    .viewerBadge_container__1QS1n, 
-    [class*="viewerBadge_container"], 
-    [class*="StyledExternalLink"] {
-        display: none !important;
-    }
-
-    /* 5. Ajuste para que el contenido use todo el alto de la pantalla */
-    .main .block-container {
-        padding-bottom: 0px !important;
+        visibility: hidden !important;
+        height: 0 !important;
     }
     </style>
-    """,
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
+
+# 2. Inyecta JavaScript para borrar lo que el CSS no pudo
+components.html("""
+<script>
+    const removeElements = () => {
+        // Borrar el footer (Made with Streamlit)
+        const footer = window.parent.document.querySelector('footer');
+        if (footer) footer.style.display = 'none';
+
+        // Borrar la corona y botones de arriba
+        const header = window.parent.document.querySelector('header');
+        if (header) header.style.display = 'none';
+
+        // Borrar el badge de Streamlit/GitHub (el gatito)
+        const badges = window.parent.document.querySelectorAll('[class*="viewerBadge"]');
+        badges.forEach(badge => badge.style.display = 'none');
+        
+        // Borrar botones de Deploy
+        const deployBtn = window.parent.document.querySelector('[data-testid="stAppDeployButton"]');
+        if (deployBtn) deployBtn.style.display = 'none';
+    };
+
+    // Ejecutar inmediatamente y luego cada segundo por si Streamlit intenta revivirlos
+    removeElements();
+    setInterval(removeElements, 1000);
+</script>
+""", height=0)
 
 st.set_page_config(
     page_title="Sistema Scada", 
