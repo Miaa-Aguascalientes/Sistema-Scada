@@ -991,40 +991,68 @@ if sector_seleccionado:
 
         folium_static(m_sec, width=None, height=750)
 
-# --- DENTRO DE LA SECCIÓN 7, ANTES DE folium_static ---
+# --- LÓGICA DE REGISTRADORES EN SECCIÓN 7 ---
         mapa_registradores_dict = cargar_registradores_desde_db()
         
-        for serie, info_reg in mapa_registradores_dict.items():
-            # NORMALIZACIÓN TOTAL: Quitamos espacios y pasamos a mayúsculas
-            # Esto hace que "Sector 1" sea igual a "SECTOR 1" o "sector1"
-            s_db = str(info_reg.get('Sector', '')).replace(" ", "").upper()
-            s_hud = str(sector_seleccionado).replace(" ", "").upper()
+        # 1. Contar cuántos registradores pertenecen a este sector
+        # Usamos normalización (.strip().upper()) para que no fallen las comparaciones
+        registradores_del_sector = [
+            (serie, info) for serie, info in mapa_registradores_dict.items()
+            if str(info.get('sector', '')).strip().upper() == str(sector_seleccionado).strip().upper()
+        ]
+        
+        cantidad_reg = len(registradores_del_sector)
 
-            if s_db == s_hud:
-                d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
-                p1, _ = d_reg(info_reg['Presion'])
-                p2, _ = d_reg(info_reg['Presion2'])
-                q, _ = d_reg(info_reg['Caudal'])
+        # 2. Mostrar aviso visual de cuántos se encontraron
+        if cantidad_reg > 0:
+            st.success(f"📡 Se detectaron {cantidad_reg} registradores en el {sector_seleccionado}")
+        else:
+            st.warning(f"⚠️ No se encontraron registradores vinculados al {sector_seleccionado} en la base de datos.")
 
-                # Creamos el marcador diamante
-                folium.RegularPolygonMarker(
-                    location=info_reg['coord'],
-                    number_of_sides=4,
-                    radius=10,
-                    color='#00d4ff',
-                    fill=True,
-                    fill_color='#00d4ff',
-                    popup=folium.Popup(f"SN: {serie}<br>P1: {p1:.2f}<br>P2: {p2:.2f}<br>Q: {q:.2f}", max_width=200)
-                ).add_to(m_sec)
+        # 3. Dibujar los registradores encontrados
+        for serie, info_reg in registradores_del_sector:
+            # Extraer telemetría
+            d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
+            p1_v, _ = d_reg(info_reg['tag_presion'])
+            p2_v, _ = d_reg(info_reg['tag_presion2'])
+            q_v, _ = d_reg(info_reg['tag_caudal'])
 
-                # Etiqueta
-                folium.Marker(
-                    location=info_reg['coord'],
-                    icon=folium.DivIcon(
-                        icon_anchor=(-15, 15),
-                        html=f'<div style="font-size: 10px; color: #00d4ff; font-weight: bold; text-shadow: 2px 2px #000;">SN_{serie}</div>'
-                    )
-                ).add_to(m_sec)
+            # Popup con información y el total del sector
+            html_reg = f"""
+            <div style="background: #000; color: #fff; padding: 10px; border-radius: 8px; border: 1.5px solid #00d4ff; width: 230px; font-family: monospace;">
+                <b style="color: #00d4ff; font-size: 13px;">📡 SN: {serie}</b><br>
+                <span style="font-size: 9px; color: #888;">Sector: {sector_seleccionado} (Total: {cantidad_reg})</span>
+                <hr style="opacity:0.2; margin:5px 0;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>P. Ent:</span> <b style="color:#00ff00;">{p1_v:.2f} kg</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>P. Sal:</span> <b style="color:#00ff00;">{p2_v:.2f} kg</b>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Caudal:</span> <b style="color:#00ff00;">{q_v:.2f} L/s</b>
+                </div>
+            </div>
+            """
+
+            folium.RegularPolygonMarker(
+                location=info_reg['coord'],
+                number_of_sides=4,
+                radius=10,
+                color='#00d4ff',
+                fill=True,
+                fill_color='#00d4ff',
+                fill_opacity=0.8,
+                popup=folium.Popup(html_reg, max_width=300)
+            ).add_to(m_sec)
+
+            folium.Marker(
+                location=info_reg['coord'],
+                icon=folium.DivIcon(
+                    icon_anchor=(-15, 15),
+                    html=f'<div style="font-size: 10px; color: #00d4ff; font-weight: bold; text-shadow: 2px 2px #000;">SN_{serie}</div>'
+                )
+            ).add_to(m_sec)
     
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
