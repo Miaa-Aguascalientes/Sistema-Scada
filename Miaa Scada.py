@@ -654,20 +654,33 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
 
         
-        /* 1. Ocultar el pie de página (el "Made with Streamlit") */
-        footer {visibility: hidden !important;}
-        
-        /* 2. Ocultar la barra de estado y el menú (Abajo a la derecha) */
-        [data-testid="stStatusWidget"] {display: none !important;}
-        
-        /* 3. Ocultar el botón de Deploy y la decoración superior */
-        .stAppDeployButton {display: none !important;}
+        /* 1. Ocultar el Header (Parte superior) */
         header {visibility: hidden !important;}
+        .stAppHeader {display: none !important;}
+
+        /* 2. Ocultar el Footer y el Viewer Badge (Lo que te estorba abajo a la derecha) */
+        footer {display: none !important; visibility: hidden !important;}
         
-        /* 4. ESTO ES LO NUEVO: Eliminar el contenedor que sostiene el footer */
-        #MainMenu {visibility: hidden !important;}
+        /* Esto ataca directamente a la etiqueta de Streamlit y cualquier badge flotante */
+        div[data-testid="stStatusWidget"] {display: none !important;}
         .viewerBadge_container__1QSob {display: none !important;}
         .styles_viewerBadge__1yB5_ {display: none !important;}
+        
+        /* Selector universal para cualquier cosa que Streamlit meta como "badge" */
+        [class*="viewerBadge"] {display: none !important;}
+        [class*="stDeployButton"] {display: none !important;}
+
+        /* 3. Limpiar bordes y espacios sobrantes */
+        #MainMenu {visibility: hidden !important;}
+        .stAppDeployButton {display: none !important;}
+        
+        /* Maximizar el espacio del contenido */
+        .block-container {
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
 
 
     </style>
