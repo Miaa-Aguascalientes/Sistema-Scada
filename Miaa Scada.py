@@ -654,20 +654,20 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
 
         
-        /* Oculta el pie de página (Made with Streamlit) */
-        footer {visibility: hidden;}
+        /* 1. Ocultar el pie de página (el "Made with Streamlit") */
+        footer {visibility: hidden !important;}
         
-        /* Oculta el encabezado (iconos de la derecha que ya mencionaste) */
-        header {visibility: hidden;}
+        /* 2. Ocultar la barra de estado y el menú (Abajo a la derecha) */
+        [data-testid="stStatusWidget"] {display: none !important;}
         
-        /* Oculta el contenedor del menú y el footer de forma definitiva */
-        #MainMenu {visibility: hidden;}
-        .stAppDeployButton {display:none;}
+        /* 3. Ocultar el botón de Deploy y la decoración superior */
+        .stAppDeployButton {display: none !important;}
+        header {visibility: hidden !important;}
         
-        /* Opcional: Elimina el espacio extra que deja el footer */
-        .stApp [data-testid="stStatusWidget"] {
-            display: none;
-        }
+        /* 4. ESTO ES LO NUEVO: Eliminar el contenedor que sostiene el footer */
+        #MainMenu {visibility: hidden !important;}
+        .viewerBadge_container__1QSob {display: none !important;}
+        .styles_viewerBadge__1yB5_ {display: none !important;}
 
 
     </style>
@@ -1106,6 +1106,7 @@ with col_mapa:
         location=st.session_state.centro_mapa, 
         zoom_start=st.session_state.zoom_inicial, 
         tiles="CartoDB dark_matter"
+        attributionControl=False # <--- ESTO ES CLAVE
     )
     Fullscreen().add_to(m)
 
