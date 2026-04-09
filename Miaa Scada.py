@@ -649,6 +649,18 @@ st.markdown("""
         /* ANIMACIÓN */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
+
+        /* MATAR LA CORONA Y EL MUNDO (TOOLBAR) */
+        [data-testid="stAppToolbar"] {
+        display: none !important;
+}
+
+        /* FORZAR OCULTAMIENTO DE CUALQUIER COSA QUE FLOTE ABAJO A LA DERECHA */
+        iframe[title="streamlitApp"] + div, 
+        .stApp > div:last-child {
+        display: none !important;
+}
+        
     </style>
 """, unsafe_allow_html=True)
 
