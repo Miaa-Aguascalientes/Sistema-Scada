@@ -14,6 +14,44 @@ import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
 
+import streamlit as st
+
+st.markdown(
+    """
+    <style>
+    /* 1. Elimina el header (la corona y el menú) */
+    [data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* 2. Elimina el footer y el botón de Made in Streamlit */
+    footer {
+        display: none !important;
+    }
+    
+    /* 3. Elimina el botón de Deploy y el Toolbar de la derecha */
+    [data-testid="stAppDeployButton"], 
+    .stAppToolbar, 
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+
+    /* 4. ELIMINAR EL ICONO DE GITHUB / CLOUD (El gato/badge) */
+    /* Este es el que suele dar más lata */
+    .viewerBadge_container__1QS1n, 
+    [class*="viewerBadge_container"], 
+    [class*="StyledExternalLink"] {
+        display: none !important;
+    }
+
+    /* 5. Ajuste para que el contenido use todo el alto de la pantalla */
+    .main .block-container {
+        padding-bottom: 0px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 st.set_page_config(
     page_title="Sistema Scada", 
