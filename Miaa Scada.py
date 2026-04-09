@@ -417,26 +417,30 @@ def cargar_registradores_desde_db():
         query = "SELECT * FROM Diccionario_registradores"
         df_reg = pd.read_sql(query, engine)
         
+        # DEBUG: Ver cuántos registros encuentra (borrar después)
+        # st.sidebar.write(f"Registradores encontrados: {len(df_reg)}")
+        
         nuevo_mapa_reg = {}
         for _, row in df_reg.iterrows():
             try:
-                # Procesar coordenadas: "lat, lon"
-                coords_raw = str(row['coord']).strip().replace('(', '').replace(')', '')
-                lat, lon = map(float, coords_raw.split(','))
+                # Procesar Coordenadas (Campo 'Coord')
+                c_raw = str(row['Coord']).strip().replace('(', '').replace(')', '')
+                lat, lon = map(float, c_raw.split(','))
                 
-                # Usamos num_serie como identificador único
-                serie_id = str(row['num_serie'])
+                serie_id = str(row['Num_serie']).strip()
                 nuevo_mapa_reg[serie_id] = {
                     "serie": serie_id,
                     "coord": (lat, lon),
-                    "sector": str(row['Sector']),
-                    "tag_presion": row['Presion_1'],
-                    "tag_presion2": row['Presion_2'],
+                    "sector": str(row['Sector']).strip(),
+                    "tag_presion": row['Presion'],
+                    "tag_presion2": row['Presion2'],
                     "tag_caudal": row['Caudal']
                 }
             except: continue
         return nuevo_mapa_reg
-    except: return {}
+    except Exception as e:
+        st.error(f"Error cargando registradores: {e}")
+        return {}
 
 
 # 4 SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
@@ -994,58 +998,51 @@ if sector_seleccionado:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
 
 # --- RENDERIZAR REGISTRADORES ---
+        # 1. Cargamos el diccionario
         mapa_registradores_dict = cargar_registradores_desde_db()
         
+        # 2. Iteramos
         for serie, info_reg in mapa_registradores_dict.items():
-            # Forzamos a mayúsculas y quitamos espacios para que la comparación sea infalible
-            sector_db = str(info_reg.get('sector', '')).strip().upper()
-            sector_hud = str(sector_seleccionado).strip().upper()
+            # NORMALIZACIÓN TOTAL: Quitamos espacios, pasamos a mayúsculas
+            s_db = str(info_reg.get('sector', '')).replace(" ", "").upper()
+            s_hud = str(sector_seleccionado).replace(" ", "").upper()
 
-            if sector_db == sector_hud:
-                # Extraer telemetría
+            if s_db == s_hud:
+                # Extraer telemetría de SCADA
                 d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
-                p1_v, p1_s = d_reg(info_reg['tag_presion'])
-                p2_v, p2_s = d_reg(info_reg['tag_presion2'])
-                q_v, q_s = d_reg(info_reg['tag_caudal'])
+                p1_v, _ = d_reg(info_reg['tag_presion'])
+                p2_v, _ = d_reg(info_reg['tag_presion2'])
+                q_v, _ = d_reg(info_reg['tag_caudal'])
 
+                # HTML del Popup
                 html_reg = f"""
-                <div style="background: #000; color: #fff; padding: 12px; border-radius: 8px; border: 1.5px solid #00d4ff; width: 250px; font-family: 'Courier New', monospace;">
-                    <div style="border-bottom: 1px solid #1f4068; padding-bottom: 5px; margin-bottom: 8px;">
-                        <b style="color: #00d4ff; font-size: 13px;">📡 REGISTRADOR: {serie}</b>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <span style="color: #888;">P. Entrada:</span>
-                        <b style="color: #00ff00;">{p1_v:.2f} kg</b>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <span style="color: #888;">P. Salida:</span>
-                        <b style="color: #00ff00;">{p2_v:.2f} kg</b>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; border-top: 1px solid #222; padding-top: 4px;">
-                        <span style="color: #888;">Caudal:</span>
-                        <b style="color: #00ff00;">{q_v:.2f} L/s</b>
-                    </div>
+                <div style="background: #000; color: #fff; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff; width: 220px; font-family: monospace;">
+                    <b style="color: #00d4ff;">REGISTRADOR: {serie}</b><br>
+                    <hr style="opacity:0.2; margin:5px 0;">
+                    P1: <b style="color:#00ff00;">{p1_v:.2f}</b> | 
+                    P2: <b style="color:#00ff00;">{p2_v:.2f}</b><br>
+                    Q: <b style="color:#00ff00;">{q_v:.2f} L/s</b>
                 </div>
                 """
 
-                # Marcador Diamante Cyan
+                # Marcador diamante azul
                 folium.RegularPolygonMarker(
                     location=info_reg['coord'],
                     number_of_sides=4,
-                    radius=8,
+                    radius=10,
                     color='#00d4ff',
                     fill=True,
                     fill_color='#00d4ff',
-                    fill_opacity=0.8,
+                    fill_opacity=0.9,
                     popup=folium.Popup(html_reg, max_width=300)
                 ).add_to(m_sec)
 
-                # Etiqueta SN
+                # Etiqueta de texto
                 folium.Marker(
                     location=info_reg['coord'],
                     icon=folium.DivIcon(
                         icon_anchor=(-15, 15),
-                        html=f'<div style="font-size: 9px; color: #00d4ff; font-weight: bold; text-shadow: 1px 1px #000;">SN_{serie}</div>'
+                        html=f'<div style="font-size: 10px; color: #00d4ff; font-weight: bold; text-shadow: 2px 2px #000;">SN_{serie}</div>'
                     )
                 ).add_to(m_sec)
     
