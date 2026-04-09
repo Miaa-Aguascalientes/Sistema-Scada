@@ -658,12 +658,35 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
         
 
-    /* Ocultar el footer y el espacio que ocupa */
-    footer {visibility: hidden;}
-    [data-testid="stStatusWidget"] {visibility: hidden;}
-    
-    /* Eliminar el badge de Streamlit que flota abajo a la derecha */
-    .viewerBadge_container__1QS1n {display: none !important;}
+        /* 1. Desaparece el Header (Corona, Menú, etc.) */
+        header[data-testid="stHeader"] {
+        display: none !important;
+        }
+
+        /* 2. Desaparece el Footer (Made with Streamlit) */
+        footer {
+        display: none !important;
+        }
+
+        /* 3. ELIMINA EL ICONO DE ABAJO A LA DERECHA (El "Gatito" o Badge) */
+        /* Usamos un selector de prefijo para que no importe cómo cambie la clase */
+        [class^="viewerBadge_container"],
+        [class*=" viewerBadge_container"],
+        [data-testid="stStatusWidget"],
+        div.viewerBadge_container__1QS1n {
+        display: none !important;
+        }
+
+        /* 4. Limpia cualquier botón de "Deploy" residual */
+        .stAppDeployButton {
+        display: none !important;
+        }
+
+        /* 5. Ajusta el espacio para que no se vea una franja blanca abajo */
+        #root > div:nth-child(1) > div.withScreencast > div > div > div > section > div.block-container {
+        padding-bottom: 0rem !important;
+        padding-top: 0rem !important;
+        }
         
         
     </style>
