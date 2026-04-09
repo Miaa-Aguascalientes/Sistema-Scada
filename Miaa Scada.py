@@ -654,32 +654,33 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
 
         
-        /* 1. Ocultar el Header (Parte superior) */
-        header {visibility: hidden !important;}
-        .stAppHeader {display: none !important;}
-
-        /* 2. Ocultar el Footer y el Viewer Badge (Lo que te estorba abajo a la derecha) */
-        footer {display: none !important; visibility: hidden !important;}
-        
-        /* Esto ataca directamente a la etiqueta de Streamlit y cualquier badge flotante */
-        div[data-testid="stStatusWidget"] {display: none !important;}
-        .viewerBadge_container__1QSob {display: none !important;}
-        .styles_viewerBadge__1yB5_ {display: none !important;}
-        
-        /* Selector universal para cualquier cosa que Streamlit meta como "badge" */
-        [class*="viewerBadge"] {display: none !important;}
-        [class*="stDeployButton"] {display: none !important;}
-
-        /* 3. Limpiar bordes y espacios sobrantes */
-        #MainMenu {visibility: hidden !important;}
+        /* 1. ELIMINAR EL PIE DE PÁGINA Y EL BADGE DE STREAMLIT */
+        /* Atacamos el footer, el contenedor de badges y cualquier elemento de estatus */
+        footer {display: none !important;}
+        [data-testid="stStatusWidget"] {display: none !important;}
         .stAppDeployButton {display: none !important;}
+        header {display: none !important;}
+
+        /* 2. ELIMINAR EL CUADRO DE "MADE WITH STREAMLIT" Y OTROS FLOTANTES */
+        /* Usamos selectores universales por si las clases cambian */
+        #MainMenu {visibility: hidden !important;}
+        .viewerBadge_container__1QSob {display: none !important;}
         
-        /* Maximizar el espacio del contenido */
-        .block-container {
-            padding-top: 0rem !important;
+        /* Esta línea es para las versiones más nuevas de Streamlit */
+        [data-testid="stDecoration"] {display: none !important;}
+        
+        /* 3. FORZAR EL CONTENEDOR PRINCIPAL A OCUPAR TODO EL ESPACIO */
+        /* Esto empuja cualquier residuo fuera de la vista */
+        .main .block-container {
             padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
+            margin-bottom: -5rem !important;
+        }
+
+        /* 4. QUITAR EL MARGEN BLANCO/GRIS AL FINAL */
+        .stApp {
+            bottom: 0px !important;
+            height: 100vh !important;
+            overflow: hidden !important;
         }
 
 
