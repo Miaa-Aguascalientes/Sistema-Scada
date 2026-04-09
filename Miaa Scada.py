@@ -653,28 +653,35 @@ st.markdown("""
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
         
-/* Ocultar TODO lo que esté en el pie de página */
+
+    /* 1. Elimina el header (la corona y el menú) */
+    [data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* 2. Elimina el footer y el botón de Made in Streamlit */
     footer {
         display: none !important;
     }
     
-    /* Atacar el contenedor de la marca de agua por atributo, no por clase */
-    [data-testid="stStatusWidget"], 
-    [data-testid="stFooter"],
-    .viewerBadge_container__1QS1n,
-    .stAppDeployButton {
+    /* 3. Elimina el botón de Deploy y el Toolbar de la derecha */
+    [data-testid="stAppDeployButton"], 
+    .stAppToolbar, 
+    [data-testid="stToolbar"] {
         display: none !important;
-        visibility: hidden !important;
     }
 
-    /* Eliminar el pseudo-elemento que a veces queda flotando */
-    footer:after {
-        content: none !important;
+    /* 4. ELIMINAR EL ICONO DE GITHUB / CLOUD (El gato/badge) */
+    /* Este es el que suele dar más lata */
+    .viewerBadge_container__1QS1n, 
+    [class*="viewerBadge_container"], 
+    [class*="StyledExternalLink"] {
+        display: none !important;
     }
 
-    /* Forzar que el contenedor principal ocupe todo el espacio sin dejar hueco abajo */
-    #root > div:nth-child(1) > div.withScreencast > div > div > div > section > div.block-container {
-        padding-bottom: 0rem !important;
+    /* 5. Ajuste para que el contenido use todo el alto de la pantalla */
+    .main .block-container {
+        padding-bottom: 0px !important;
     }
         
         
