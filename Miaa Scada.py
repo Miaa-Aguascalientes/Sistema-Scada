@@ -411,36 +411,32 @@ def cargar_rebombeos_desde_db():
 # --- DICCIONARIO DE REGISTRADORES (USANDO NUM_SERIE) ---
 @st.cache_data(ttl=600)
 def cargar_registradores_desde_db():
-    engine = get_mysql_telemetria_engine()
+    engine = get_mysql_telemetria_engine() # Usa tu función de conexión
     if not engine: return {}
     try:
         query = "SELECT * FROM Diccionario_registradores"
         df_reg = pd.read_sql(query, engine)
         
-        # DEBUG: Ver cuántos registros encuentra (borrar después)
-        # st.sidebar.write(f"Registradores encontrados: {len(df_reg)}")
-        
         nuevo_mapa_reg = {}
         for _, row in df_reg.iterrows():
             try:
-                # Procesar Coordenadas (Campo 'Coord')
+                # 1. Extraer coordenadas del campo 'Coord'
                 c_raw = str(row['Coord']).strip().replace('(', '').replace(')', '')
                 lat, lon = map(float, c_raw.split(','))
                 
+                # 2. Usar Num_serie como llave
                 serie_id = str(row['Num_serie']).strip()
                 nuevo_mapa_reg[serie_id] = {
                     "serie": serie_id,
                     "coord": (lat, lon),
-                    "sector": str(row['Sector']).strip(),
-                    "tag_presion": row['Presion'],
-                    "tag_presion2": row['Presion2'],
-                    "tag_caudal": row['Caudal']
+                    "Sector": str(row['Sector']).strip(), # Guardamos con mayúscula
+                    "Presion": row['Presion'],
+                    "Presion2": row['Presion2'],
+                    "Caudal": row['Caudal']
                 }
             except: continue
         return nuevo_mapa_reg
-    except Exception as e:
-        st.error(f"Error cargando registradores: {e}")
-        return {}
+    except: return {}
 
 
 # 4 SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
@@ -994,38 +990,23 @@ if sector_seleccionado:
         except: pass
 
         folium_static(m_sec, width=None, height=750)
-    else:
-        st.error(f"No se encontró información para el sector {sector_seleccionado}")
 
-# --- RENDERIZAR REGISTRADORES ---
-        # 1. Cargamos el diccionario
+# --- DENTRO DE LA SECCIÓN 7, ANTES DE folium_static ---
         mapa_registradores_dict = cargar_registradores_desde_db()
         
-        # 2. Iteramos
         for serie, info_reg in mapa_registradores_dict.items():
-            # NORMALIZACIÓN TOTAL: Quitamos espacios, pasamos a mayúsculas
-            s_db = str(info_reg.get('sector', '')).replace(" ", "").upper()
+            # NORMALIZACIÓN TOTAL: Quitamos espacios y pasamos a mayúsculas
+            # Esto hace que "Sector 1" sea igual a "SECTOR 1" o "sector1"
+            s_db = str(info_reg.get('Sector', '')).replace(" ", "").upper()
             s_hud = str(sector_seleccionado).replace(" ", "").upper()
 
             if s_db == s_hud:
-                # Extraer telemetría de SCADA
                 d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
-                p1_v, _ = d_reg(info_reg['tag_presion'])
-                p2_v, _ = d_reg(info_reg['tag_presion2'])
-                q_v, _ = d_reg(info_reg['tag_caudal'])
+                p1, _ = d_reg(info_reg['Presion'])
+                p2, _ = d_reg(info_reg['Presion2'])
+                q, _ = d_reg(info_reg['Caudal'])
 
-                # HTML del Popup
-                html_reg = f"""
-                <div style="background: #000; color: #fff; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff; width: 220px; font-family: monospace;">
-                    <b style="color: #00d4ff;">REGISTRADOR: {serie}</b><br>
-                    <hr style="opacity:0.2; margin:5px 0;">
-                    P1: <b style="color:#00ff00;">{p1_v:.2f}</b> | 
-                    P2: <b style="color:#00ff00;">{p2_v:.2f}</b><br>
-                    Q: <b style="color:#00ff00;">{q_v:.2f} L/s</b>
-                </div>
-                """
-
-                # Marcador diamante azul
+                # Creamos el marcador diamante
                 folium.RegularPolygonMarker(
                     location=info_reg['coord'],
                     number_of_sides=4,
@@ -1033,11 +1014,10 @@ if sector_seleccionado:
                     color='#00d4ff',
                     fill=True,
                     fill_color='#00d4ff',
-                    fill_opacity=0.9,
-                    popup=folium.Popup(html_reg, max_width=300)
+                    popup=folium.Popup(f"SN: {serie}<br>P1: {p1:.2f}<br>P2: {p2:.2f}<br>Q: {q:.2f}", max_width=200)
                 ).add_to(m_sec)
 
-                # Etiqueta de texto
+                # Etiqueta
                 folium.Marker(
                     location=info_reg['coord'],
                     icon=folium.DivIcon(
@@ -1046,6 +1026,8 @@ if sector_seleccionado:
                     )
                 ).add_to(m_sec)
     
+    else:
+        st.error(f"No se encontró información para el sector {sector_seleccionado}")
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
