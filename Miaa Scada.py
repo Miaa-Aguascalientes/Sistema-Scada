@@ -652,6 +652,24 @@ st.markdown("""
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
+
+        
+        /* Oculta el pie de página (Made with Streamlit) */
+        footer {visibility: hidden;}
+        
+        /* Oculta el encabezado (iconos de la derecha que ya mencionaste) */
+        header {visibility: hidden;}
+        
+        /* Oculta el contenedor del menú y el footer de forma definitiva */
+        #MainMenu {visibility: hidden;}
+        .stAppDeployButton {display:none;}
+        
+        /* Opcional: Elimina el espacio extra que deja el footer */
+        .stApp [data-testid="stStatusWidget"] {
+            display: none;
+        }
+
+
     </style>
 """, unsafe_allow_html=True)
 # 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
