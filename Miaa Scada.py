@@ -408,6 +408,36 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
+# --- DICCIONARIO DE REGISTRADORES (USANDO NUM_SERIE) ---
+@st.cache_data(ttl=600)
+def cargar_registradores_desde_db():
+    engine = get_mysql_telemetria_engine()
+    if not engine: return {}
+    try:
+        query = "SELECT * FROM Diccionario_registradores"
+        df_reg = pd.read_sql(query, engine)
+        
+        nuevo_mapa_reg = {}
+        for _, row in df_reg.iterrows():
+            try:
+                # Procesar coordenadas: "lat, lon"
+                coords_raw = str(row['coord']).strip().replace('(', '').replace(')', '')
+                lat, lon = map(float, coords_raw.split(','))
+                
+                # Usamos num_serie como identificador único
+                serie_id = str(row['num_serie'])
+                nuevo_mapa_reg[serie_id] = {
+                    "serie": serie_id,
+                    "coord": (lat, lon),
+                    "sector": str(row['sector']),
+                    "tag_presion": row['presion'],
+                    "tag_presion2": row['presion2'],
+                    "tag_caudal": row['caudal']
+                }
+            except: continue
+        return nuevo_mapa_reg
+    except: return {}
+
 
 # 4 SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
 params = st.query_params
@@ -962,6 +992,64 @@ if sector_seleccionado:
         folium_static(m_sec, width=None, height=750)
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
+
+    # --- RENDERIZAR REGISTRADORES EN EL MAPA DEL SECTOR ----------------------------------------------------------------------------------------------------------------------
+        mapa_registradores_dict = cargar_registradores_desde_db()
+        
+        for serie, info_reg in mapa_registradores_dict.items():
+            # Filtrar por el sector que el usuario tiene abierto
+            if info_reg['sector'] == sector_seleccionado:
+                
+                # Obtener telemetría en tiempo real
+                d_reg = lambda tag: data_scada.get(tag, (0, "N/A"))
+                p1_v, p1_s = d_reg(info_reg['tag_presion'])
+                p2_v, p2_s = d_reg(info_reg['tag_presion2'])
+                q_v, q_s = d_reg(info_reg['tag_caudal'])
+
+                # Diseño del Popup (Doble Presión + Caudal)
+                html_reg = f"""
+                <div style="background: #000; color: #fff; padding: 12px; border-radius: 8px; border: 1.5px solid #00d4ff; width: 250px; font-family: 'Courier New', monospace;">
+                    <div style="border-bottom: 1px solid #1f4068; padding-bottom: 5px; margin-bottom: 8px;">
+                        <b style="color: #00d4ff; font-size: 13px;">📡 REGISTRADOR: {serie}</b>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span style="color: #888;">P. Entrada:</span>
+                        <b style="color: #00ff00;">{p1_v:.2f} kg</b>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span style="color: #888;">P. Salida:</span>
+                        <b style="color: #00ff00;">{p2_v:.2f} kg</b>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid #222; padding-top: 4px;">
+                        <span style="color: #888;">Caudal:</span>
+                        <b style="color: #00ff00;">{q_v:.2f} L/s</b>
+                    </div>
+                    <div style="font-size: 8px; color: #FFFF00; margin-top: 8px; text-align: right; opacity: 0.7;">
+                        ESTADO: {p1_s}
+                    </div>
+                </div>
+                """
+
+                # Marcador de Diamante Azul para los registradores
+                folium.RegularPolygonMarker(
+                    location=info_reg['coord'],
+                    number_of_sides=4,
+                    radius=8,
+                    color='#00d4ff',
+                    fill=True,
+                    fill_color='#00d4ff',
+                    fill_opacity=0.8,
+                    popup=folium.Popup(html_reg, max_width=300)
+                ).add_to(m_sec)
+
+                # Etiqueta de texto con el número de serie
+                folium.Marker(
+                    location=info_reg['coord'],
+                    icon=folium.DivIcon(
+                        icon_anchor=(-15, 15),
+                        html=f'<div style="font-size: 9px; color: #00d4ff; font-weight: bold; text-shadow: 1px 1px #000;">SN_{serie}</div>'
+                    )
+                ).add_to(m_sec)
     
     st.stop()
     
