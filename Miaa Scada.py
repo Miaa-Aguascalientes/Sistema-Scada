@@ -537,7 +537,24 @@ if tag_a_graficar:
 # 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
+        /* 1. BLOQUEO TOTAL DE INTERFAZ (HEADER, FOOTER, MENU) */
+        /* Adiós corona, adiós menú de 3 puntos, adiós footer */
+        header, footer, #MainMenu, .stAppDeployButton, [data-testid="stHeader"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* 2. ELIMINACIÓN DEL BADGE (EL GATITO / STREAMLIT CLOUD BADGE) */
+        /* Este selector ataca cualquier cosa que huela a badge de Streamlit */
+        [class^="viewerBadge_container"], 
+        [class*="viewerBadge_container"], 
+        div[id^="viewerBadge"],
+        .viewerBadge_container__1QS1n {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* 3. SIDEBAR FIJO Y SIN FLECHAS */
         [data-testid="collapsedControl"], 
         button[kind="headerNoPadding"], 
         [data-testid="stSidebarCollapseButton"] {
@@ -548,17 +565,11 @@ st.markdown("""
             min-width: 320px !important; 
             max-width: 320px !important;
             width: 320px !important;
+            background-color: #0b1a29 !important; 
+            border-right: 2px solid #1f4068; 
         }
 
-        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
-            display: none !important;
-        }
-        header { visibility: hidden !important; height: 0px !important; }
-        #MainMenu { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
-
-        /* 3. LOGO EN LO MÁS ALTO */
+        /* 4. LOGO EN SIDEBAR */
         .sidebar-logo { 
             position: fixed;
             top: 0px;
@@ -574,23 +585,23 @@ st.markdown("""
         }
         .sidebar-logo img { width: 80%; height: auto; }
 
-        /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
+        /* 5. CONTENEDOR PRINCIPAL Y MAPA (ELIMINAR HUECOS) */
         .stApp { background-color: #000000; color: white; }
         
         .block-container {
-            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
+            padding-top: 0rem !important;
             padding-bottom: 0rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-            margin-top: 100px !important;    /* Sube todo el contenido para cubrir el hueco del header */
+            margin-top: 100px !important; 
         }
 
-        /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
+        /* Ajuste para que el mapa suba y no deje franjas */
         iframe {
-            margin-top: -110px !important; /* Margen negativo para succionar el mapa hacia arriba */
+            margin-top: -110px !important;
         }
 
-        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
+        /* 6. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -603,29 +614,19 @@ st.markdown("""
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
+            background-color: #000000;
             width: 100%;
             text-align: center;
             padding: 10px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
+        /* 7. CONTENIDO DEL SIDEBAR */
         [data-testid="stSidebarContent"] {
             padding-top: 110px !important; 
         }
 
-        [data-testid="stSidebar"] { 
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-
-                /* --- COMPONENTES DEL DASHBOARD --- */
-        [data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 auto !important;
-        }
-        
+        /* 8. COMPONENTES DEL DASHBOARD */
         .resumen-card { 
             background: #050505; 
             border: 1px solid #1f4068; 
@@ -644,54 +645,12 @@ st.markdown("""
         
         .status-ok { background-color: #1b5e20; color: #a5d6a7; }
         .status-err { background-color: #b71c1c; color: #ef9a9a; }
-        
-        .section-header { 
-            padding: 10px; 
-            border-radius: 3px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            color: white; 
-        }
 
-        /* ANIMACIÓN DE PARPADEO */
+        /* ANIMACIÓN */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
-        
-
-        /* 1. Desaparece el Header (Corona, Menú, etc.) */
-        header[data-testid="stHeader"] {
-        display: none !important;
-        }
-
-        /* 2. Desaparece el Footer (Made with Streamlit) */
-        footer {
-        display: none !important;
-        }
-
-        /* 3. ELIMINA EL ICONO DE ABAJO A LA DERECHA (El "Gatito" o Badge) */
-        /* Usamos un selector de prefijo para que no importe cómo cambie la clase */
-        [class^="viewerBadge_container"],
-        [class*=" viewerBadge_container"],
-        [data-testid="stStatusWidget"],
-        div.viewerBadge_container__1QS1n {
-        display: none !important;
-        }
-
-        /* 4. Limpia cualquier botón de "Deploy" residual */
-        .stAppDeployButton {
-        display: none !important;
-        }
-
-        /* 5. Ajusta el espacio para que no se vea una franja blanca abajo */
-        #root > div:nth-child(1) > div.withScreencast > div > div > div > section > div.block-container {
-        padding-bottom: 0rem !important;
-        padding-top: 0rem !important;
-        }
-        
-        
     </style>
 """, unsafe_allow_html=True)
-
 
 
 
