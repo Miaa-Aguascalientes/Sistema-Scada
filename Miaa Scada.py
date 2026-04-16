@@ -13,8 +13,6 @@ import hashlib
 import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
-import ast
-import json
 
 
 st.set_page_config(
@@ -270,50 +268,29 @@ def obtener_historia_7_dias(tag_name):
     except:
         return pd.DataFrame()
 
-
-
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    engine = get_mysql_telemetria_engine()
-    if not engine: return []
+    conn = get_postgres_conn()
+    if not conn: return []
     try:
-        # En MySQL, quitamos las funciones de Postgres y las comillas dobles
-        # Usamos comillas invertidas solo para el campo con guion
+        # Añadimos los campos numéricos solicitados en la consulta
         query = """
-            SELECT 
-                sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
-                U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
-                Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, 
-                Vol_Fact, Kwh, `costoKw-hr`, Recaudacion, 
-                Dotacion, Balance_Estimado,
-                geom as geo 
-            FROM Sectores_hidr
+            SELECT sector, "Pozos_Sector", 
+                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
+                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
+                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
+                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
+                   "Recaudacion", "Dotacion", "Balance_Estimado",
+                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
+            FROM "Sectorizacion"."Sectores_hidr"
         """
-        df = pd.read_sql(query, engine)
-        
-        # IMPORTANTE: Convertir el texto de 'geo' a un diccionario real
-        if not df.empty and 'geo' in df.columns:
-            def convertir_a_dict(valor):
-                if not valor: return None
-                try:
-                    # Intentamos cargar como JSON estándar
-                    return json.loads(valor.replace("'", '"'))
-                except:
-                    try:
-                        # Si falla (por comillas simples), usamos ast
-                        return ast.literal_eval(valor)
-                    except:
-                        return None
-            
-            df['geo'] = df['geo'].apply(convertir_a_dict)
-            
-            # Quitamos filas que no se pudieron convertir
-            df = df.dropna(subset=['geo'])
-            
+        df = pd.read_sql(query, conn)
+        conn.close()
         return df.to_dict('records')
     except Exception as e:
         st.error(f"Error al cargar sectores: {e}")
         return []
+
 
 def formato_hora(decimal):
     try:
