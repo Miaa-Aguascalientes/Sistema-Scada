@@ -13,7 +13,7 @@ import hashlib
 import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
-
+import ast
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -287,32 +287,34 @@ def cargar_sectores_poligonos():
         df = pd.read_sql(query, engine)
         
         if not df.empty and 'geo' in df.columns:
-            def limpiar_y_parsear(valor):
-                if not valor or str(valor).strip() == "":
+            def forzar_geometria(valor):
+                if not valor or str(valor).strip() == "" or valor == "None":
                     return None
+                
+                # Si ya es un dict por alguna razón del conector, lo pasamos
+                if isinstance(valor, dict):
+                    return valor
+                
                 try:
-                    # Caso 1: Ya es un diccionario
-                    if isinstance(valor, dict):
-                        return valor
-                    
-                    # Caso 2: Es un string. 
-                    # Primero intentamos cargarlo directo
+                    # Intento 1: JSON Estándar (Comillas dobles)
+                    return json.loads(valor)
+                except:
                     try:
-                        return json.loads(valor)
-                    except json.JSONDecodeError:
-                        # Si falla por las comillas (como se ve en tu error), 
-                        # intercambiamos comillas simples por dobles.
-                        # Usamos un reemplazo cuidadoso para no romper textos internos
-                        dato_limpio = valor.replace("'", '"')
-                        return json.loads(dato_limpio)
-                except Exception as e:
-                    # Si de plano no se puede, imprimimos el error en consola para debuguear
-                    print(f"Error parseando geo: {e}")
-                    return None
+                        # Intento 2: Estilo Python (Comillas simples)
+                        # literal_eval es mucho más seguro que eval()
+                        return ast.literal_eval(valor)
+                    except Exception as e:
+                        # Si falla todo, limpiamos espacios y reintentamos
+                        try:
+                            limpio = str(valor).strip()
+                            return ast.literal_eval(limpio)
+                        except:
+                            print(f"Error fatal en sector: {valor[:50]}...")
+                            return None
 
-            df['geo'] = df['geo'].apply(limpiar_y_parsear)
+            df['geo'] = df['geo'].apply(forzar_geometria)
             
-            # Eliminamos las filas donde la geometría falló o está vacía
+            # Limpiamos los que fallaron
             df = df.dropna(subset=['geo'])
             
         return df.to_dict('records')
