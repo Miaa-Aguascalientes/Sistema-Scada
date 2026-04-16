@@ -270,15 +270,12 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    # Usamos el engine de MySQL (asegúrate de que get_mysql_engine esté definido)
     engine = get_mysql_engine()
     if not engine:
         return []
     try:
-        # En MySQL las tablas se referencian habitualmente sin comillas dobles 
-        # o con comillas simples invertidas (`) si tienen caracteres especiales.
-        # ST_AsGeoJSON y ST_Transform dependen de que tu MySQL tenga soporte espacial (8.0+).
-        # Nota: En MySQL 8+, si los datos ya están en 4326, ST_Transform no es necesario.
+        # Quitamos ST_AsGeoJSON porque ya es texto
+        # Si el nombre de la tabla tiene puntos o espacios, usa las comillas invertidas ``
         query = """
             SELECT 
                 sector, 
@@ -302,21 +299,28 @@ def cargar_sectores_poligonos():
                 Recaudacion, 
                 Dotacion, 
                 Balance_Estimado,
-                ST_AsGeoJSON(geom) as geo 
+                geom as geo 
             FROM Sectores_hidr
         """
-        # Ejecutamos la consulta usando el engine de MySQL
         df = pd.read_sql(query, engine)
         
-        # Procesamos el GeoJSON si viene como string
         if not df.empty and 'geo' in df.columns:
-            df['geo'] = df['geo'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+            # Intentamos convertir el texto a JSON (dict de Python)
+            def limpiar_geometria(x):
+                if isinstance(x, str):
+                    try:
+                        return json.loads(x)
+                    except:
+                        # Por si acaso el texto trae comillas simples o formato raro
+                        return json.loads(x.replace("'", '"'))
+                return x
+
+            df['geo'] = df['geo'].apply(limpiar_geometria)
             
         return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error al cargar sectores desde MySQL: {e}")
+        st.error(f"Error al cargar sectores desde MySQL (campo texto): {e}")
         return []
-
 
 def formato_hora(decimal):
     try:
