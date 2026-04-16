@@ -271,55 +271,45 @@ def obtener_historia_7_dias(tag_name):
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
     engine = get_mysql_engine()
-    if not engine:
+    if not engine: 
         return []
     try:
-        # Quitamos ST_AsGeoJSON porque ya es texto
-        # Si el nombre de la tabla tiene puntos o espacios, usa las comillas invertidas ``
+        # Consulta directa: geom ya es texto, así que lo traemos tal cual
         query = """
             SELECT 
-                sector, 
-                Pozos_Sector, 
-                Superficie, 
-                Long_Red, 
-                Vol_Prod, 
-                U_Domesticos, 
-                U_NoDom, 
-                U_Tot, 
-                Poblacion, 
-                Cons_m3, 
-                Faltas_Agua, 
-                Fugas_Tot, 
-                FTC, 
-                FTA, 
-                Vol_Medid, 
-                Vol_Fact, 
-                Kwh, 
-                `costoKw-hr`, 
-                Recaudacion, 
-                Dotacion, 
-                Balance_Estimado,
+                sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
+                U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
+                Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, 
+                Vol_Fact, Kwh, `costoKw-hr`, Recaudacion, 
+                Dotacion, Balance_Estimado,
                 geom as geo 
             FROM Sectores_hidr
         """
         df = pd.read_sql(query, engine)
         
         if not df.empty and 'geo' in df.columns:
-            # Intentamos convertir el texto a JSON (dict de Python)
-            def limpiar_geometria(x):
-                if isinstance(x, str):
-                    try:
-                        return json.loads(x)
-                    except:
-                        # Por si acaso el texto trae comillas simples o formato raro
-                        return json.loads(x.replace("'", '"'))
-                return x
+            # Función robusta para convertir el texto a JSON
+            def parsear_geojson(valor):
+                if not valor:
+                    return None
+                try:
+                    # Si ya es un dict (raro pero pasa con algunos conectores), lo dejamos igual
+                    if isinstance(valor, dict):
+                        return valor
+                    # Si es texto, lo convertimos a objeto de Python
+                    return json.loads(valor)
+                except Exception as e:
+                    # Si falla el parseo, devolvemos None para no romper el mapa
+                    return None
 
-            df['geo'] = df['geo'].apply(limpiar_geometria)
+            df['geo'] = df['geo'].apply(parsear_geojson)
+            
+            # Filtramos los que no tengan geometría válida
+            df = df.dropna(subset=['geo'])
             
         return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error al cargar sectores desde MySQL (campo texto): {e}")
+        st.error(f"Error al cargar sectores desde MySQL (campo TEXT): {e}")
         return []
 
 def formato_hora(decimal):
