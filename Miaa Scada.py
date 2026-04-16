@@ -270,25 +270,51 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_postgres_conn()
-    if not conn: return []
+    # Usamos el engine de MySQL (asegúrate de que get_mysql_engine esté definido)
+    engine = get_mysql_engine()
+    if not engine:
+        return []
     try:
-        # Añadimos los campos numéricos solicitados en la consulta
+        # En MySQL las tablas se referencian habitualmente sin comillas dobles 
+        # o con comillas simples invertidas (`) si tienen caracteres especiales.
+        # ST_AsGeoJSON y ST_Transform dependen de que tu MySQL tenga soporte espacial (8.0+).
+        # Nota: En MySQL 8+, si los datos ya están en 4326, ST_Transform no es necesario.
         query = """
-            SELECT sector, "Pozos_Sector", 
-                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
-                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
-                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
-                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
-                   "Recaudacion", "Dotacion", "Balance_Estimado",
-                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
-            FROM "Sectorizacion"."Sectores_hidr"
+            SELECT 
+                sector, 
+                Pozos_Sector, 
+                Superficie, 
+                Long_Red, 
+                Vol_Prod, 
+                U_Domesticos, 
+                U_NoDom, 
+                U_Tot, 
+                Poblacion, 
+                Cons_m3, 
+                Faltas_Agua, 
+                Fugas_Tot, 
+                FTC, 
+                FTA, 
+                Vol_Medid, 
+                Vol_Fact, 
+                Kwh, 
+                `costoKw-hr`, 
+                Recaudacion, 
+                Dotacion, 
+                Balance_Estimado,
+                ST_AsGeoJSON(geom) as geo 
+            FROM Sectores_hidr
         """
-        df = pd.read_sql(query, conn)
-        conn.close()
+        # Ejecutamos la consulta usando el engine de MySQL
+        df = pd.read_sql(query, engine)
+        
+        # Procesamos el GeoJSON si viene como string
+        if not df.empty and 'geo' in df.columns:
+            df['geo'] = df['geo'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+            
         return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error al cargar sectores: {e}")
+        st.error(f"Error al cargar sectores desde MySQL: {e}")
         return []
 
 
