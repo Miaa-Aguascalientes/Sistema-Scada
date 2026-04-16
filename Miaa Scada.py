@@ -268,59 +268,7 @@ def obtener_historia_7_dias(tag_name):
     except:
         return pd.DataFrame()
 
-@st.cache_data(ttl=3600)
-def cargar_sectores_poligonos():
-    engine = get_mysql_engine()
-    if not engine: 
-        return []
-    try:
-        query = """
-            SELECT 
-                sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
-                U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
-                Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, 
-                Vol_Fact, Kwh, `costoKw-hr`, Recaudacion, 
-                Dotacion, Balance_Estimado,
-                geom as geo 
-            FROM Sectores_hidr
-        """
-        df = pd.read_sql(query, engine)
-        
-        if not df.empty and 'geo' in df.columns:
-            def forzar_geometria(valor):
-                if not valor or str(valor).strip() == "" or valor == "None":
-                    return None
-                
-                # Si ya es un dict por alguna razón del conector, lo pasamos
-                if isinstance(valor, dict):
-                    return valor
-                
-                try:
-                    # Intento 1: JSON Estándar (Comillas dobles)
-                    return json.loads(valor)
-                except:
-                    try:
-                        # Intento 2: Estilo Python (Comillas simples)
-                        # literal_eval es mucho más seguro que eval()
-                        return ast.literal_eval(valor)
-                    except Exception as e:
-                        # Si falla todo, limpiamos espacios y reintentamos
-                        try:
-                            limpio = str(valor).strip()
-                            return ast.literal_eval(limpio)
-                        except:
-                            print(f"Error fatal en sector: {valor[:50]}...")
-                            return None
 
-            df['geo'] = df['geo'].apply(forzar_geometria)
-            
-            # Limpiamos los que fallaron
-            df = df.dropna(subset=['geo'])
-            
-        return df.to_dict('records')
-    except Exception as e:
-        st.error(f"Error al cargar sectores: {e}")
-        return []
 
 def formato_hora(decimal):
     try:
