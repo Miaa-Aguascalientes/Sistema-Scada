@@ -270,7 +270,7 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_postgres_conn()
+    conn = get_mysql_telemetria_engine()
     if not conn: return []
     try:
         # Añadimos los campos numéricos solicitados en la consulta
@@ -282,7 +282,7 @@ def cargar_sectores_poligonos():
                    "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
                    "Recaudacion", "Dotacion", "Balance_Estimado",
                    ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
-            FROM "Sectorizacion"."Sectores_hidr"
+            FROM "Sectores_hidr"
         """
         df = pd.read_sql(query, conn)
         conn.close()
