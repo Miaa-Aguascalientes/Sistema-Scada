@@ -1193,7 +1193,7 @@ def get_sector_style(feature, visible):
     }
 
 # 1. Cargamos los datos con tu función de caché
-sectores = cargar_sectores_poligonos()
+sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", z_index=1)
