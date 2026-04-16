@@ -274,7 +274,6 @@ def cargar_sectores_poligonos():
     if not engine: 
         return []
     try:
-        # Consulta directa: geom ya es texto, así que lo traemos tal cual
         query = """
             SELECT 
                 sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
@@ -288,28 +287,37 @@ def cargar_sectores_poligonos():
         df = pd.read_sql(query, engine)
         
         if not df.empty and 'geo' in df.columns:
-            # Función robusta para convertir el texto a JSON
-            def parsear_geojson(valor):
-                if not valor:
+            def limpiar_y_parsear(valor):
+                if not valor or str(valor).strip() == "":
                     return None
                 try:
-                    # Si ya es un dict (raro pero pasa con algunos conectores), lo dejamos igual
+                    # Caso 1: Ya es un diccionario
                     if isinstance(valor, dict):
                         return valor
-                    # Si es texto, lo convertimos a objeto de Python
-                    return json.loads(valor)
+                    
+                    # Caso 2: Es un string. 
+                    # Primero intentamos cargarlo directo
+                    try:
+                        return json.loads(valor)
+                    except json.JSONDecodeError:
+                        # Si falla por las comillas (como se ve en tu error), 
+                        # intercambiamos comillas simples por dobles.
+                        # Usamos un reemplazo cuidadoso para no romper textos internos
+                        dato_limpio = valor.replace("'", '"')
+                        return json.loads(dato_limpio)
                 except Exception as e:
-                    # Si falla el parseo, devolvemos None para no romper el mapa
+                    # Si de plano no se puede, imprimimos el error en consola para debuguear
+                    print(f"Error parseando geo: {e}")
                     return None
 
-            df['geo'] = df['geo'].apply(parsear_geojson)
+            df['geo'] = df['geo'].apply(limpiar_y_parsear)
             
-            # Filtramos los que no tengan geometría válida
+            # Eliminamos las filas donde la geometría falló o está vacía
             df = df.dropna(subset=['geo'])
             
         return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error al cargar sectores desde MySQL (campo TEXT): {e}")
+        st.error(f"Error al cargar sectores: {e}")
         return []
 
 def formato_hora(decimal):
