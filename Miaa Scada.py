@@ -804,70 +804,67 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7 SECCIÓN --------------------------------------------------------------
-# 7 SECCIÓN: VISTA DETALLE DEL SECTOR ---------------------------------------------
+# 7 SECCIÓN --------------------------------------------------------------7 VISTA DETALLE DEL SECTOR ---------------------------------------------------------------
 if sector_seleccionado:
-    # --- 1. OBTENCIÓN DE DATOS DEL SECTOR ---
-    sec_id = str(sector_seleccionado).split('.')[0].strip()
-    datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
+    # 1. Título superior fijo
+    st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
+    
+    datos_s = next((s for s in sectores if s['sector'] == sector_seleccionado), None)
     
     if datos_s:
-        # --- A. INDICADORES SUPERIORES (KPIs) ---
-        # Estilo para que las tarjetas se vean integradas al HUD
         st.markdown("""
             <style>
-                .block-container { padding-top: 3.5rem !important; }
-                .metrics-container { 
-                    display: flex; 
-                    justify-content: space-between; 
-                    margin-bottom: 20px; 
-                    gap: 10px;
+                /* Reducimos el espacio que Streamlit reserva arriba */
+                .block-container { 
+                    padding-top: 3.5rem !important; 
+                    margin-top: 0px !important; 
                 }
-                .kpi-card {
-                    background: rgba(11, 26, 41, 0.9);
+                
+                /* Contenedor de métricas ultra-compacto */
+                .metrics-container {
+                    position: relative;
+                    z-index: 9999;
+                    margin-top: -700px; /* Subimos las métricas hacia el título */
+                    margin-bottom: 5px;
+                }
+
+                .micro-card {
+                    background: #0b1a29; 
                     border: 1px solid #1f4068;
-                    border-radius: 8px;
-                    padding: 10px;
-                    flex: 1;
+                    border-radius: 5px; 
+                    padding: 8px; /* Padding más pequeño */
                     text-align: center;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
                 }
-                .kpi-label { color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
-                .kpi-value { color: #00d4ff; font-size: 1.2rem; font-weight: bold; margin-top: 5px; }
+                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+                .micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }
+                
+                /* Reducimos el espacio que ocupa el divisor */
+                hr {
+                    margin-top: 5px !important;
+                    margin-bottom: 10px !important;
+                    opacity: 0.3;
+                }
+
+                /* Ajuste del mapa para que no suba sobre las métricas pero no deje huecos */
+                iframe {
+                    margin-top: 0px !important;
+                }
             </style>
         """, unsafe_allow_html=True)
 
-        # Renderizado de los 6 indicadores principales
-        st.markdown(f"""
-            <div class="metrics-container">
-                <div class="kpi-card">
-                    <div class="kpi-label">Población</div>
-                    <div class="kpi-value">{datos_s.get('Poblacion', 0):,.0f}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">U. Totales</div>
-                    <div class="kpi-value">{datos_s.get('U_Tot', 0):,.0f}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">U. Domésticos</div>
-                    <div class="kpi-value">{datos_s.get('U_Domesticos', 0):,.0f}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Consumo m³</div>
-                    <div class="kpi-value">{datos_s.get('Cons_m3', 0):,.1f}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Dotación</div>
-                    <div class="kpi-value">{datos_s.get('Dotacion', 0):,.1f}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Balance</div>
-                    <div class="kpi-value">{datos_s.get('Balance_Estimado', 0):,.1f}%</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        # Renderizado de métricas
+        st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
+        with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
+        with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.divider()
+        st.divider() # Este divisor ahora es más delgado por el CSS de arriba
 
         # --- B. PREPARACIÓN DE DATOS PARA EL MAPA ---
         dict_reg = cargar_registradores_desde_db()
