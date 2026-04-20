@@ -270,12 +270,11 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    # Es vital usar use_pure=True para evitar que se corten las cadenas largas de texto
     conn = get_mysql_telemetria_engine() 
     if not conn: return []
     
     try:
-        # 1. Consulta limpia: quitamos comillas de Postgres y usamos nombres de MySQL
+        # Traemos el campo de texto puro
         query = """
             SELECT sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
                    U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
@@ -293,29 +292,34 @@ def cargar_sectores_poligonos():
             texto = row['coordenadas_raw']
             if texto and isinstance(texto, str):
                 try:
-                    # PARSEO MANUAL:
-                    # La DB tiene: "-102.28 21.90, -102.28 21.87..."
-                    # Queremos: [[lat, lon], [lat, lon]...] para Folium o [[lon, lat]...] para GeoJSON
-                    coords_geojson = []
-                    puntos = texto.split(',') # Separamos por comas cada vértice
+                    # 1. Limpieza profunda: quitamos espacios al inicio/final y saltos de línea
+                    texto = texto.strip()
                     
+                    # 2. Separar puntos por coma
+                    puntos = [p.strip() for p in texto.split(',') if p.strip()]
+                    
+                    coords_geojson = []
                     for p in puntos:
-                        partes = p.strip().split(' ')
+                        # 3. Separar Lon de Lat por espacio
+                        partes = p.split()
                         if len(partes) >= 2:
-                            # GeoJSON estándar usa [Longitud, Latitud]
+                            # IMPORTANTE: GeoJSON requiere [Longitud, Latitud]
                             lon = float(partes[0])
                             lat = float(partes[1])
                             coords_geojson.append([lon, lat])
                     
-                    # Aseguramos que el polígono se cierre (el primer punto debe ser igual al último)
-                    if coords_geojson and coords_geojson[0] != coords_geojson[-1]:
-                        coords_geojson.append(coords_geojson[0])
-
-                    # Creamos el objeto geo que el mapa espera recibir
-                    row['geo'] = json.dumps({
-                        "type": "Polygon",
-                        "coordinates": [coords_geojson]
-                    })
+                    # 4. REGLA DE ORO: Si el polígono no está cerrado, el mapa NO lo dibuja
+                    if coords_geojson:
+                        if coords_geojson[0] != coords_geojson[-1]:
+                            coords_geojson.append(coords_geojson[0])
+                        
+                        # 5. Estructura GeoJSON válida (notar los 3 niveles de corchetes)
+                        row['geo'] = json.dumps({
+                            "type": "Polygon",
+                            "coordinates": [coords_geojson]
+                        })
+                    else:
+                        row['geo'] = None
                 except Exception:
                     row['geo'] = None
             else:
@@ -326,7 +330,7 @@ def cargar_sectores_poligonos():
         return sectores_listos
 
     except Exception as e:
-        st.error(f"Error crítico al procesar polígonos: {e}")
+        st.error(f"Error en carga de polígonos: {e}")
         return []
 
 
