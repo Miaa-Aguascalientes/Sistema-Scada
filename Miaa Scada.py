@@ -314,9 +314,9 @@ def cargar_registradores_desde_db():
                     "coord": [float(lat_s), float(lon_s)],
                     "sector": str(r['Sector']).split('.')[0].strip(),
                     # MAPEAMOS CADA COLUMNA DE TU TABLA A UNA LLAVE
-                    "tag_p1": r.get('presion_1'), # Tag de Presión 1
-                    "tag_p2": r.get('presion_2'), # Tag de Presión 2 (AQUÍ ESTABA EL ERROR)
-                    "tag_q": r.get('caudal'),     # Tag de Caudal
+                    "tag_p1": r.get('Presion_1'), # Tag de Presión 1
+                    "tag_p2": r.get('Presion_2'), # Tag de Presión 2 (AQUÍ ESTABA EL ERROR)
+                    "tag_q": r.get('Caudal'),     # Tag de Caudal
                     "tag_vbat": r.get('bateria'), # Tag de Voltaje Batería
                     "tag_idx": r.get('indice')    # Tag de Índice/Lectura
                 }
