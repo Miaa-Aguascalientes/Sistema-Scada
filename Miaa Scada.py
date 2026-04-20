@@ -275,24 +275,18 @@ def obtener_historia_7_dias(tag_name):
 def cargar_sectores_poligonos():
     engine = get_mysql_telemetria_engine()
     if not engine: return []
-    
     try:
-        # Consulta con comillas invertidas para campos con guiones
-        query = """
-            SELECT sector, geom, Pozos_Sector, Superficie, Poblacion, Fugas_Tot, `costoKw-hr`
-            FROM Sectores_hidr 
-            WHERE geom IS NOT NULL AND geom != ''
-        """
+        # Traemos el campo geom (que es texto) y los datos del HUD
+        query = "SELECT sector, geom, Pozos_Sector, Superficie, Poblacion, Fugas_Tot FROM Sectores_hidr WHERE geom IS NOT NULL"
         df = pd.read_sql(query, engine)
         
         sectores_listos = []
         for _, row in df.iterrows():
             try:
-                # El campo TEXTO 'geom' se convierte a objeto de geometría
-                # MySQL entrega Longitude, Latitude
+                # shapely lee el texto 'POLYGON((...))'
                 poly_obj = wkt.loads(row['geom'])
                 
-                # Invertimos a Latitude, Longitude para Folium
+                # Folium necesita [Lat, Lon], MySQL da [Lon, Lat]. Aquí los volteamos:
                 if poly_obj.geom_type == 'Polygon':
                     coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
                 elif poly_obj.geom_type == 'MultiPolygon':
@@ -303,10 +297,9 @@ def cargar_sectores_poligonos():
                 sectores_listos.append(d)
             except:
                 continue 
-                
         return sectores_listos
     except Exception as e:
-        st.error(f"Error en consulta de sectores: {e}")
+        st.error(f"Error consulta: {e}")
         return []
 
 def formato_hora(decimal):
@@ -1191,48 +1184,35 @@ sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", z_index=1)
-    
     for s in sectores_data:
         try:
-            nombre_sec = s['sector']
-            
-            # Preparar URL de acceso
-            sector_encoded = urllib.parse.quote(nombre_sec)
+            # Tu Popup HUD personalizado
+            sector_encoded = urllib.parse.quote(s['sector'])
             url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'admin')}"
             
-            # Diseño del Popup HUD
             html_popup = f"""
-            <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
-                <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
-                <table style="width:100%; font-size: 11px; margin-bottom: 10px; border-collapse: collapse;">
-                    <tr><td><b>Población:</b></td><td style="text-align:right;">{s.get('Poblacion', 0):,.0f}</td></tr>
-                    <tr><td><b>Pozos:</b></td><td style="text-align:right;">{s.get('Pozos_Sector', 0)}</td></tr>
-                    <tr><td><b>Fugas:</b></td><td style="text-align:right; color:#ff4b4b;">{s.get('Fugas_Tot', 0)}</td></tr>
-                </table>
-                <a href="{url_acceso}" target="_blank" 
-                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
-                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
-                          border-radius: 5px;">🚀 ABRIR SECTOR</a>
+            <div style="font-family: 'Segoe UI', sans-serif; width: 200px; background-color: #0b1a29; color: white; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff;">
+                <h4 style="margin:0; color:#00d4ff;">{s['sector']}</h4>
+                <hr style="border: 0.5px solid #333;">
+                <p style="font-size:11px;"><b>Población:</b> {s.get('Poblacion', 0):,.0f}<br>
+                <b>Pozos:</b> {s.get('Pozos_Sector', 0)}</p>
+                <a href="{url_acceso}" target="_blank" style="display:block; text-align:center; background:#00d4ff; color:#0b1a29; font-weight:bold; padding:5px; border-radius:4px; text-decoration:none;">ABRIR</a>
             </div>
             """
 
-            # Dibujo de Polígono (Maneja Polygons y MultiPolygons)
-            locations = s['coords_procesadas']
-            
+            # DIBUJAR EL POLÍGONO
             folium.Polygon(
-                locations=locations,
-                color='#00d4ff' if ver_sectores else 'transparent',
-                weight=1.5 if ver_sectores else 0,
+                locations=s['coords_procesadas'],
+                color='#00d4ff', 
+                weight=2 if ver_sectores else 0,
                 fill=True,
                 fill_color='#00d4ff',
-                fill_opacity=0.12 if ver_sectores else 0.0001,
-                tooltip=f"Sector: {nombre_sec}",
-                popup=folium.Popup(html_popup, max_width=260)
+                fill_opacity=0.15 if ver_sectores else 0.0001, # Clicable aunque no se vea
+                tooltip=f"Sector: {s['sector']}",
+                popup=folium.Popup(html_popup, max_width=250)
             ).add_to(fg_sectores)
-            
         except:
             continue
-
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
