@@ -860,6 +860,13 @@ if sector_seleccionado:
 
         st.divider() # Este divisor ahora es más delgado por el CSS de arriba
 
+        # --- CARGA Y FILTRADO DE REGISTRADORES ---
+        dict_todos_registradores = cargar_registradores_desde_db()
+        # Filtramos los registradores que pertenecen a este sector
+        registradores_sector = {
+            k: v for k, v in dict_todos_registradores.items() 
+            if str(v['sector']) == str(sector_seleccionado)
+        }
         # --- MAPA DEL SECTOR ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
@@ -990,6 +997,51 @@ if sector_seleccionado:
                     )
                 ).add_to(m_sec)
 
+        # --- RENDERIZADO DE REGISTRADORES DE PRESIÓN/CAUDAL ---
+        for id_reg, info_reg in registradores_sector.items():
+            # Extraer valores de telemetría para el registrador
+            # d_reg es la misma función lambda que ya usas para los pozos
+            val_p, f_p_reg = d(info_reg['tag_presion'])
+            val_q, f_q_reg = d(info_reg['tag_caudal'])
+
+            html_reg = f"""
+            <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; width: 220px; border: 1px dashed #00ffcc; font-family: 'Courier New', Courier, monospace;">
+                <div style="border-bottom: 1px solid #00ffcc; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <b style="font-size: 13px;">📡 REG: {info_reg['nombre']}</b>
+                </div>
+                <div style="font-size: 11px; margin-bottom: 4px;">
+                    PRESIÓN: <b style="font-size: 14px;">{val_p:.2f}</b> <span style="font-size: 9px;">kg/cm²</span>
+                    <span style="color: #FFFF00; font-size: 8px; float: right;">{f_p_reg}</span>
+                </div>
+                <div style="font-size: 11px;">
+                    CAUDAL: <b style="font-size: 14px;">{val_q:.2f}</b> <span style="font-size: 9px;">Lps</span>
+                    <span style="color: #FFFF00; font-size: 8px; float: right;">{f_q_reg}</span>
+                </div>
+                <div style="font-size: 9px; color: #448888; margin-top: 8px; text-align: right;">ID: {id_reg}</div>
+            </div>
+            """
+
+            # Marcador Hexagonal para los registradores
+            folium.RegularPolygonMarker(
+                location=info_reg['coord'],
+                number_of_sides=6,
+                radius=8,
+                color='#00ffcc',
+                fill=True,
+                fill_color='#002222',
+                fill_opacity=0.8,
+                popup=folium.Popup(html_reg, max_width=250)
+            ).add_to(m_sec)
+
+            # Etiqueta pequeña flotante con el nombre del registrador
+            folium.Marker(
+                location=info_reg['coord'],
+                icon=folium.DivIcon(
+                    icon_anchor=(-10, -10),
+                    html=f'<div style="font-size: 8px; color: #00ffcc; font-family: sans-serif; background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">{info_reg["nombre"]}</div>'
+                )
+            ).add_to(m_sec)
+        
         try:
             m_sec.fit_bounds(geojson_sector.get_bounds())
         except: pass
