@@ -216,10 +216,9 @@ def get_mysql_scada_engine():
 def get_mysql_telemetria_engine():
     try:
         creds = st.secrets["mysql_telemetria"]
-        # Escapamos el password por el carácter '&'
         pass_encoded = urllib.parse.quote_plus(creds["password"])
-        # Forzamos charset utf8 para que el texto de la geometría no se corrompa
-        url = f"mysql+mysqlconnector://{creds['user']}:{pass_encoded}@{creds['host']}/{creds['database']}?charset=utf8"
+        # Eliminamos parámetros extraños para que la conexión sea pura
+        url = f"mysql+mysqlconnector://{creds['user']}:{pass_encoded}@{creds['host']}/{creds['database']}"
         return create_engine(url)
     except Exception as e:
         st.error(f"Error de conexión: {e}")
@@ -283,33 +282,37 @@ def cargar_sectores_poligonos():
         
         sectores_procesados = []
         for _, row in df.iterrows():
-            wkt_text = row['geom']
-            if not wkt_text: continue
+            raw_geom = row['geom']
+            if not raw_geom: continue
             
             try:
-                # Limpieza preventiva: eliminamos posibles espacios o prefijos SRID
-                if ";" in str(wkt_text):
-                    wkt_text = str(wkt_text).split(";")[-1]
+                # LIMPIEZA BINARIA: MySQL a veces mete 4 bytes de basura al inicio de campos BLOB/GEOM
+                # Si el texto no empieza con 'P' (de POLYGON), intentamos limpiar
+                wkt_str = str(raw_geom)
+                if "POLYGON" not in wkt_str.upper():
+                    # Buscamos donde empieza realmente el texto del polígono
+                    inicio = wkt_str.upper().find("POLYGON")
+                    if inicio != -1:
+                        wkt_str = wkt_str[inicio:]
                 
-                # Convertimos el texto a objeto geométrico
-                poly_obj = wkt.loads(str(wkt_text))
+                # Traducimos de Texto a Objeto
+                poly_obj = wkt.loads(wkt_str)
                 
-                # Invertimos coordenadas: MySQL(Lon, Lat) -> Folium(Lat, Lon)
+                # Invertimos coordenadas [Long, Lat] -> [Lat, Lon]
                 if poly_obj.geom_type == 'Polygon':
                     coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
                 elif poly_obj.geom_type == 'MultiPolygon':
-                    coords = []
-                    for part in poly_obj.geoms:
-                        coords.append([[p[1], p[0]] for p in part.exterior.coords])
+                    coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly_obj.geoms]
                 else:
                     continue
 
                 d = row.to_dict()
-                d['puntos'] = coords
+                d['coords_folium'] = coords
                 sectores_procesados.append(d)
-            except Exception as ex:
-                # print(f"Fallo en sector {row['sector']}: {ex}")
+            except Exception as e:
+                # Si falla uno, lo ignoramos pero seguimos con los demás
                 continue
+                
         return sectores_procesados
     except Exception as e:
         st.error(f"Error en carga: {e}")
@@ -1192,42 +1195,38 @@ def get_sector_style(feature, visible):
         'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
     }
 
-# Cargar datos desde MySQL
+# --- LÓGICA DEL MAPA ---
 sectores_data = cargar_sectores_poligonos()
 
+# DEBUG TEMPORAL: Borra esto cuando funcione
+if not sectores_data:
+    st.warning("⚠️ No se cargó ningún sector. Revisa la conexión o el campo geom.")
+else:
+    # Esto te dirá cuántos sectores sí se procesaron bien
+    st.sidebar.success(f"✅ {len(sectores_data)} sectores listos para dibujar")
+
 if sectores_data:
-    # FeatureGroup para control de capas
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", show=True)
     
     for s in sectores_data:
         try:
-            # Tu lógica de URL y Popup se mantiene igual
-            sector_enc = urllib.parse.quote(s['sector'])
-            url_url = f"/?sector={sector_enc}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+            # Tu HUD de Popup (Simplificado para pruebas)
+            pop_html = f"<b>{s['sector']}</b><br>Pozos: {s['Pozos_Sector']}"
             
-            popup_content = f"""
-            <div style="background-color:#0b1a29; color:white; padding:10px; border-radius:5px; border:1px solid #00d4ff; width:180px;">
-                <b style="color:#00d4ff;">{s['sector']}</b><br>
-                <small>Pozos: {s.get('Pozos_Sector', 0)}</small><br>
-                <a href="{url_url}" target="_blank" style="color:cyan; text-decoration:none;">[ ABRIR SECTOR ]</a>
-            </div>
-            """
-
-            # DIBUJO DIRECTO
-            # Si el sector es MultiPolygon, 'puntos' es una lista de listas
+            # Dibujo
             folium.Polygon(
-                locations=s['puntos'],
+                locations=s['coords_folium'],
                 color='#00d4ff',
-                weight=2 if ver_sectores else 0,
+                weight=3, # Más grueso para que se note
                 fill=True,
                 fill_color='#00d4ff',
-                fill_opacity=0.15 if ver_sectores else 0.0001,
-                popup=folium.Popup(popup_content, max_width=250),
-                tooltip=f"Sector: {s['sector']}"
+                fill_opacity=0.3, # Más opaco para pruebas
+                tooltip=f"Sector: {s['sector']}",
+                popup=folium.Popup(pop_html, max_width=200)
             ).add_to(fg_sectores)
-        except:
-            continue
-            
+        except Exception as e:
+            st.sidebar.error(f"Error dibujando {s['sector']}: {e}")
+
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
