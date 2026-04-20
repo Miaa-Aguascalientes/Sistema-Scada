@@ -270,64 +270,58 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    # Es vital usar use_pure=True para que las cadenas de texto largas no se corten
+    # Es obligatorio usar use_pure=True para que el texto largo de coordenadas no se corrompa
     conn = get_mysql_telemetria_engine() 
     if not conn: return []
     
     try:
-        # Traemos el texto tal cual se ve en tu base de datos
-        query = """
-            SELECT sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
-                   U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
-                   Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, Vol_Fact, 
-                   Kwh, `costoKw-hr`, Recaudacion, Dotacion, Balance_Estimado,
-                   geom as texto_geom
-            FROM Sectores_hidr
-        """
+        # Traemos la columna 'geom' que tiene el texto de coordenadas
+        query = "SELECT *, geom as texto_raw FROM Sectores_hidr"
         df = pd.read_sql(query, conn)
         conn.close()
         
-        resultados = []
+        sectores_listos = []
         for _, row in df.iterrows():
-            texto = row['texto_geom']
+            texto = row['texto_raw']
             if texto and isinstance(texto, str):
                 try:
-                    # 1. Limpiamos y separamos los puntos por la coma
-                    puntos_raw = [p.strip() for p in texto.split(',') if p.strip()]
+                    # 1. Separamos cada punto (lat/long) usando la coma
+                    puntos = [p.strip() for p in texto.split(',') if p.strip()]
                     
-                    coords = []
-                    for p in puntos_raw:
-                        # 2. Separamos Longitud de Latitud por el espacio
+                    coordenadas_finales = []
+                    for p in puntos:
+                        # 2. Separamos la Longitud de la Latitud por el espacio
                         partes = p.split()
                         if len(partes) >= 2:
-                            # GeoJSON estándar: [Longitud, Latitud]
-                            coords.append([float(partes[0]), float(partes[1])])
+                            # Formato GeoJSON: [Longitud, Latitud]
+                            lon = float(partes[0])
+                            lat = float(partes[1])
+                            coordenadas_finales.append([lon, lat])
                     
-                    # 3. REGLA DE ORO: El polígono debe cerrarse (punto inicial = punto final)
-                    if coords:
-                        if coords[0] != coords[-1]:
-                            coords.append(coords[0])
+                    # 3. EL TRUCO FINAL: Si el polígono no se cierra, el mapa no dibuja nada
+                    if coordenadas_finales:
+                        if coordenadas_finales[0] != coordenadas_finales[-1]:
+                            coordenadas_finales.append(coordenadas_finales[0])
                         
-                        # 4. Creamos el GeoJSON manual con la estructura de triple corchete
+                        # Construimos la estructura de polígono que Folium/Leaflet entienden
                         row['geo'] = json.dumps({
                             "type": "Polygon",
-                            "coordinates": [coords]
+                            "coordinates": [coordenadas_finales]
                         })
                     else:
                         row['geo'] = None
-                except:
-                    row['geo'] = None
+                except Exception:
+                    row['geo'] = None # Si un sector falla, que no rompa los demás
             else:
                 row['geo'] = None
                 
-            resultados.append(row.to_dict())
+            sectores_listos.append(row.to_dict())
 
-        return resultados
+        return sectores_listos
 
     except Exception as e:
-        st.error(f"Error cargando sectores: {e}")
+        st.error(f"Error al procesar los datos de la base de datos: {e}")
         return []
-
 
 def formato_hora(decimal):
     try:
