@@ -410,41 +410,40 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=60) # Bajamos el TTL para que veas cambios rápido
 def cargar_registradores_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
     try:
         query = "SELECT * FROM Diccionario_de_registradores"
         df_reg = pd.read_sql(query, engine)
-        
         nuevo_mapa_reg = {}
+        
         for _, row in df_reg.iterrows():
             try:
-                # 1. Limpieza profunda del string de coordenadas
-                # Quitamos (), [], espacios y posibles caracteres extra
-                c_raw = str(row['coord']).strip().replace('(', '').replace(')', '').replace('[', '').replace(']', '')
-                
-                if ',' in c_raw:
-                    partes = c_raw.split(',')
+                raw_c = str(row['coord']).replace('(', '').replace(')', '').strip()
+                if ',' in raw_c:
+                    # El strip() aquí es VITAL para quitar el espacio tras la coma
+                    partes = raw_c.split(',')
                     lat = float(partes[0].strip())
                     lon = float(partes[1].strip())
                     
-                    # 2. Validación de datos reales
-                    if lat != 0 and lon != 0:
-                        nuevo_mapa_reg[row['Registrador']] = {
-                            "nombre": row.get('Nombre_registrador', f"REG {row['Registrador']}"),
+                    if lat != 0:
+                        nuevo_mapa_reg[str(row['Registrador'])] = {
+                            "nombre": row['Nombre_registrador'],
                             "coord": (lat, lon),
-                            "sector": str(row['Sector']).strip() if row['Sector'] else "",
-                            "tag_presion_1": row.get('presion_1'),
-                            "tag_presion_2": row.get('presion_2'),
-                            "tag_caudal": row.get('caudal')
+                            "sector": str(row['Sector']).strip(),
+                            "tag_presion_1": row['presion_1'],
+                            "tag_presion_2": row['presion_2'],
+                            "tag_caudal": row['caudal']
                         }
-            except:
-                continue # Si una fila está mal, se salta a la siguiente
+            except Exception as e:
+                # Esto te dirá en la consola si una fila específica está rota
+                print(f"Error en fila {row['Registrador']}: {e}")
+                continue
         return nuevo_mapa_reg
     except Exception as e:
-        st.error(f"Error en carga: {e}")
+        st.error(f"Error General: {e}")
         return {}
 
 
@@ -802,25 +801,30 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7 SECCIÓN --------------------------------------------------------------7 VISTA DETALLE DEL SECTOR ---------------------------------------------------------------
+# 7 SECCIÓN --------------------------------------------------------------
 if sector_seleccionado:
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
     datos_s = next((s for s in sectores if str(s['sector']).strip() == str(sector_seleccionado).strip()), None)
     
     if datos_s:
-        # Cargamos registradores usando la nueva función de columna única
-        dict_todos_registradores = cargar_registradores_desde_db()
+        # --- CARGA Y FILTRADO ---
+        dict_todos = cargar_registradores_desde_db()
+        sec_actual = str(sector_seleccionado).strip()
         
-        # Filtro de sector
-        sec_str = str(sector_seleccionado).strip()
-        registradores_sector = {k: v for k, v in dict_todos_registradores.items() if v['sector'] == sec_str}
+        # Filtrado manual para asegurar que no hay fallos de tipos
+        registradores_sector = {}
+        for k, v in dict_todos.items():
+            if v['sector'] == sec_actual:
+                registradores_sector[k] = v
 
-        # Mapa Base
+        # DEBUG: Si esto sale en 0, el problema es que el 'Sector' en la DB no coincide con el seleccionado
+        st.write(f"DEBUG: Registradores en DB: {len(dict_todos)} | En este Sector: {len(registradores_sector)}")
+
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Capa del Sector
+        # Sector GeoJson
         geojson_sec = folium.GeoJson(
             json.loads(datos_s['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.1}
@@ -831,59 +835,40 @@ if sector_seleccionado:
         # --- DIBUJAR REGISTRADORES ---
         for id_reg, info_reg in registradores_sector.items():
             p1, _ = d(info_reg['tag_presion_1'])
-            p2, _ = d(info_reg['tag_presion_2'])
             q_r, _ = d(info_reg['tag_caudal'])
 
-            # Popup estilo tecnológico
-            html_reg = f"""
-            <div style="background:#001a1a; color:#00ffcc; padding:10px; border:1px solid #00ffcc; border-radius:5px; font-family:sans-serif;">
-                <b style="font-size:12px;">📡 REGISTRADOR {id_reg}</b><br>
-                <span style="font-size:10px; color:#aaa;">{info_reg['nombre']}</span>
-                <hr style="margin:5px 0; border:0; border-top:1px solid #00ffcc; opacity:0.3;">
-                P1: <b>{p1:.2f}</b> | P2: <b>{p2:.2f}</b> <small>kg</small><br>
-                Q: <b>{q_r:.2f}</b> <small>Lps</small>
-            </div>
-            """
-
-            # Icono de Hexágono Cian
+            # Marcador Hexagonal
             folium.RegularPolygonMarker(
                 location=info_reg['coord'],
                 number_of_sides=6,
-                radius=10,
+                radius=12, # Más grande para que se vea a huevo
                 color='#00ffcc',
                 fill=True,
-                fill_color='#003333',
-                fill_opacity=0.8,
-                popup=folium.Popup(html_reg, max_width=250)
+                fill_color='#00ffcc',
+                fill_opacity=0.6,
+                popup=f"REG {id_reg}: {p1:.2f} kg"
             ).add_to(m_sec)
 
-            # Etiqueta permanente
+            # Etiqueta
             folium.Marker(
                 location=info_reg['coord'],
-                icon=folium.DivIcon(
-                    icon_anchor=(-15, -15),
-                    html=f'<div style="font-size:8pt; color:#00ffcc; font-weight:bold; text-shadow:1px 1px #000;">{info_reg["nombre"]}</div>'
-                )
+                icon=folium.DivIcon(html=f'<div style="font-size:10pt; color:#00ffcc; font-weight:bold;">{info_reg["nombre"]}</div>')
             ).add_to(m_sec)
 
-        # --- DIBUJAR POZOS (Círculos) ---
+        # --- DIBUJAR POZOS ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
                 p_info = mapa_pozos_dict[id_p]
-                folium.CircleMarker(
-                    location=p_info['coord'], radius=5, color=p_info['color_final'],
-                    fill=True, fill_opacity=1, popup=f"POZO {id_p}"
-                ).add_to(m_sec)
+                folium.CircleMarker(location=p_info['coord'], radius=5, color=p_info['color_final'], fill=True, fill_opacity=1).add_to(m_sec)
 
-        # Ajuste de encuadre
         try:
             m_sec.fit_bounds(geojson_sec.get_bounds())
         except: pass
 
         folium_static(m_sec, width=None, height=750)
     else:
-        st.error("No se encontró información del sector.")
+        st.error("No se encontró el sector.")
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
