@@ -13,7 +13,7 @@ import hashlib
 import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
-
+from datetime import datetime, timedelta
 
 st.set_page_config(
     page_title="Sistema Scada", 
