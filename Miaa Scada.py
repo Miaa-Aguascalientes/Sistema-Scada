@@ -918,8 +918,10 @@ if sector_seleccionado:
                 </div>
             </div>
             """
-            folium.CircleMarker(
-                location=r['coord'], radius=7, color='#00FFFF', fill=True, fill_opacity=0.9,
+            # Marcador de Estrella
+            folium.Marker(
+                location=r['coord'],
+                icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
                 popup=folium.Popup(html_reg, max_width=300)
             ).add_to(m_sec)
 
