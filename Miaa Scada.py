@@ -291,45 +291,36 @@ def cargar_sectores_poligonos():
         st.error(f"Error al cargar sectores: {e}")
         return []
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5)
 def cargar_registradores_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
     try:
-        # NOMBRE DE TABLA CORREGIDO: Diccionario_registradores
-        query = "SELECT * FROM Diccionario_registradores"
-        df_reg = pd.read_sql(query, engine)
+        # Cargamos la tabla Diccionario_registradores
+        df_reg = pd.read_sql("SELECT * FROM Diccionario_registradores", engine)
         nuevo_mapa_reg = {}
         
         for _, row in df_reg.iterrows():
             try:
-                # Procesar Coordenadas (Mismo método que pozos)
-                c_raw = str(row['coord']).replace('(', '').replace(')', '').strip()
+                # Limpieza total de la columna coord
+                c_raw = str(row['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
                 if ',' in c_raw:
                     lat_s, lon_s = c_raw.split(',')
-                    posicion = (float(lat_s.strip()), float(lon_s.strip()))
+                    posicion = (float(lat_s), float(lon_s))
                     
-                    # NORMALIZACIÓN DE SECTOR: 
-                    # Lo pasamos a float -> int -> str para que "10.0" sea "10"
-                    sec_val = str(row['Sector']).strip()
-                    if '.' in sec_val:
-                        sec_db = str(int(float(sec_val)))
-                    else:
-                        sec_db = sec_val
+                    # Normalización del sector para evitar el error del ".0"
+                    # Esto convierte 10.0 en "10"
+                    sec_db = str(row['Sector']).split('.')[0].strip()
 
                     nuevo_mapa_reg[str(row['Registrador'])] = {
                         "nombre": str(row['Nombre_registrador']),
                         "coord": posicion,
                         "sector": sec_db,
-                        "tag_p1": row['presion_1'],
-                        "tag_p2": row['presion_2'],
-                        "tag_q": row['caudal']
+                        "p1": row['presion_1']
                     }
             except: continue
         return nuevo_mapa_reg
-    except Exception as e:
-        st.error(f"Error al leer Diccionario_registradores: {e}")
-        return {}
+    except: return {}
 
 
 def formato_hora(decimal):
@@ -809,61 +800,58 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7 SECCIÓN -----------------------------------------------------------------------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # Normalizar el sector del polígono (Postgres) para comparar
-    sec_normalizado = str(sector_seleccionado).strip()
-    if '.' in sec_normalizado:
-        sec_normalizado = str(int(float(sec_normalizado)))
-
-    st.markdown(f'<div class="titulo-superior">Sector: {sec_normalizado}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="titulo-superior">Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
-    # Buscar el polígono
-    datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_normalizado), None)
+    # 1. Normalizar el ID del sector seleccionado
+    sec_target = str(sector_seleccionado).split('.')[0].strip()
+    
+    datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_target), None)
     
     if datos_s:
-        dict_reg = cargar_registradores_desde_db()
+        all_regs = cargar_registradores_desde_db()
         
-        # Filtrar registradores que coincidan con el sector normalizado
-        regs_sector = [v for v in dict_reg.values() if v['sector'] == sec_normalizado]
+        # FILTRO A: Por nombre de sector
+        regs_sector = [v for v in all_regs.values() if v['sector'] == sec_target]
+        
+        # MOSTRAR INFO PARA SABER QUÉ PASA
+        st.write(f"Buscando Sector: '{sec_target}' | Encontrados en DB: {len(regs_sector)}")
+        if len(regs_sector) == 0:
+            st.warning(f"Sectores disponibles en tu MySQL: {list(set([r['sector'] for r in all_regs.values()]))}")
 
-        # --- TEST DE VISIBILIDAD ---
-        if not regs_sector:
-            # Si no hay, te muestra qué sectores sí existen en la tabla de MySQL
-            existentes = list(set([v['sector'] for v in dict_reg.values()]))
-            st.error(f"No se encontraron registradores para el sector {sec_normalizado}")
-            st.info(f"Sectores disponibles en la tabla de registradores: {existentes}")
-        
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         
-        # Capa del Polígono
-        folium.GeoJson(json.loads(datos_s['geo']), 
-                       style_function=lambda x: {'color': 'white', 'weight': 1, 'fillOpacity': 0.1}).add_to(m_sec)
+        # Dibujar Polígono
+        geo_data = json.loads(datos_s['geo'])
+        folium.GeoJson(geo_data, style_function=lambda x: {'color': 'orange', 'weight': 2, 'fillOpacity': 0.1}).add_to(m_sec)
 
-        d = lambda tag: data_scada.get(tag, (0, "N/A"))
-
-        # PINTAR REGISTRADORES
-        for r in regs_sector:
-            p1, _ = d(r['tag_p1'])
+        # 2. PINTAR REGISTRADORES (Si el filtro A falló, pintamos TODOS los de la DB para ver dónde están)
+        regs_a_pintar = regs_sector if len(regs_sector) > 0 else all_regs.values()
+        
+        for r in regs_a_pintar:
+            # Marcador gigante y de color fosforescente
+            folium.CircleMarker(
+                location=r['coord'],
+                radius=12,
+                color='#00FFFF',
+                fill=True,
+                fill_color='#00FFFF',
+                fill_opacity=0.9,
+                popup=f"REG: {r['nombre']} (Sector en DB: {r['sector']})"
+            ).add_to(m_sec)
             
-            # Marcador tipo "Aviso" para que destaque
+            # Texto forzado encima del punto
             folium.Marker(
                 location=r['coord'],
-                icon=folium.Icon(color='blue', icon='broadcast', prefix='fa'),
-                popup=f"<b>{r['nombre']}</b><br>P1: {p1:.2f} kg"
+                icon=folium.DivIcon(html=f'<div style="font-size:14pt; color:#00FFFF; font-weight:bold; background:black; padding:2px; border:1px solid cyan;">{r["nombre"]}</div>')
             ).add_to(m_sec)
 
-            # Etiqueta de texto
-            folium.Marker(
-                location=r['coord'],
-                icon=folium.DivIcon(html=f'<div style="font-size:12pt; color:#00ffcc; font-weight:bold; width:200px;">{r["nombre"]}</div>')
-            ).add_to(m_sec)
-
-        # PINTAR POZOS
+        # 3. PINTAR POZOS
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
                 folium.CircleMarker(location=mapa_pozos_dict[id_p]['coord'], radius=5, color="red", fill=True).add_to(m_sec)
 
-        folium_static(m_sec, width=None, height=750)
+        folium_static(m_sec, width=None, height=700)
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
