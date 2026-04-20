@@ -270,50 +270,63 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_mysql_telemetria_engine() # Asegúrate de que use_pure=True esté en la conexión
+    # Es vital usar use_pure=True para evitar que se corten las cadenas largas de texto
+    conn = get_mysql_telemetria_engine() 
     if not conn: return []
+    
     try:
-        # 1. Traemos 'geom' como texto plano ya que así está en tu DB
+        # 1. Consulta limpia: quitamos comillas de Postgres y usamos nombres de MySQL
         query = """
-            SELECT sector, "Pozos_Sector", 
-                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
-                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
-                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
-                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
-                   "Recaudacion", "Dotacion", "Balance_Estimado",
-                   geom as coordenadas_texto 
+            SELECT sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
+                   U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
+                   Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, Vol_Fact, 
+                   Kwh, `costoKw-hr`, Recaudacion, Dotacion, Balance_Estimado,
+                   geom as coordenadas_raw
             FROM Sectores_hidr
         """
         df = pd.read_sql(query, conn)
+        conn.close()
         
-        # 2. Convertimos el texto de coordenadas a un formato GeoJSON manualmente
-        sectores_procesados = []
+        sectores_listos = []
+        
         for _, row in df.iterrows():
-            texto = row['coordenadas_texto']
-            if texto:
+            texto = row['coordenadas_raw']
+            if texto and isinstance(texto, str):
                 try:
-                    # Convertimos la cadena "lat long, lat long" en una lista de listas [[long, lat], ...]
-                    # Nota: GeoJSON usa [Longitud, Latitud]
-                    coords_list = []
-                    puntos = texto.split(',')
-                    for p in puntos:
-                        c = p.strip().split(' ')
-                        if len(c) >= 2:
-                            coords_list.append([float(c[0]), float(c[1])])
+                    # PARSEO MANUAL:
+                    # La DB tiene: "-102.28 21.90, -102.28 21.87..."
+                    # Queremos: [[lat, lon], [lat, lon]...] para Folium o [[lon, lat]...] para GeoJSON
+                    coords_geojson = []
+                    puntos = texto.split(',') # Separamos por comas cada vértice
                     
-                    # Creamos la estructura GeoJSON que esperaba tu mapa original
+                    for p in puntos:
+                        partes = p.strip().split(' ')
+                        if len(partes) >= 2:
+                            # GeoJSON estándar usa [Longitud, Latitud]
+                            lon = float(partes[0])
+                            lat = float(partes[1])
+                            coords_geojson.append([lon, lat])
+                    
+                    # Aseguramos que el polígono se cierre (el primer punto debe ser igual al último)
+                    if coords_geojson and coords_geojson[0] != coords_geojson[-1]:
+                        coords_geojson.append(coords_geojson[0])
+
+                    # Creamos el objeto geo que el mapa espera recibir
                     row['geo'] = json.dumps({
                         "type": "Polygon",
-                        "coordinates": [coords_list]
+                        "coordinates": [coords_geojson]
                     })
-                except Exception as e:
+                except Exception:
                     row['geo'] = None
-            
-            sectores_procesados.append(row.to_dict())
+            else:
+                row['geo'] = None
+                
+            sectores_listos.append(row.to_dict())
 
-        return sectores_procesados
+        return sectores_listos
+
     except Exception as e:
-        st.error(f"Error al cargar sectores: {e}")
+        st.error(f"Error crítico al procesar polígonos: {e}")
         return []
 
 
