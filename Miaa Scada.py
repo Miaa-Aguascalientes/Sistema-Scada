@@ -808,70 +808,91 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # --- CARGA DINÁMICA DE DATOS DE REGISTRADORES ---
+        # --- 1. CARGA DE REGISTRADORES Y SUS DATOS DE SCADA ---
         dict_reg = cargar_registradores_desde_db()
         
-        # 1. Extraemos todos los tags únicos que necesitamos consultar a Scada
-        tags_a_consultar = []
+        # Recopilamos todos los tags para una sola consulta masiva
+        tags_query = []
         for r in dict_reg.values():
-            for key in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
-                tag = r.get(key)
-                if tag: tags_a_consultar.append(tag)
+            for t_key in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
+                t_name = r.get(t_key)
+                if t_name: tags_query.append(t_name)
         
-        # 2. Consultamos los últimos valores usando TU función
-        # Nota: Asegúrate que 'data_scada' se actualice con esto o úsala directamente
-        valores_actuales = cargar_datos_scada(list(set(tags_a_consultar)))
+        # Usamos tu función para traer los últimos valores
+        # Importante: lista_tags debe ser única para no repetir trabajo
+        valores_scada_reg = cargar_datos_scada(list(set(tags_query)))
 
-        # --- MAPA Y ESTILOS ---
+        # --- 2. CONFIGURACIÓN DEL MAPA ---
         st.markdown("""<style>.block-container { padding-top: 3.5rem !important; }</style>""", unsafe_allow_html=True)
+        
+        # Creamos el objeto mapa
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Polígono
-        geo_sec = folium.GeoJson(json.loads(datos_s['geo']), style_function=lambda x: {'color': 'white', 'weight': 2, 'fillOpacity': 0.1}).add_to(m_sec)
+        # Capa del Sector (Polígono)
+        try:
+            geo_data = json.loads(datos_s['geo'])
+            geojson_sec = folium.GeoJson(
+                geo_data, 
+                style_function=lambda x: {'fillColor': '#00d4ff', 'color': 'white', 'weight': 2, 'fillOpacity': 0.1}
+            ).add_to(m_sec)
+        except Exception as e:
+            st.error(f"Error en GeoJSON del sector: {e}")
+            geojson_sec = None
 
-        # --- 3. DIBUJAR REGISTRADORES CON DATOS REALES ---
+        # --- 3. DIBUJAR REGISTRADORES ---
         for r in dict_reg.values():
-            # Función interna para obtener el valor del diccionario de resultados
-            def get_val(tag_key):
+            # Función local para extraer datos de la consulta que acabamos de hacer
+            def get_scada_data(tag_key):
                 tag_name = r.get(tag_key)
-                return valores_actuales.get(tag_name, (0.0, "N/A"))
+                return valores_scada_reg.get(tag_name, (0.0, "N/A"))
 
-            p1, f_p1 = get_val('tag_p1')
-            p2, f_p2 = get_val('tag_p2')
-            cau, f_q = get_val('tag_q')
-            vbat, f_v = get_val('tag_vbat')
-            idx, f_i = get_val('tag_idx')
+            p1, f1 = get_scada_data('tag_p1')
+            p2, f2 = get_scada_data('tag_p2')
+            cau, fq = get_scada_data('tag_q')
+            vbat, fv = get_scada_data('tag_vbat')
+            idx, fi = get_scada_data('tag_idx')
 
             html_reg = f"""
-            <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:260px; font-family:sans-serif;">
-                <div style="border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:8px;">
-                    <b style="color:#00FFFF; font-size:14px;">REGISTRADOR: {r['nombre']}</b><br>
-                    <small style="color:#888;">ID: {r.get('serie', 'S/N')}</small>
-                </div>
-                <div style="font-size:12px; line-height:1.6;">
-                    💧 Caudal: <b style="color:#00FFFF;">{cau:.2f} L/s</b> <br>
-                    🚀 Presión 1: <b style="color:#00FFFF;">{p1:.2f} kg</b> <br>
-                    🚀 Presión 2: <b style="color:#00FFFF;">{p2:.2f} kg</b> <br>
-                    🔢 Índice: <b>{idx:,.1f} m³</b> <br>
-                    🔋 Batería: <b>{vbat:.2f} V</b> <br>
-                    <hr style="opacity:0.2; margin:5px 0;">
-                    <small style="color:yellow;">Última lectura: {f_p1}</small>
+            <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:Arial;">
+                <b style="color:#00FFFF; font-size:14px;">REGISTRADOR: {r['nombre']}</b><br>
+                <hr style="opacity:0.2; margin:5px 0;">
+                <div style="font-size:12px; line-height:1.5;">
+                    💧 Caudal: <b>{cau:.2f} L/s</b><br>
+                    🚀 Presión 1: <b>{p1:.2f} kg</b><br>
+                    🚀 Presión 2: <b>{p2:.2f} kg</b><br>
+                    🔢 Índice: <b>{idx:,.1f} m³</b><br>
+                    🔋 Batería: <b>{vbat:.2f} V</b>
+                    <p style="color:yellow; font-size:10px; margin-top:5px;">Lectura: {f1}</p>
                 </div>
             </div>
             """
+            
             folium.CircleMarker(
-                location=r['coord'], radius=7, color='#00FFFF', fill=True, fill_opacity=0.9,
+                location=r['coord'], radius=8, color='#00FFFF', fill=True, fill_opacity=1,
                 popup=folium.Popup(html_reg, max_width=300)
             ).add_to(m_sec)
 
-        # --- 4. DIBUJAR POZOS (Mantenemos tu lógica de popups detallados) ---
-        # ... (Aquí iría el bloque de los pozos que ya tenemos configurado)
+        # --- 4. DIBUJAR POZOS (Lógica de tu respaldo) ---
+        ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+        for id_p in ids_pozos:
+            if id_p in mapa_pozos_dict:
+                p_info = mapa_pozos_dict[id_p]
+                # (Aquí puedes pegar el bloque de popup de pozo que ya tienes funcionando)
+                folium.CircleMarker(
+                    location=p_info['coord'], radius=6, color=p_info['color_final'], 
+                    fill=True, fill_opacity=1
+                ).add_to(m_sec)
+
+        # Ajustar cámara y mostrar
+        if geojson_sec:
+            try: m_sec.fit_bounds(geojson_sec.get_bounds())
+            except: pass
         
-        try:
-            m_sec.fit_bounds(geo_sec.get_bounds())
-        except: pass
         folium_static(m_sec, width=None, height=750)
+    
+    else:
+        st.error("No se encontró información del sector.")
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
