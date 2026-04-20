@@ -291,29 +291,39 @@ def cargar_sectores_poligonos():
         st.error(f"Error al cargar sectores: {e}")
         return []
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5)
 def cargar_registradores_desde_db():
     engine = get_mysql_telemetria_engine()
-    if not engine: return {}
+    if not engine: 
+        return {"error": "No hay conexión al motor de MySQL"}
     try:
-        # Cargamos la tabla correcta
+        # Consulta directa
         df = pd.read_sql("SELECT * FROM Diccionario_registradores", engine)
+        
+        if df.empty:
+            return {"error": "La tabla 'Diccionario_registradores' está VACÍA en MySQL"}
+            
         data_dict = {}
         for _, r in df.iterrows():
             try:
-                # Limpieza de coordenadas: quita (), espacios y divide por coma
+                # Limpieza de coordenadas estilo pozo
                 c = str(r['coord']).replace('(','').replace(')','').strip()
                 lat, lon = map(float, c.split(','))
                 
-                data_dict[str(r['Registrador'])] = {
+                # Usamos la Serie o Registrador como ID
+                idx = str(r.get('Registrador', r.get('Serie', 'S/N')))
+                data_dict[idx] = {
                     "nombre": str(r['Nombre_registrador']),
                     "coord": [lat, lon],
                     "sector": str(r['Sector']).strip(),
                     "tag_p1": r['presion_1']
                 }
-            except: continue
+            except Exception as e:
+                print(f"Fila omitida por error de formato: {e}")
+                continue
         return data_dict
-    except: return {}
+    except Exception as e:
+        return {"error": f"Error de SQL: {str(e)}"}
 
 
 def formato_hora(decimal):
@@ -799,48 +809,58 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == str(sector_seleccionado).strip()), None)
     
     if datos_s:
-        # --- ESTILOS ---
-        st.markdown("""<style>.block-container { padding-top: 3.5rem !important; }</style>""", unsafe_allow_html=True)
+        # --- CSS ORIGINAL ---
+        st.markdown("""<style>.block-container { padding-top: 3.5rem !important; }.metrics-container { position: relative; z-index: 9999; margin-top: -10px; margin-bottom: 5px; }.micro-card { background: #0b1a29; border: 1px solid #1f4068; border-radius: 5px; padding: 8px; text-align: center; }.micro-label { color: #888; font-size: 10px; text-transform: uppercase; }.micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }</style>""", unsafe_allow_html=True)
 
-        # --- CARGA DE DATOS ---
-        dict_reg = cargar_registradores_desde_db()
+        # --- MÉTRICAS ---
+        st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
+        with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
+        with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
+        with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.divider()
+
+        # --- DIAGNÓSTICO REAL ---
+        res_reg = cargar_registradores_desde_db()
         
-        # DEBUG: Esto te dirá si la lista está vacía
-        if not dict_reg:
-            st.error("🚨 LA FUNCIÓN NO CARGÓ NADA. Revisa el nombre de la tabla o la conexión a MySQL.")
+        if "error" in res_reg:
+            st.error(f"🚨 ERROR CRÍTICO: {res_reg['error']}")
         else:
-            st.sidebar.write(f"Registradores cargados: {len(dict_reg)}")
+            st.info(f"✅ Se cargaron {len(res_reg)} registradores de la base de datos.")
 
         # --- MAPA ---
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Polígono del Sector
-        geojson_sector = folium.GeoJson(
-            json.loads(datos_s['geo']),
-            style_function=lambda x: {'fillColor': '#00d4ff', 'color': 'white', 'weight': 2, 'fillOpacity': 0.1}
-        ).add_to(m_sec)
+        # Sector (Polígono)
+        geo_sec = folium.GeoJson(json.loads(datos_s['geo']), style_function=lambda x: {'color': 'white', 'weight': 2, 'fillOpacity': 0.1}).add_to(m_sec)
 
-        # --- PINTAR TODOS LOS REGISTRADORES SIN FILTRO ---
-        for id_r, reg in dict_reg.items():
-            # Marcador rojo gigante para que no haya duda
-            folium.CircleMarker(
-                location=reg['coord'],
-                radius=10,
-                color='red',
-                fill=True,
-                fill_color='yellow',
-                fill_opacity=1,
-                popup=f"REG: {reg['nombre']}"
-            ).add_to(m_sec)
-            
-            # Etiqueta de texto forzada
-            folium.Marker(
-                location=reg['coord'],
-                icon=folium.DivIcon(html=f'<div style="font-size: 12pt; color: yellow; font-weight: bold; background: black; border: 2px solid red;">{reg["nombre"]}</div>')
-            ).add_to(m_sec)
+        # --- DIBUJAR REGISTRADORES (SIN FILTROS, A HUEVO) ---
+        if not isinstance(res_reg, dict) or "error" in res_reg:
+            pass # No hay nada que pintar
+        else:
+            for id_r, r in res_reg.items():
+                # Marcador AMARILLO gigante para que resalte sobre el mapa oscuro
+                folium.CircleMarker(
+                    location=r['coord'],
+                    radius=12,
+                    color='#FFFF00',
+                    fill=True,
+                    fill_color='#FF0000', # Centro rojo
+                    fill_opacity=1,
+                    popup=f"REG: {r['nombre']} | Sector DB: {r['sector']}"
+                ).add_to(m_sec)
+                
+                folium.Marker(
+                    location=r['coord'],
+                    icon=folium.DivIcon(html=f'<div style="font-size: 14pt; color: #FFFF00; font-weight: bold; background: black; border: 1px solid white; width: 150px;">{r["nombre"]}</div>')
+                ).add_to(m_sec)
 
-        # --- PINTAR POZOS (Lógica que ya te funciona) ---
+        # --- DIBUJAR POZOS ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
@@ -848,12 +868,13 @@ if sector_seleccionado:
                 folium.CircleMarker(location=p_info['coord'], radius=5, color=p_info['color_final'], fill=True).add_to(m_sec)
 
         try:
-            m_sec.fit_bounds(geojson_sector.get_bounds())
+            m_sec.fit_bounds(geo_sec.get_bounds())
         except: pass
 
         folium_static(m_sec, width=None, height=750)
     else:
-        st.error("No se encontró el sector.")
+        st.error(f"Sector {sector_seleccionado} no encontrado en la base de datos de polígonos.")
+    
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
