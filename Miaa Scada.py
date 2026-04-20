@@ -804,7 +804,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 if sector_seleccionado:
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
-    # Normalización para el match de sector
+    # Match de sector normalizado
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
@@ -820,7 +820,7 @@ if sector_seleccionado:
             </style>
         """, unsafe_allow_html=True)
 
-        # Renderizado de métricas del sector (Superior)
+        # Métricas superiores del sector
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -836,19 +836,20 @@ if sector_seleccionado:
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Capa del Polígono del Sector
+        # Polígono del Sector
         geojson_sector = folium.GeoJson(
             json.loads(datos_s['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.1}
         ).add_to(m_sec)
 
-        # --- 1. DIBUJAR REGISTRADORES (MACROMEDIDORES) ---
+        # --- 1. REGISTRADORES (MACROMEDIDORES) CON PRESIONES 1 Y 2 ---
         dict_reg = cargar_registradores_desde_db()
         for r in dict_reg.values():
             d_sc = lambda tag: data_scada.get(tag, (0, "N/A"))
             
-            # Variables según tus imágenes (presion_1, caudal, bateria, indice)
-            pres, f_p = d_sc(r.get('tag_p1'))
+            # Mapeo de variables (incluyendo ambas presiones)
+            p1, f_p1 = d_sc(r.get('tag_p1'))
+            p2, f_p2 = d_sc(r.get('tag_p2')) # Tag de presión 2
             cau, f_q = d_sc(r.get('tag_q'))
             vbat, f_v = d_sc(r.get('tag_vbat'))
             idx, f_i = d_sc(r.get('tag_idx'))
@@ -857,23 +858,23 @@ if sector_seleccionado:
             <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:260px; font-family:sans-serif;">
                 <div style="border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:8px;">
                     <b style="color:#00FFFF; font-size:14px;">REGISTRADOR: {r['nombre']}</b><br>
-                    <small style="color:#888;">Serie: {r.get('serie', 'S/N')}</small>
+                    <small style="color:#888;">ID: {r.get('serie', 'S/N')}</small>
                 </div>
                 <div style="font-size:12px; line-height:1.6;">
                     💧 Caudal: <b style="color:#00FFFF;">{cau:.2f} L/s</b> <small style="color:yellow;">{f_q}</small><br>
-                    🚀 Presión: <b style="color:#00FFFF;">{pres:.2f} kg</b> <small style="color:yellow;">{f_p}</small><br>
+                    🚀 Presión 1: <b style="color:#00FFFF;">{p1:.2f} kg</b> <small style="color:yellow;">{f_p1}</small><br>
+                    🚀 Presión 2: <b style="color:#00FFFF;">{p2:.2f} kg</b> <small style="color:yellow;">{f_p2}</small><br>
                     🔢 Índice: <b>{idx:,.1f} m³</b> <small style="color:yellow;">{f_i}</small><br>
                     🔋 Batería: <b>{vbat:.2f} V</b> <small style="color:yellow;">{f_v}</small>
                 </div>
             </div>
             """
-            
             folium.CircleMarker(
                 location=r['coord'], radius=7, color='#00FFFF', fill=True, fill_opacity=0.9,
                 popup=folium.Popup(html_reg, max_width=300)
             ).add_to(m_sec)
 
-        # --- 2. DIBUJAR POZOS (POPUP COMPLETO RESTAURADO) ---
+        # --- 2. POZOS (CON TODA LA DATA) ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
@@ -881,7 +882,6 @@ if sector_seleccionado:
                 d = lambda tag: data_scada.get(tag, (0, "N/A"))
                 is_st = (info['status_label'] == 'SIN TELEMETRÍA')
                 
-                # Datos Hidráulicos y Eléctricos
                 q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
                 p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
                 tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
@@ -899,10 +899,9 @@ if sector_seleccionado:
                         <div style="display:flex; justify-content:space-between;"><span>💧 Caudal:</span><b>{q:.2f} L/s</b></div>
                         <div style="display:flex; justify-content:space-between;"><span>🚀 Presión:</span><b>{p:.2f} kg</b></div>
                         <div style="display:flex; justify-content:space-between;"><span>🔋 Tanque:</span><b>{tanq:.2f} m</b></div>
-                        <div style="display:flex; justify-content:space-between;"><span>📉 N. Dinámico:</span><b>{dinam:.2f} m</b></div>
                     </div>
-                    <table style="width:100%; font-size:10px; border-collapse:collapse; background:rgba(255,255,255,0.05); border-radius:5px;">
-                        <tr style="color:#00d4ff; text-align:left; border-bottom:1px solid #333;">
+                    <table style="width:100%; font-size:10px; background:rgba(255,255,255,0.05); border-radius:5px;">
+                        <tr style="color:#00d4ff; text-align:left;">
                             <th style="padding:4px;">Fase</th><th>Volt</th><th>Amp</th>
                         </tr>
                         <tr><td style="padding:4px;">L1-L2</td><td>{v_l[0][0]:.0f}V</td><td>{a_l[0][0]:.1f}A</td></tr>
@@ -911,7 +910,6 @@ if sector_seleccionado:
                     </table>
                 </div>
                 """
-
                 if info.get('blink'):
                     folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), 
                                   popup=folium.Popup(html_pozo, max_width=400)).add_to(m_sec)
@@ -919,14 +917,11 @@ if sector_seleccionado:
                     folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, 
                                         fill_opacity=1, popup=folium.Popup(html_pozo, max_width=400)).add_to(m_sec)
 
-        # Auto-ajuste de cámara al sector
         try:
             m_sec.fit_bounds(geojson_sector.get_bounds())
         except: pass
         folium_static(m_sec, width=None, height=750)
     
-    else:
-        st.error(f"Sector {sector_seleccionado} no localizado.")
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
