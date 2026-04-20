@@ -926,8 +926,7 @@ if sector_seleccionado:
         
         # indicadores de los pozos en el mapa del sector ---------------------------------------------------------------------------------------------------------------------------------------
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
-        m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
-        Fullscreen().add_to(m_sec)
+       
         
         geojson_sector = folium.GeoJson(
             json.loads(datos_s['geo']),
