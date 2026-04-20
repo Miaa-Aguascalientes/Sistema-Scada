@@ -410,38 +410,41 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
-# --- DICCIONARIO DE REGISTRADORES (NUEVO) ---
 @st.cache_data(ttl=3600)
 def cargar_registradores_desde_db():
     engine = get_mysql_telemetria_engine()
-    if not engine: 
-        return {}
+    if not engine: return {}
     try:
-        # Consulta a la tabla de registradores
         query = "SELECT * FROM Diccionario_de_registradores"
         df_reg = pd.read_sql(query, engine)
         
         nuevo_mapa_reg = {}
         for _, row in df_reg.iterrows():
             try:
-                # Limpieza y conversión de coordenadas
-                coords_str = str(row['coord']).strip().replace('(', '').replace(')', '')
-                lat, lon = map(float, coords_str.split(','))
+                # 1. Limpieza profunda del string de coordenadas
+                # Quitamos (), [], espacios y posibles caracteres extra
+                c_raw = str(row['coord']).strip().replace('(', '').replace(')', '').replace('[', '').replace(']', '')
                 
-                # Construcción del diccionario indexado por el ID del Registrador
-                # He añadido 'sector' que es la clave para que solo aparezcan en la Vista de Detalles
-                nuevo_mapa_reg[row['Registrador']] = {
-                    "nombre": row.get('Nombre_registrador', f"REG {row['Registrador']}"),
-                    "coord": (lat, lon),
-                    "sector": str(row['Sector']).strip() if row['Sector'] else "",
-                    "tag_presion_1": row['presion_1'],
-                    "tag_presion_2": row['presion_2'],
-                    "tag_caudal": row['caudal']
-                }
-            except Exception as e:
-                continue
+                if ',' in c_raw:
+                    partes = c_raw.split(',')
+                    lat = float(partes[0].strip())
+                    lon = float(partes[1].strip())
+                    
+                    # 2. Validación de datos reales
+                    if lat != 0 and lon != 0:
+                        nuevo_mapa_reg[row['Registrador']] = {
+                            "nombre": row.get('Nombre_registrador', f"REG {row['Registrador']}"),
+                            "coord": (lat, lon),
+                            "sector": str(row['Sector']).strip() if row['Sector'] else "",
+                            "tag_presion_1": row.get('presion_1'),
+                            "tag_presion_2": row.get('presion_2'),
+                            "tag_caudal": row.get('caudal')
+                        }
+            except:
+                continue # Si una fila está mal, se salta a la siguiente
         return nuevo_mapa_reg
     except Exception as e:
+        st.error(f"Error en carga: {e}")
         return {}
 
 
@@ -801,124 +804,86 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7 SECCIÓN --------------------------------------------------------------7 VISTA DETALLE DEL SECTOR ---------------------------------------------------------------
 if sector_seleccionado:
-    # 1. Título superior fijo
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
-    # Buscamos los datos del sector asegurando que la comparación sea limpia
     datos_s = next((s for s in sectores if str(s['sector']).strip() == str(sector_seleccionado).strip()), None)
     
     if datos_s:
-        st.markdown("""
-            <style>
-                .block-container { padding-top: 3.5rem !important; }
-                .metrics-container { position: relative; z-index: 9999; margin-top: -700px; margin-bottom: 5px; }
-                .micro-card { background: #0b1a29; border: 1px solid #1f4068; border-radius: 5px; padding: 8px; text-align: center; }
-                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; }
-                .micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }
-            </style>
-        """, unsafe_allow_html=True)
-
-        # Renderizado de métricas (Población, U. Totales, etc.)
-        st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
-        with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
-        with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
-        with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
-        with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
-        with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
-        with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        st.divider()
-
-        # --- 1. CARGA Y FILTRADO DE REGISTRADORES ---
+        # Cargamos registradores usando la nueva función de columna única
         dict_todos_registradores = cargar_registradores_desde_db()
         
-        # Filtro: Comparamos el campo 'sector' del diccionario con el sector seleccionado
-        registradores_sector = {
-            k: v for k, v in dict_todos_registradores.items() 
-            if str(v.get('sector', '')).strip() == str(sector_seleccionado).strip()
-        }
+        # Filtro de sector
+        sec_str = str(sector_seleccionado).strip()
+        registradores_sector = {k: v for k, v in dict_todos_registradores.items() if v['sector'] == sec_str}
 
-        # --- 2. CONFIGURACIÓN DEL MAPA ---
+        # Mapa Base
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Dibujar el Polígono del Sector (GeoJSON)
-        geojson_sector = folium.GeoJson(
+        # Capa del Sector
+        geojson_sec = folium.GeoJson(
             json.loads(datos_s['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.1}
         ).add_to(m_sec)
 
-        # Función lambda para obtener datos de telemetría
         d = lambda tag: data_scada.get(tag, (0, "N/A"))
 
-        # --- 3. DIBUJAR POZOS DEL SECTOR ---
+        # --- DIBUJAR REGISTRADORES ---
+        for id_reg, info_reg in registradores_sector.items():
+            p1, _ = d(info_reg['tag_presion_1'])
+            p2, _ = d(info_reg['tag_presion_2'])
+            q_r, _ = d(info_reg['tag_caudal'])
+
+            # Popup estilo tecnológico
+            html_reg = f"""
+            <div style="background:#001a1a; color:#00ffcc; padding:10px; border:1px solid #00ffcc; border-radius:5px; font-family:sans-serif;">
+                <b style="font-size:12px;">📡 REGISTRADOR {id_reg}</b><br>
+                <span style="font-size:10px; color:#aaa;">{info_reg['nombre']}</span>
+                <hr style="margin:5px 0; border:0; border-top:1px solid #00ffcc; opacity:0.3;">
+                P1: <b>{p1:.2f}</b> | P2: <b>{p2:.2f}</b> <small>kg</small><br>
+                Q: <b>{q_r:.2f}</b> <small>Lps</small>
+            </div>
+            """
+
+            # Icono de Hexágono Cian
+            folium.RegularPolygonMarker(
+                location=info_reg['coord'],
+                number_of_sides=6,
+                radius=10,
+                color='#00ffcc',
+                fill=True,
+                fill_color='#003333',
+                fill_opacity=0.8,
+                popup=folium.Popup(html_reg, max_width=250)
+            ).add_to(m_sec)
+
+            # Etiqueta permanente
+            folium.Marker(
+                location=info_reg['coord'],
+                icon=folium.DivIcon(
+                    icon_anchor=(-15, -15),
+                    html=f'<div style="font-size:8pt; color:#00ffcc; font-weight:bold; text-shadow:1px 1px #000;">{info_reg["nombre"]}</div>'
+                )
+            ).add_to(m_sec)
+
+        # --- DIBUJAR POZOS (Círculos) ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
-                info = mapa_pozos_dict[id_p]
-                q_p, _ = d(info['caudal'])
-                p_p, _ = d(info['presion'])
-                
+                p_info = mapa_pozos_dict[id_p]
                 folium.CircleMarker(
-                    location=info['coord'], radius=6, color=info['color_final'], 
-                    fill=True, fill_opacity=1, 
-                    popup=folium.Popup(f"<b>POZO {id_p}</b><br>Q: {q_p:.2f}<br>P: {p_p:.2f}", max_width=200)
+                    location=p_info['coord'], radius=5, color=p_info['color_final'],
+                    fill=True, fill_opacity=1, popup=f"POZO {id_p}"
                 ).add_to(m_sec)
 
-        # --- 4. DIBUJAR REGISTRADORES (HEXÁGONOS CIAN) ---
-        for id_reg, info_reg in registradores_sector.items():
-            # Verificamos que existan coordenadas válidas
-            if info_reg['coord'] and info_reg['coord'] != (0, 0):
-                # Extraemos valores usando los tags definidos en tu diccionario
-                p1, _ = d(info_reg.get('tag_presion_1'))
-                p2, _ = d(info_reg.get('tag_presion_2'))
-                q_reg, _ = d(info_reg.get('tag_caudal'))
-
-                html_reg = f"""
-                <div style="background:#001a1a; color:#00ffcc; padding:10px; border-radius:8px; border:1px solid #00ffcc; min-width:160px; font-family:sans-serif;">
-                    <b style="font-size:12px;">📡 {info_reg['nombre']}</b>
-                    <hr style="margin:5px 0; opacity:0.3; border:0; border-top:1px solid #00ffcc;">
-                    <div style="font-size:11px;">
-                        P1: <b>{p1:.2f}</b> kg/cm²<br>
-                        P2: <b>{p2:.2f}</b> kg/cm²<br>
-                        Q: <b>{q_reg:.2f}</b> Lps
-                    </div>
-                </div>
-                """
-
-                # Marcador Hexagonal
-                folium.RegularPolygonMarker(
-                    location=info_reg['coord'],
-                    number_of_sides=6,
-                    radius=10,
-                    color='#00ffcc',
-                    fill=True,
-                    fill_color='#002222',
-                    fill_opacity=0.9,
-                    popup=folium.Popup(html_reg, max_width=250)
-                ).add_to(m_sec)
-
-                # Etiqueta con el nombre del registrador
-                folium.Marker(
-                    location=info_reg['coord'],
-                    icon=folium.DivIcon(
-                        icon_anchor=(-15, -15),
-                        html=f'<div style="font-size:8pt; color:#00ffcc; font-weight:bold; text-shadow:1px 1px #000; white-space:nowrap;">{info_reg["nombre"]}</div>'
-                    )
-                ).add_to(m_sec)
-
-        # Ajuste de cámara automático al sector
+        # Ajuste de encuadre
         try:
-            m_sec.fit_bounds(geojson_sector.get_bounds())
+            m_sec.fit_bounds(geojson_sec.get_bounds())
         except: pass
 
         folium_static(m_sec, width=None, height=750)
-        
     else:
-        st.error(f"No se encontró información para el sector {sector_seleccionado}")
-    
+        st.error("No se encontró información del sector.")
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
