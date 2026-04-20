@@ -1192,6 +1192,7 @@ def get_sector_style(feature, visible):
     }
 
 # 1. Cargamos los datos con tu función de caché
+# ... dentro de tu bloque donde generas el mapa ...
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
@@ -1199,17 +1200,12 @@ if sectores_data:
     
     for s in sectores_data:
         try:
-            if not s.get('geo'): continue
-            
             nombre_sec = s['sector']
-            geo_dict = json.loads(s['geo'])
             
-            # 2. Reconstrucción del enlace de acceso (Botón)
-            # Usamos quote para manejar espacios o caracteres especiales en el nombre del sector
+            # Tu lógica de URL y Popup se mantiene igual
             sector_encoded = urllib.parse.quote(nombre_sec)
-            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.rol}"
+            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
             
-            # 3. Popup con diseño y botón restaurado
             html_popup = f"""
             <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
                 <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
@@ -1218,40 +1214,23 @@ if sectores_data:
                     <tr><td><b>Pozos:</b></td><td style="text-align:right;">{s.get('Pozos_Sector', 0)}</td></tr>
                     <tr><td><b>Fugas:</b></td><td style="text-align:right; color:#ff4b4b;">{s.get('Fugas_Tot', 0)}</td></tr>
                 </table>
-                
-                <a href="{url_acceso}" target="_blank" 
-                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
-                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
-                          border-radius: 5px; transition: 0.3s;">
-                   🚀 ABRIR SECTOR
-                </a>
+                <a href="{url_acceso}" target="_blank" style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; border-radius: 5px;">🚀 ABRIR SECTOR</a>
             </div>
             """
 
-            # 4. Lógica de visibilidad (Siempre presentes en el código)
-            estilo = {
-                'fillColor': '#00d4ff',
-                'color': '#00d4ff' if ver_sectores else 'transparent',
-                'weight': 1.5 if ver_sectores else 0,
-                'fillOpacity': 0.12 if ver_sectores else 0.0001 # Invisible pero "clicable"
-            }
-
-            folium.GeoJson(
-                geo_dict,
-                style_function=lambda x, stl=estilo: stl,
-                highlight_function=lambda x: {
-                    'fillColor': '#00d4ff', 
-                    'color': '#ffffff', 
-                    'weight': 3, 
-                    'fillOpacity': 0.4
-                },
+            # DIBUJAMOS EL POLÍGONO DIRECTO
+            folium.Polygon(
+                locations=s['geo'], # Aquí usamos las coordenadas ya invertidas
+                color='#00d4ff' if ver_sectores else 'transparent',
+                weight=1.5 if ver_sectores else 0,
+                fill=True,
+                fill_color='#00d4ff',
+                fill_opacity=0.12 if ver_sectores else 0.0001,
                 tooltip=f"Sector: {nombre_sec}",
                 popup=folium.Popup(html_popup, max_width=260)
             ).add_to(fg_sectores)
-
-        except Exception:
+        except:
             continue
-
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
