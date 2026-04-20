@@ -865,8 +865,10 @@ if sector_seleccionado:
         # Filtramos los registradores que pertenecen a este sector
         registradores_sector = {
             k: v for k, v in dict_todos_registradores.items() 
-            if str(v['sector']) == str(sector_seleccionado)
+            if str(v.get('sector', '')).strip() == str(sector_seleccionado).strip()
         }
+
+        
         # --- MAPA DEL SECTOR ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
