@@ -270,11 +270,12 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
+    # Es fundamental usar use_pure=True para que las cadenas largas no se corten
     conn = get_mysql_telemetria_engine() 
     if not conn: return []
     
     try:
-        # Traemos el campo de texto puro
+        # Consulta directa al campo de texto de MySQL
         query = """
             SELECT sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
                    U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
@@ -286,37 +287,36 @@ def cargar_sectores_poligonos():
         df = pd.read_sql(query, conn)
         conn.close()
         
-        sectores_listos = []
+        sectores_finales = []
         
         for _, row in df.iterrows():
-            texto = row['coordenadas_raw']
-            if texto and isinstance(texto, str):
+            texto_coords = row['coordenadas_raw']
+            # Ignoramos registros vacíos o NULL para evitar que el mapa falle
+            if texto_coords and isinstance(texto_coords, str):
                 try:
-                    # 1. Limpieza profunda: quitamos espacios al inicio/final y saltos de línea
-                    texto = texto.strip()
+                    # 1. Limpiamos espacios y separamos por comas
+                    puntos_str = [p.strip() for p in texto_coords.split(',') if p.strip()]
                     
-                    # 2. Separar puntos por coma
-                    puntos = [p.strip() for p in texto.split(',') if p.strip()]
+                    lista_puntos = []
+                    for p in puntos_str:
+                        # 2. Separamos Longitud de Latitud (asumiendo formato: "-102.2 21.8")
+                        ejes = p.split()
+                        if len(ejes) >= 2:
+                            # GeoJSON estándar requiere [Longitud, Latitud]
+                            lon = float(ejes[0])
+                            lat = float(ejes[1])
+                            lista_puntos.append([lon, lat])
                     
-                    coords_geojson = []
-                    for p in puntos:
-                        # 3. Separar Lon de Lat por espacio
-                        partes = p.split()
-                        if len(partes) >= 2:
-                            # IMPORTANTE: GeoJSON requiere [Longitud, Latitud]
-                            lon = float(partes[0])
-                            lat = float(partes[1])
-                            coords_geojson.append([lon, lat])
-                    
-                    # 4. REGLA DE ORO: Si el polígono no está cerrado, el mapa NO lo dibuja
-                    if coords_geojson:
-                        if coords_geojson[0] != coords_geojson[-1]:
-                            coords_geojson.append(coords_geojson[0])
+                    # 3. VERIFICACIÓN CRÍTICA: Un polígono DEBE cerrarse o no se dibuja
+                    if lista_puntos:
+                        if lista_puntos[0] != lista_puntos[-1]:
+                            lista_puntos.append(lista_puntos[0])
                         
-                        # 5. Estructura GeoJSON válida (notar los 3 niveles de corchetes)
+                        # 4. Construcción manual de la estructura GeoJSON (triple corchete)
+                        # Este es el formato que Folium/Plotly entienden para dibujar áreas
                         row['geo'] = json.dumps({
                             "type": "Polygon",
-                            "coordinates": [coords_geojson]
+                            "coordinates": [lista_puntos]
                         })
                     else:
                         row['geo'] = None
@@ -325,12 +325,12 @@ def cargar_sectores_poligonos():
             else:
                 row['geo'] = None
                 
-            sectores_listos.append(row.to_dict())
+            sectores_finales.append(row.to_dict())
 
-        return sectores_listos
+        return sectores_finales
 
     except Exception as e:
-        st.error(f"Error en carga de polígonos: {e}")
+        st.error(f"Falla total en la carga de polígonos: {e}")
         return []
 
 
