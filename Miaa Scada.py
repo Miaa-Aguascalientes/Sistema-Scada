@@ -804,47 +804,18 @@ if sector_seleccionado:
     # 1. Título superior fijo
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
-    datos_s = next((s for s in sectores if s['sector'] == sector_seleccionado), None)
+    datos_s = next((s for s in sectores if str(s['sector']).strip() == str(sector_seleccionado).strip()), None)
     
     if datos_s:
         st.markdown("""
             <style>
-                /* Reducimos el espacio que Streamlit reserva arriba */
-                .block-container { 
-                    padding-top: 3.5rem !important; 
-                    margin-top: 0px !important; 
-                }
-                
-                /* Contenedor de métricas ultra-compacto */
-                .metrics-container {
-                    position: relative;
-                    z-index: 9999;
-                    margin-top: -700px; /* Subimos las métricas hacia el título */
-                    margin-bottom: 5px;
-                }
-
-                .micro-card {
-                    background: #0b1a29; 
-                    border: 1px solid #1f4068;
-                    border-radius: 5px; 
-                    padding: 8px; /* Padding más pequeño */
-                    text-align: center;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-                }
+                .block-container { padding-top: 3.5rem !important; margin-top: 0px !important; }
+                .metrics-container { position: relative; z-index: 9999; margin-top: -700px; margin-bottom: 5px; }
+                .micro-card { background: #0b1a29; border: 1px solid #1f4068; border-radius: 5px; padding: 8px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
                 .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
                 .micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }
-                
-                /* Reducimos el espacio que ocupa el divisor */
-                hr {
-                    margin-top: 5px !important;
-                    margin-bottom: 10px !important;
-                    opacity: 0.3;
-                }
-
-                /* Ajuste del mapa para que no suba sobre las métricas pero no deje huecos */
-                iframe {
-                    margin-top: 0px !important;
-                }
+                hr { margin-top: 5px !important; margin-bottom: 10px !important; opacity: 0.3; }
+                iframe { margin-top: 0px !important; }
             </style>
         """, unsafe_allow_html=True)
 
@@ -859,21 +830,16 @@ if sector_seleccionado:
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        st.divider() # Este divisor ahora es más delgado por el CSS de arriba
+        st.divider()
 
-        # --- CARGA Y FILTRADO DE REGISTRADORES ---
+        # --- 1. FILTRADO DE REGISTRADORES (CON LIMPIEZA) ---
         dict_todos_registradores = cargar_registradores_desde_db()
-        # Filtramos los registradores que pertenecen a este sector
         registradores_sector = {
             k: v for k, v in dict_todos_registradores.items() 
             if str(v.get('sector', '')).strip() == str(sector_seleccionado).strip()
         }
-        # --- LÍNEA DE DEPURACIÓN (Borrar después de probar) ---
-        # st.sidebar.write(f"DEBUG: Sector {sector_seleccionado} tiene {len(registradores_sector)} registradores")
 
-        
-        # --- MAPA DEL SECTOR ---
-        ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+        # --- 2. INICIALIZACIÓN DEL MAPA ---
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
@@ -882,166 +848,77 @@ if sector_seleccionado:
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.1}
         ).add_to(m_sec)
 
+        # --- 3. DIBUJAR POZOS ---
+        ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+        d = lambda tag: data_scada.get(tag, (0, "N/A"))
+
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
                 info = mapa_pozos_dict[id_p]
-                
-                # --- EXTRACCIÓN DE DATOS PARA EL POPUP ---
-                d = lambda tag: data_scada.get(tag, (0, "N/A"))
                 is_st = (info['status_label'] == 'SIN TELEMETRÍA')
                 
                 q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
                 p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
-                sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
-                dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
                 tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
-                col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
-                
-                h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
-                h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
-                h_arr_fmt = formato_hora(h_arr_val)
-                h_par_fmt = formato_hora(h_par_val)
-                
                 v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
                 a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-                # Tu HTML personalizado integrado
                 html_popup_sec = f"""
-                <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
-                        <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
-                        <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
-                            <span>🚀 Presión: <b>{p:.2f} kg</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px;">
-                        <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
-                    </div>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
-                        <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
-                            <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
-                                <th style="padding: 4px;">Fase</th>
-                                <th style="padding: 4px;">Voltaje / Act.</th>
-                                <th style="padding: 4px;">Amp / Act.</th>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #222;">
-                                <td style="padding: 6px 4px;">L1-L2</td>
-                                <td><b>{v[0][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[0][1]}</span></td>
-                                <td><b>{a[0][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[0][1]}</span></td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #222;">
-                                <td style="padding: 6px 4px;">L2-L3</td>
-                                <td><b>{v[1][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[1][1]}</span></td>
-                                <td><b>{a[1][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[1][1]}</span></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 6px 4px;">L1-L3</td>
-                                <td><b>{v[2][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[2][1]}</span></td>
-                                <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
-                            </tr>
-                        </table>
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>▶️ Arranque: <b>{h_arr_fmt}</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_arr}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
-                            <span>⏹️ Paro: <b>{h_par_fmt}</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
-                        </div>
-                    </div>
+                <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 350px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                    <b style="color: #00d4ff;">POZO {id_p}</b> [{info['status_label']}]<br>
+                    <hr opacity:0.2>
+                    💧 Q: <b>{q:.2f} L/s</b> <br>
+                    🚀 P: <b>{p:.2f} kg</b> <br>
+                    🔋 Tanque: <b>{tanq:.2f} m</b>
                 </div>
                 """
 
-                # Marcador con lógica de parpadeo (Blink)
                 if info.get('blink'):
-                    folium.Marker(
-                        location=info['coord'],
-                        icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                        popup=folium.Popup(html_popup_sec, max_width=450)
-                    ).add_to(m_sec)
+                    folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
+                                  popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
                 else:
-                    folium.CircleMarker(
-                        location=info['coord'], radius=5, color=info['color_final'], 
-                        fill=True, fill_color=info['color_final'], fill_opacity=1,
-                        popup=folium.Popup(html_popup_sec, max_width=450)
-                    ).add_to(m_sec)
+                    folium.CircleMarker(location=info['coord'], radius=5, color=info['color_final'], fill=True,
+                                        fill_color=info['color_final'], fill_opacity=1,
+                                        popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
                 
-                # Etiqueta de ID
-                folium.Marker(
-                    location=info['coord'],
-                    icon=folium.DivIcon(
-                        icon_anchor=(-12, 12),
-                        html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]}; text-shadow: 1px 1px #000;">{id_p}</div>'
-                    )
-                ).add_to(m_sec)
+                folium.Marker(location=info['coord'], icon=folium.DivIcon(icon_anchor=(-12, 12),
+                    html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]};">{id_p}</div>')).add_to(m_sec)
 
-        # --- RENDERIZADO DE REGISTRADORES DE PRESIÓN/CAUDAL ---
+        # --- 4. DIBUJAR REGISTRADORES (DENTRO DEL MAPA) ---
         for id_reg, info_reg in registradores_sector.items():
-            # Extraer valores de telemetría para el registrador
-            # d_reg es la misma función lambda que ya usas para los pozos
-            p1, _ = d(info_reg['tag_presion_1'])
-            p2, _ = d(info_reg['tag_presion_2'])
-            q, _ = d(info_reg['tag_caudal'])
+            val_p1, f_p1 = d(info_reg.get('tag_presion_1'))
+            val_p2, f_p2 = d(info_reg.get('tag_presion_2'))
+            val_q, f_q = d(info_reg.get('tag_caudal'))
 
             html_reg = f"""
-            <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; border: 1px solid #00ffcc;">
-            <b style="font-size: 13px;">📡 {info_reg['nombre']}</b><br>
-            <hr style="margin: 5px 0; opacity: 0.3;">
-            <div style="font-size: 11px;">
-             P1: <b>{p1:.2f}</b> | P2: <b>{p2:.2f}</b> <small>kg/cm²</small><br>
-             Q: <b>{q:.2f}</b> <small>Lps</small>
-           </div>
-       </div>
-"""
+            <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; width: 220px; border: 1px solid #00ffcc; font-family: sans-serif;">
+                <b style="font-size: 13px;">📡 REG: {info_reg['nombre']}</b><br>
+                <hr style="margin: 5px 0; opacity: 0.3;">
+                <div style="font-size: 11px;">
+                    P1: <b>{val_p1:.2f}</b> | P2: <b>{val_p2:.2f}</b> <small>kg/cm²</small><br>
+                    Q: <b>{val_q:.2f}</b> <small>Lps</small>
+                </div>
+            </div>
+            """
 
-            # Marcador Hexagonal para los registradores
             folium.RegularPolygonMarker(
                 location=info_reg['coord'],
                 number_of_sides=6,
-                radius=8,
+                radius=9,
                 color='#00ffcc',
                 fill=True,
                 fill_color='#002222',
-                fill_opacity=0.8,
+                fill_opacity=0.9,
                 popup=folium.Popup(html_reg, max_width=250)
             ).add_to(m_sec)
 
-            # Etiqueta pequeña flotante con el nombre del registrador
             folium.Marker(
                 location=info_reg['coord'],
-                icon=folium.DivIcon(
-                    icon_anchor=(-10, -10),
-                    html=f'<div style="font-size: 8px; color: #00ffcc; font-family: sans-serif; background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px;">{info_reg["nombre"]}</div>'
-                )
+                icon=folium.DivIcon(icon_anchor=(-10, -10),
+                    html=f'<div style="font-size: 8px; color: #00ffcc; font-weight: bold; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 3px;">{info_reg["nombre"]}</div>')
             ).add_to(m_sec)
-        
+
+        # --- 5. AJUSTE DE VISTA Y RENDERIZADO FINAL ---
         try:
             m_sec.fit_bounds(geojson_sector.get_bounds())
         except: pass
