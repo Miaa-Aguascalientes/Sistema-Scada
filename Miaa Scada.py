@@ -297,29 +297,34 @@ def cargar_registradores_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
     try:
-        # Usamos el nombre que me diste: Diccionario_registradores
         df = pd.read_sql("SELECT * FROM Diccionario_registradores", engine)
         d_res = {}
         for _, r in df.iterrows():
             try:
-                # 1. Limpieza extrema de coordenadas
+                # 1. Limpieza de coordenadas
                 raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
                 lat_s, lon_s = raw_c.split(',')
                 
-                # 2. Mapeo según los nombres de columna de tu imagen
-                # Usamos .get() por si acaso algún nombre varía
-                nombre = r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))
+                # 2. Identificación del ID (Serie)
                 id_reg = r.get('Serie', r.get('Registrador', 'ID'))
                 
+                # 3. Guardamos TODOS los tags que Scada necesita consultar después
                 d_res[str(id_reg)] = {
-                    "nombre": str(nombre),
+                    "nombre": str(r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))),
                     "coord": [float(lat_s), float(lon_s)],
                     "sector": str(r['Sector']).split('.')[0].strip(),
-                    "tag_p1": r.get('presion_1')
+                    # MAPEAMOS CADA COLUMNA DE TU TABLA A UNA LLAVE
+                    "tag_p1": r.get('presion_1'), # Tag de Presión 1
+                    "tag_p2": r.get('presion_2'), # Tag de Presión 2 (AQUÍ ESTABA EL ERROR)
+                    "tag_q": r.get('caudal'),     # Tag de Caudal
+                    "tag_vbat": r.get('bateria'), # Tag de Voltaje Batería
+                    "tag_idx": r.get('indice')    # Tag de Índice/Lectura
                 }
-            except: continue
+            except Exception as e:
+                continue
         return d_res
-    except: return {}
+    except Exception as e:
+        return {}
 
 
 
