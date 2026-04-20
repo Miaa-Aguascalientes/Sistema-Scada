@@ -270,25 +270,47 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_mysql_telemetria_engine()
-    if not conn: return []
+    # Usamos tu conexión segura de telemetría
+    engine = get_mysql_telemetria_engine()
+    if not engine: return []
+    
     try:
-        # Añadimos los campos numéricos solicitados en la consulta
+        # En MySQL usamos ST_AsText para obtener la geometría desde el campo GEOMETRY
+        # También usamos comillas invertidas (`) para columnas con guiones como costoKw-hr
         query = """
-            SELECT sector, "Pozos_Sector", 
-                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
-                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
-                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
-                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
-                   "Recaudacion", "Dotacion", "Balance_Estimado",
-                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
-            FROM "Sectores_hidr"
+            SELECT sector, 
+                   Pozos_Sector, Superficie, Long_Red, Vol_Prod, U_Domesticos, 
+                   U_NoDom, U_Tot, Poblacion, Cons_m3, Faltas_Agua, Fugas_Tot, 
+                   FTC, FTA, Vol_Medid, Vol_Fact, Kwh, `costoKw-hr`, 
+                   Recaudacion, Dotacion, Balance_Estimado,
+                   ST_AsText(geom) as wkt_geom 
+            FROM Sectores_hidr
         """
-        df = pd.read_sql(query, conn)
-        conn.close()
-        return df.to_dict('records')
+        df = pd.read_sql(query, engine)
+        
+        sectores_listos = []
+        for _, row in df.iterrows():
+            if row['wkt_geom']:
+                try:
+                    # Convertimos el texto WKT a objeto de geometría
+                    poly_obj = wkt.loads(row['wkt_geom'])
+                    
+                    # Invertimos coordenadas para Folium (MySQL da Long,Lat -> Folium quiere Lat,Lon)
+                    if poly_obj.geom_type == 'Polygon':
+                        coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
+                    elif poly_obj.geom_type == 'MultiPolygon':
+                        coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly_obj.geoms]
+                    
+                    # Creamos el diccionario final
+                    d = row.to_dict()
+                    d['geo'] = coords # Guardamos las coordenadas listas para dibujar
+                    sectores_listos.append(d)
+                except Exception:
+                    continue
+                    
+        return sectores_listos
     except Exception as e:
-        st.error(f"Error al cargar sectores: {e}")
+        st.error(f"Error al cargar sectores desde MySQL: {e}")
         return []
 
 
