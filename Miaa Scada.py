@@ -13,7 +13,7 @@ import hashlib
 import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
-from shapely import wkt
+
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -270,51 +270,25 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    engine = get_mysql_telemetria_engine()
-    if not engine: return []
-    
+    conn = get_postgres_conn()
+    if not conn: return []
     try:
-        # Nota: Asegúrate de que el campo geom en MySQL tenga datos reales
+        # Añadimos los campos numéricos solicitados en la consulta
         query = """
-            SELECT sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
-                   U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
-                   Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, Vol_Fact, 
-                   Kwh, `costoKw-hr`, Recaudacion, Dotacion, Balance_Estimado,
-                   ST_AsText(geom) as wkt_geom 
-            FROM Sectores_hidr
+            SELECT sector, "Pozos_Sector", 
+                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
+                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
+                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
+                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
+                   "Recaudacion", "Dotacion", "Balance_Estimado",
+                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
+            FROM "Sectorizacion"."Sectores_hidr"
         """
-        df = pd.read_sql(query, engine)
-        
-        sectores_listos = []
-        for _, row in df.iterrows():
-            wkt_data = row['wkt_geom']
-            if wkt_data:
-                try:
-                    # 1. Convertir texto a objeto geométrico
-                    poly_obj = wkt.loads(wkt_data)
-                    
-                    # 2. Extraer y Voltear coordenadas (MySQL Lon,Lat -> Folium Lat,Lon)
-                    if poly_obj.geom_type == 'Polygon':
-                        # Lista simple de coordenadas
-                        coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
-                    elif poly_obj.geom_type == 'MultiPolygon':
-                        # Lista de listas de coordenadas
-                        coords = []
-                        for part in poly_obj.geoms:
-                            coords.append([[p[1], p[0]] for p in part.exterior.coords])
-                    else:
-                        continue
-
-                    d = row.to_dict()
-                    d['geo_folium'] = coords  # Nueva llave con coordenadas listas
-                    sectores_listos.append(d)
-                except Exception as e:
-                    # st.write(f"Error procesando sector {row['sector']}: {e}")
-                    continue
-                    
-        return sectores_listos
+        df = pd.read_sql(query, conn)
+        conn.close()
+        return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error al cargar sectores desde MySQL: {e}")
+        st.error(f"Error al cargar sectores: {e}")
         return []
 
 
@@ -1196,7 +1170,6 @@ def get_sector_style(feature, visible):
     }
 
 # 1. Cargamos los datos con tu función de caché
-# --- LÓGICA DE DIBUJO EN EL MAPA ---
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
@@ -1204,12 +1177,17 @@ if sectores_data:
     
     for s in sectores_data:
         try:
+            if not s.get('geo'): continue
+            
             nombre_sec = s['sector']
+            geo_dict = json.loads(s['geo'])
             
-            # Popup HUD (Tu diseño original)
+            # 2. Reconstrucción del enlace de acceso (Botón)
+            # Usamos quote para manejar espacios o caracteres especiales en el nombre del sector
             sector_encoded = urllib.parse.quote(nombre_sec)
-            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.rol}"
             
+            # 3. Popup con diseño y botón restaurado
             html_popup = f"""
             <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
                 <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
@@ -1218,46 +1196,40 @@ if sectores_data:
                     <tr><td><b>Pozos:</b></td><td style="text-align:right;">{s.get('Pozos_Sector', 0)}</td></tr>
                     <tr><td><b>Fugas:</b></td><td style="text-align:right; color:#ff4b4b;">{s.get('Fugas_Tot', 0)}</td></tr>
                 </table>
-                <a href="{url_acceso}" target="_blank" style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; border-radius: 5px;">🚀 ABRIR SECTOR</a>
+                
+                <a href="{url_acceso}" target="_blank" 
+                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
+                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
+                          border-radius: 5px; transition: 0.3s;">
+                   🚀 ABRIR SECTOR
+                </a>
             </div>
             """
 
-            # DIBUJO INTELIGENTE
-            # Detectamos si es una lista de polígonos (MultiPolygon) o uno solo
-            coords = s['geo_folium']
-            
-            # Si el primer elemento es una lista que contiene otra lista, es un MultiPolygon
-            es_multi = isinstance(coords[0][0], list)
+            # 4. Lógica de visibilidad (Siempre presentes en el código)
+            estilo = {
+                'fillColor': '#00d4ff',
+                'color': '#00d4ff' if ver_sectores else 'transparent',
+                'weight': 1.5 if ver_sectores else 0,
+                'fillOpacity': 0.12 if ver_sectores else 0.0001 # Invisible pero "clicable"
+            }
 
-            if es_multi:
-                # Dibujamos cada parte del MultiPolygon
-                for sub_poly in coords:
-                    folium.Polygon(
-                        locations=sub_poly,
-                        color='#00d4ff' if ver_sectores else 'transparent',
-                        weight=1.5 if ver_sectores else 0,
-                        fill=True,
-                        fill_color='#00d4ff',
-                        fill_opacity=0.15 if ver_sectores else 0.0001,
-                        tooltip=f"Sector: {nombre_sec}",
-                        popup=folium.Popup(html_popup, max_width=260)
-                    ).add_to(fg_sectores)
-            else:
-                # Dibujo normal
-                folium.Polygon(
-                    locations=coords,
-                    color='#00d4ff' if ver_sectores else 'transparent',
-                    weight=1.5 if ver_sectores else 0,
-                    fill=True,
-                    fill_color='#00d4ff',
-                    fill_opacity=0.15 if ver_sectores else 0.0001,
-                    tooltip=f"Sector: {nombre_sec}",
-                    popup=folium.Popup(html_popup, max_width=260)
-                ).add_to(fg_sectores)
+            folium.GeoJson(
+                geo_dict,
+                style_function=lambda x, stl=estilo: stl,
+                highlight_function=lambda x: {
+                    'fillColor': '#00d4ff', 
+                    'color': '#ffffff', 
+                    'weight': 3, 
+                    'fillOpacity': 0.4
+                },
+                tooltip=f"Sector: {nombre_sec}",
+                popup=folium.Popup(html_popup, max_width=260)
+            ).add_to(fg_sectores)
 
-        except Exception as e:
+        except Exception:
             continue
-            
+
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
