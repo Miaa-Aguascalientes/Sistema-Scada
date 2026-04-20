@@ -805,64 +805,113 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 
 # 7 SECCIÓN --------------------------------------------------------------
-# 7 VISTA DETALLE DEL SECTOR ---------------------------------------------
+# 7 SECCIÓN: VISTA DETALLE DEL SECTOR ---------------------------------------------
 if sector_seleccionado:
-    st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
-    
+    # --- 1. OBTENCIÓN DE DATOS DEL SECTOR ---
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # --- 1. CARGA DE REGISTRADORES Y SUS DATOS DE SCADA ---
+        # --- A. INDICADORES SUPERIORES (KPIs) ---
+        # Estilo para que las tarjetas se vean integradas al HUD
+        st.markdown("""
+            <style>
+                .block-container { padding-top: 3.5rem !important; }
+                .metrics-container { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    margin-bottom: 20px; 
+                    gap: 10px;
+                }
+                .kpi-card {
+                    background: rgba(11, 26, 41, 0.9);
+                    border: 1px solid #1f4068;
+                    border-radius: 8px;
+                    padding: 10px;
+                    flex: 1;
+                    text-align: center;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                }
+                .kpi-label { color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
+                .kpi-value { color: #00d4ff; font-size: 1.2rem; font-weight: bold; margin-top: 5px; }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Renderizado de los 6 indicadores principales
+        st.markdown(f"""
+            <div class="metrics-container">
+                <div class="kpi-card">
+                    <div class="kpi-label">Población</div>
+                    <div class="kpi-value">{datos_s.get('Poblacion', 0):,.0f}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">U. Totales</div>
+                    <div class="kpi-value">{datos_s.get('U_Tot', 0):,.0f}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">U. Domésticos</div>
+                    <div class="kpi-value">{datos_s.get('U_Domesticos', 0):,.0f}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Consumo m³</div>
+                    <div class="kpi-value">{datos_s.get('Cons_m3', 0):,.1f}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Dotación</div>
+                    <div class="kpi-value">{datos_s.get('Dotacion', 0):,.1f}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Balance</div>
+                    <div class="kpi-value">{datos_s.get('Balance_Estimado', 0):,.1f}%</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.divider()
+
+        # --- B. PREPARACIÓN DE DATOS PARA EL MAPA ---
         dict_reg = cargar_registradores_desde_db()
         
-        # Recopilamos todos los tags para una sola consulta masiva
-        tags_query = []
+        # Recopilar tags para Scada (respetando que ahora vienen de columnas con Mayúscula)
+        tags_interes = []
         for r in dict_reg.values():
-            for t_key in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
-                t_name = r.get(t_key)
-                if t_name: tags_query.append(t_name)
+            for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
+                if r.get(k): tags_interes.append(r.get(k))
         
-        # Usamos tu función para traer los últimos valores
-        # Importante: lista_tags debe ser única para no repetir trabajo
-        valores_scada_reg = cargar_datos_scada(list(set(tags_query)))
+        # Consulta a Scada con tu función
+        scada_vals = cargar_datos_scada(list(set(tags_interes)))
 
-        # --- 2. CONFIGURACIÓN DEL MAPA ---
-        st.markdown("""<style>.block-container { padding-top: 3.5rem !important; }</style>""", unsafe_allow_html=True)
-        
-        # Creamos el objeto mapa
+        # --- C. RENDERIZADO DEL MAPA ---
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Capa del Sector (Polígono)
+        # Polígono del sector
         try:
-            geo_data = json.loads(datos_s['geo'])
-            geojson_sec = folium.GeoJson(
-                geo_data, 
+            geo_sec = folium.GeoJson(
+                json.loads(datos_s['geo']),
                 style_function=lambda x: {'fillColor': '#00d4ff', 'color': 'white', 'weight': 2, 'fillOpacity': 0.1}
             ).add_to(m_sec)
-        except Exception as e:
-            st.error(f"Error en GeoJSON del sector: {e}")
-            geojson_sec = None
+        except: geo_sec = None
 
-        # --- 3. DIBUJAR REGISTRADORES ---
+        # Marcadores de Registradores
         for r in dict_reg.values():
-            # Función local para extraer datos de la consulta que acabamos de hacer
-            def get_scada_data(tag_key):
-                tag_name = r.get(tag_key)
-                return valores_scada_reg.get(tag_name, (0.0, "N/A"))
+            def get_data(key):
+                t_name = r.get(key)
+                v, f = scada_vals.get(t_name, (0.0, "N/A"))
+                try: return float(v), f
+                except: return 0.0, "N/A"
 
-            p1, f1 = get_scada_data('tag_p1')
-            p2, f2 = get_scada_data('tag_p2')
-            cau, fq = get_scada_data('tag_q')
-            vbat, fv = get_scada_data('tag_vbat')
-            idx, fi = get_scada_data('tag_idx')
+            p1, f1 = get_data('tag_p1')
+            p2, f2 = get_data('tag_p2')
+            cau, fq = get_data('tag_q')
+            vbat, fv = get_data('tag_vbat')
+            idx, fi = get_data('tag_idx')
 
             html_reg = f"""
-            <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:Arial;">
-                <b style="color:#00FFFF; font-size:14px;">REGISTRADOR: {r['nombre']}</b><br>
+            <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
+                <b style="color:#00FFFF;">REGISTRADOR: {r['nombre']}</b><br>
                 <hr style="opacity:0.2; margin:5px 0;">
-                <div style="font-size:12px; line-height:1.5;">
+                <div style="font-size:12px;">
                     💧 Caudal: <b>{cau:.2f} L/s</b><br>
                     🚀 Presión 1: <b>{p1:.2f} kg</b><br>
                     🚀 Presión 2: <b>{p2:.2f} kg</b><br>
@@ -872,32 +921,31 @@ if sector_seleccionado:
                 </div>
             </div>
             """
-            
             folium.CircleMarker(
-                location=r['coord'], radius=8, color='#00FFFF', fill=True, fill_opacity=1,
+                location=r['coord'], radius=7, color='#00FFFF', fill=True, fill_opacity=0.9,
                 popup=folium.Popup(html_reg, max_width=300)
             ).add_to(m_sec)
 
-        # --- 4. DIBUJAR POZOS (Lógica de tu respaldo) ---
-        ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
-        for id_p in ids_pozos:
-            if id_p in mapa_pozos_dict:
-                p_info = mapa_pozos_dict[id_p]
-                # (Aquí puedes pegar el bloque de popup de pozo que ya tienes funcionando)
+        # --- D. POZOS (Lógica de popups completa) ---
+        ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+        for ip in ids_p:
+            if ip in mapa_pozos_dict:
+                info = mapa_pozos_dict[ip]
+                # Aquí se usa el estilo de popup de pozo que ya tienes
                 folium.CircleMarker(
-                    location=p_info['coord'], radius=6, color=p_info['color_final'], 
+                    location=info['coord'], radius=6, color=info['color_final'], 
                     fill=True, fill_opacity=1
                 ).add_to(m_sec)
 
-        # Ajustar cámara y mostrar
-        if geojson_sec:
-            try: m_sec.fit_bounds(geojson_sec.get_bounds())
+        # Ajuste de cámara y visualización
+        if geo_sec:
+            try: m_sec.fit_bounds(geo_sec.get_bounds())
             except: pass
         
         folium_static(m_sec, width=None, height=750)
     
     else:
-        st.error("No se encontró información del sector.")
+        st.error("Sector no encontrado.")
     st.stop()
     
 # 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
