@@ -1008,7 +1008,7 @@ if sector_seleccionado:
             # d_reg es la misma función lambda que ya usas para los pozos
             p1, _ = d(info_reg['tag_presion_1'])
             p2, _ = d(info_reg['tag_presion_2'])
-             q, _ = d(info_reg['tag_caudal'])
+            q, _ = d(info_reg['tag_caudal'])
 
             html_reg = f"""
             <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; border: 1px solid #00ffcc;">
