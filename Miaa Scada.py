@@ -270,19 +270,16 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    # Usamos tu conexión segura de telemetría
     engine = get_mysql_telemetria_engine()
     if not engine: return []
     
     try:
-        # En MySQL usamos ST_AsText para obtener la geometría desde el campo GEOMETRY
-        # También usamos comillas invertidas (`) para columnas con guiones como costoKw-hr
+        # Nota: Asegúrate de que el campo geom en MySQL tenga datos reales
         query = """
-            SELECT sector, 
-                   Pozos_Sector, Superficie, Long_Red, Vol_Prod, U_Domesticos, 
-                   U_NoDom, U_Tot, Poblacion, Cons_m3, Faltas_Agua, Fugas_Tot, 
-                   FTC, FTA, Vol_Medid, Vol_Fact, Kwh, `costoKw-hr`, 
-                   Recaudacion, Dotacion, Balance_Estimado,
+            SELECT sector, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
+                   U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
+                   Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, Vol_Fact, 
+                   Kwh, `costoKw-hr`, Recaudacion, Dotacion, Balance_Estimado,
                    ST_AsText(geom) as wkt_geom 
             FROM Sectores_hidr
         """
@@ -290,22 +287,29 @@ def cargar_sectores_poligonos():
         
         sectores_listos = []
         for _, row in df.iterrows():
-            if row['wkt_geom']:
+            wkt_data = row['wkt_geom']
+            if wkt_data:
                 try:
-                    # Convertimos el texto WKT a objeto de geometría
-                    poly_obj = wkt.loads(row['wkt_geom'])
+                    # 1. Convertir texto a objeto geométrico
+                    poly_obj = wkt.loads(wkt_data)
                     
-                    # Invertimos coordenadas para Folium (MySQL da Long,Lat -> Folium quiere Lat,Lon)
+                    # 2. Extraer y Voltear coordenadas (MySQL Lon,Lat -> Folium Lat,Lon)
                     if poly_obj.geom_type == 'Polygon':
+                        # Lista simple de coordenadas
                         coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
                     elif poly_obj.geom_type == 'MultiPolygon':
-                        coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly_obj.geoms]
-                    
-                    # Creamos el diccionario final
+                        # Lista de listas de coordenadas
+                        coords = []
+                        for part in poly_obj.geoms:
+                            coords.append([[p[1], p[0]] for p in part.exterior.coords])
+                    else:
+                        continue
+
                     d = row.to_dict()
-                    d['geo'] = coords # Guardamos las coordenadas listas para dibujar
+                    d['geo_folium'] = coords  # Nueva llave con coordenadas listas
                     sectores_listos.append(d)
-                except Exception:
+                except Exception as e:
+                    # st.write(f"Error procesando sector {row['sector']}: {e}")
                     continue
                     
         return sectores_listos
@@ -1192,7 +1196,7 @@ def get_sector_style(feature, visible):
     }
 
 # 1. Cargamos los datos con tu función de caché
-# ... dentro de tu bloque donde generas el mapa ...
+# --- LÓGICA DE DIBUJO EN EL MAPA ---
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
@@ -1202,7 +1206,7 @@ if sectores_data:
         try:
             nombre_sec = s['sector']
             
-            # Tu lógica de URL y Popup se mantiene igual
+            # Popup HUD (Tu diseño original)
             sector_encoded = urllib.parse.quote(nombre_sec)
             url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
             
@@ -1218,19 +1222,42 @@ if sectores_data:
             </div>
             """
 
-            # DIBUJAMOS EL POLÍGONO DIRECTO
-            folium.Polygon(
-                locations=s['geo'], # Aquí usamos las coordenadas ya invertidas
-                color='#00d4ff' if ver_sectores else 'transparent',
-                weight=1.5 if ver_sectores else 0,
-                fill=True,
-                fill_color='#00d4ff',
-                fill_opacity=0.12 if ver_sectores else 0.0001,
-                tooltip=f"Sector: {nombre_sec}",
-                popup=folium.Popup(html_popup, max_width=260)
-            ).add_to(fg_sectores)
-        except:
+            # DIBUJO INTELIGENTE
+            # Detectamos si es una lista de polígonos (MultiPolygon) o uno solo
+            coords = s['geo_folium']
+            
+            # Si el primer elemento es una lista que contiene otra lista, es un MultiPolygon
+            es_multi = isinstance(coords[0][0], list)
+
+            if es_multi:
+                # Dibujamos cada parte del MultiPolygon
+                for sub_poly in coords:
+                    folium.Polygon(
+                        locations=sub_poly,
+                        color='#00d4ff' if ver_sectores else 'transparent',
+                        weight=1.5 if ver_sectores else 0,
+                        fill=True,
+                        fill_color='#00d4ff',
+                        fill_opacity=0.15 if ver_sectores else 0.0001,
+                        tooltip=f"Sector: {nombre_sec}",
+                        popup=folium.Popup(html_popup, max_width=260)
+                    ).add_to(fg_sectores)
+            else:
+                # Dibujo normal
+                folium.Polygon(
+                    locations=coords,
+                    color='#00d4ff' if ver_sectores else 'transparent',
+                    weight=1.5 if ver_sectores else 0,
+                    fill=True,
+                    fill_color='#00d4ff',
+                    fill_opacity=0.15 if ver_sectores else 0.0001,
+                    tooltip=f"Sector: {nombre_sec}",
+                    popup=folium.Popup(html_popup, max_width=260)
+                ).add_to(fg_sectores)
+
+        except Exception as e:
             continue
+            
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
