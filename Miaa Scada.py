@@ -799,43 +799,27 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 
 # 7 SECCIÓN --------------------------------------------------------------
+# 7 SECCIÓN --------------------------------------------------------------
 # 7 VISTA DETALLE DEL SECTOR ---------------------------------------------
 if sector_seleccionado:
     # 1. Título superior fijo
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
-    # Normalización del sector para búsqueda (Evita errores de "10.0" vs "10")
-    sec_target = str(sector_seleccionado).split('.')[0].strip()
-    datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_target), None)
+    # Buscamos los datos del sector para el polígono y las métricas
+    datos_s = next((s for s in sectores if str(s['sector']).strip() == str(sector_seleccionado).strip()), None)
     
     if datos_s:
         st.markdown("""
             <style>
-                .block-container { 
-                    padding-top: 3.5rem !important; 
-                    margin-top: 0px !important; 
-                }
-                .metrics-container {
-                    position: relative;
-                    z-index: 9999;
-                    margin-top: -10px; 
-                    margin-bottom: 5px;
-                }
-                .micro-card {
-                    background: #0b1a29; 
-                    border: 1px solid #1f4068;
-                    border-radius: 5px; 
-                    padding: 8px; 
-                    text-align: center;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-                }
-                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+                .block-container { padding-top: 3.5rem !important; }
+                .metrics-container { position: relative; z-index: 9999; margin-top: -10px; margin-bottom: 5px; }
+                .micro-card { background: #0b1a29; border: 1px solid #1f4068; border-radius: 5px; padding: 8px; text-align: center; }
+                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; }
                 .micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }
-                hr { margin-top: 5px !important; margin-bottom: 10px !important; opacity: 0.3; }
             </style>
         """, unsafe_allow_html=True)
 
-        # Renderizado de métricas
+        # Renderizado de métricas del sector
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -848,75 +832,74 @@ if sector_seleccionado:
 
         st.divider()
 
-        # --- MAPA DEL SECTOR ---
+        # --- CONFIGURACIÓN DEL MAPA ---
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
-        # Capa del Polígono
+        # Pintar el Polígono del sector seleccionado
         geojson_sector = folium.GeoJson(
             json.loads(datos_s['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.1}
         ).add_to(m_sec)
 
-        # --- CARGAR Y FILTRAR REGISTRADORES (MySQL) ---
-        dict_reg = cargar_registradores_desde_db() # Esta función debe usar "Diccionario_registradores"
-        regs_sector = [v for v in dict_reg.values() if str(v['sector']).strip() == sec_target]
-
-        # Pintar Registradores (Cian)
-        for r in regs_sector:
+        # --- CARGAR TODOS LOS REGISTRADORES (SIN FILTRO DE SECTOR) ---
+        dict_reg = cargar_registradores_desde_db() 
+        
+        # Pintamos CUALQUIER registrador que esté en el diccionario
+        for id_r, r in dict_reg.items():
             d_sc = lambda tag: data_scada.get(tag, (0, "N/A"))
-            p1_val, _ = d_sc(r['tag_p1'])
+            # Intentamos obtener presión 1; si no existe el tag, devuelve 0
+            p1_val, _ = d_sc(r.get('tag_p1'))
             
+            # Marcador Cian Brillante
             folium.CircleMarker(
-                location=r['coord'], radius=8, color='#00FFFF', fill=True, fill_opacity=0.8,
-                popup=f"<b>Registrador: {r['nombre']}</b><br>Presión: {p1_val:.2f} kg"
+                location=r['coord'], 
+                radius=7, 
+                color='#00FFFF', 
+                fill=True, 
+                fill_color='#00FFFF', 
+                fill_opacity=1,
+                popup=f"<b>REG: {r['nombre']}</b><br>Sector DB: {r['sector']}<br>Presión: {p1_val:.2f} kg"
             ).add_to(m_sec)
             
+            # Etiqueta de nombre
             folium.Marker(
                 location=r['coord'],
                 icon=folium.DivIcon(
-                    icon_anchor=(0, 0),
-                    html=f'<div style="font-size: 10px; color: #00FFFF; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px;">{r["nombre"]}</div>'
+                    icon_anchor=(-10, 10),
+                    html=f'<div style="font-size: 10pt; color: #00FFFF; font-weight: bold; text-shadow: 1px 1px 2px #000;">{r["nombre"]}</div>'
                 )
             ).add_to(m_sec)
 
-        # --- PINTAR POZOS (Lógica original) ---
+        # --- PINTAR POZOS DEL SECTOR ---
         ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
                 info = mapa_pozos_dict[id_p]
-                d = lambda tag: data_scada.get(tag, (0, "N/A"))
-                is_st = (info['status_label'] == 'SIN TELEMETRÍA')
                 
-                # ... (Aquí va toda tu extracción de datos hidráulica/eléctrica para el popup) ...
-                q, _ = d(info['caudal']) if not is_st else (0.0, "N/A")
-                p, _ = d(info['presion']) if not is_st else (0.0, "N/A")
-
-                html_popup_sec = f"""
-                <div style="background: #050505; color: white; padding: 10px; border-radius: 8px; border: 1px solid {info['color_final']};">
-                    <b style="color: #00d4ff;">POZO {id_p}</b><br>
-                    Caudal: {q:.2f} L/s<br>Presión: {p:.2f} kg
-                </div>
-                """
-
+                # HTML simplificado para el pozo
+                html_p = f"<div style='color:white;'><b>POZO {id_p}</b><br>Status: {info['status_label']}</div>"
+                
                 if info.get('blink'):
                     folium.Marker(
                         location=info['coord'],
                         icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                        popup=folium.Popup(html_popup_sec, max_width=300)
+                        popup=folium.Popup(html_p, max_width=200)
                     ).add_to(m_sec)
                 else:
                     folium.CircleMarker(
                         location=info['coord'], radius=5, color=info['color_final'], 
                         fill=True, fill_opacity=1,
-                        popup=folium.Popup(html_popup_sec, max_width=300)
+                        popup=folium.Popup(html_p, max_width=200)
                     ).add_to(m_sec)
 
+        # Ajustar vista al polígono del sector
         try:
             m_sec.fit_bounds(geojson_sector.get_bounds())
         except: pass
 
         folium_static(m_sec, width=None, height=750)
+        
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
     
