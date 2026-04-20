@@ -433,8 +433,9 @@ def cargar_registradores_desde_db():
                 nuevo_mapa_reg[row['Registrador']] = {
                     "nombre": row.get('Nombre_registrador', f"REG {row['Registrador']}"),
                     "coord": (lat, lon),
-                    "sector": row['Sector'],  # Campo crucial para filtrar en la sección 7
-                    "tag_presion": row['presion'],
+                    "sector": str(row['Sector']).strip() if row['Sector'] else "",
+                    "tag_presion_1": row['presion_1'],
+                    "tag_presion_2": row['presion_2'],
                     "tag_caudal": row['caudal']
                 }
             except Exception as e:
@@ -867,6 +868,8 @@ if sector_seleccionado:
             k: v for k, v in dict_todos_registradores.items() 
             if str(v.get('sector', '')).strip() == str(sector_seleccionado).strip()
         }
+        # --- LÍNEA DE DEPURACIÓN (Borrar después de probar) ---
+        # st.sidebar.write(f"DEBUG: Sector {sector_seleccionado} tiene {len(registradores_sector)} registradores")
 
         
         # --- MAPA DEL SECTOR ---
@@ -1003,25 +1006,20 @@ if sector_seleccionado:
         for id_reg, info_reg in registradores_sector.items():
             # Extraer valores de telemetría para el registrador
             # d_reg es la misma función lambda que ya usas para los pozos
-            val_p, f_p_reg = d(info_reg['tag_presion'])
-            val_q, f_q_reg = d(info_reg['tag_caudal'])
+            p1, _ = d(info_reg['tag_presion_1'])
+            p2, _ = d(info_reg['tag_presion_2'])
+             q, _ = d(info_reg['tag_caudal'])
 
             html_reg = f"""
-            <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; width: 220px; border: 1px dashed #00ffcc; font-family: 'Courier New', Courier, monospace;">
-                <div style="border-bottom: 1px solid #00ffcc; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between;">
-                    <b style="font-size: 13px;">📡 REG: {info_reg['nombre']}</b>
-                </div>
-                <div style="font-size: 11px; margin-bottom: 4px;">
-                    PRESIÓN: <b style="font-size: 14px;">{val_p:.2f}</b> <span style="font-size: 9px;">kg/cm²</span>
-                    <span style="color: #FFFF00; font-size: 8px; float: right;">{f_p_reg}</span>
-                </div>
-                <div style="font-size: 11px;">
-                    CAUDAL: <b style="font-size: 14px;">{val_q:.2f}</b> <span style="font-size: 9px;">Lps</span>
-                    <span style="color: #FFFF00; font-size: 8px; float: right;">{f_q_reg}</span>
-                </div>
-                <div style="font-size: 9px; color: #448888; margin-top: 8px; text-align: right;">ID: {id_reg}</div>
-            </div>
-            """
+            <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; border: 1px solid #00ffcc;">
+            <b style="font-size: 13px;">📡 {info_reg['nombre']}</b><br>
+            <hr style="margin: 5px 0; opacity: 0.3;">
+            <div style="font-size: 11px;">
+             P1: <b>{p1:.2f}</b> | P2: <b>{p2:.2f}</b> <small>kg/cm²</small><br>
+             Q: <b>{q:.2f}</b> <small>Lps</small>
+           </div>
+       </div>
+"""
 
             # Marcador Hexagonal para los registradores
             folium.RegularPolygonMarker(
