@@ -13,9 +13,6 @@ import hashlib
 import bcrypt
 import time # Necesario para controlar la duración del intro
 import urllib.parse
-from shapely import wkt
-
-
 
 
 st.set_page_config(
@@ -213,16 +210,15 @@ def get_mysql_scada_engine():
         return engine
     except: return None
 
+@st.cache_resource
 def get_mysql_telemetria_engine():
     try:
-        creds = st.secrets["mysql_telemetria"]
-        pass_encoded = urllib.parse.quote_plus(creds["password"])
-        # Eliminamos parámetros extraños para que la conexión sea pura
-        url = f"mysql+mysqlconnector://{creds['user']}:{pass_encoded}@{creds['host']}/{creds['database']}"
-        return create_engine(url)
-    except Exception as e:
-        st.error(f"Error de conexión: {e}")
-        return None
+        c = st.secrets["mysql_telemetria"]
+        pwd = urllib.parse.quote_plus(c["password"])
+        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+        with engine.connect() as conn: pass 
+        return engine
+    except: return None
 
 @st.cache_resource
 def get_postgres_conn():
@@ -274,49 +270,27 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    engine = get_mysql_telemetria_engine()
-    if not engine: return []
+    conn = get_postgres_conn()
+    if not conn: return []
     try:
-        query = "SELECT sector, geom, Pozos_Sector, Superficie, Poblacion, Fugas_Tot FROM Sectores_hidr"
-        df = pd.read_sql(query, engine)
-        
-        sectores_procesados = []
-        for _, row in df.iterrows():
-            raw_geom = row['geom']
-            if not raw_geom: continue
-            
-            try:
-                # LIMPIEZA BINARIA: MySQL a veces mete 4 bytes de basura al inicio de campos BLOB/GEOM
-                # Si el texto no empieza con 'P' (de POLYGON), intentamos limpiar
-                wkt_str = str(raw_geom)
-                if "POLYGON" not in wkt_str.upper():
-                    # Buscamos donde empieza realmente el texto del polígono
-                    inicio = wkt_str.upper().find("POLYGON")
-                    if inicio != -1:
-                        wkt_str = wkt_str[inicio:]
-                
-                # Traducimos de Texto a Objeto
-                poly_obj = wkt.loads(wkt_str)
-                
-                # Invertimos coordenadas [Long, Lat] -> [Lat, Lon]
-                if poly_obj.geom_type == 'Polygon':
-                    coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
-                elif poly_obj.geom_type == 'MultiPolygon':
-                    coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly_obj.geoms]
-                else:
-                    continue
-
-                d = row.to_dict()
-                d['coords_folium'] = coords
-                sectores_procesados.append(d)
-            except Exception as e:
-                # Si falla uno, lo ignoramos pero seguimos con los demás
-                continue
-                
-        return sectores_procesados
+        # Añadimos los campos numéricos solicitados en la consulta
+        query = """
+            SELECT sector, "Pozos_Sector", 
+                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
+                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
+                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
+                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
+                   "Recaudacion", "Dotacion", "Balance_Estimado",
+                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
+            FROM "Sectorizacion"."Sectores_hidr"
+        """
+        df = pd.read_sql(query, conn)
+        conn.close()
+        return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error en carga: {e}")
+        st.error(f"Error al cargar sectores: {e}")
         return []
+
 
 def formato_hora(decimal):
     try:
@@ -1195,37 +1169,66 @@ def get_sector_style(feature, visible):
         'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
     }
 
-# --- LÓGICA DEL MAPA ---
+# 1. Cargamos los datos con tu función de caché
 sectores_data = cargar_sectores_poligonos()
 
-# DEBUG TEMPORAL: Borra esto cuando funcione
-if not sectores_data:
-    st.warning("⚠️ No se cargó ningún sector. Revisa la conexión o el campo geom.")
-else:
-    # Esto te dirá cuántos sectores sí se procesaron bien
-    st.sidebar.success(f"✅ {len(sectores_data)} sectores listos para dibujar")
-
 if sectores_data:
-    fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", show=True)
+    fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", z_index=1)
     
     for s in sectores_data:
         try:
-            # Tu HUD de Popup (Simplificado para pruebas)
-            pop_html = f"<b>{s['sector']}</b><br>Pozos: {s['Pozos_Sector']}"
+            if not s.get('geo'): continue
             
-            # Dibujo
-            folium.Polygon(
-                locations=s['coords_folium'],
-                color='#00d4ff',
-                weight=3, # Más grueso para que se note
-                fill=True,
-                fill_color='#00d4ff',
-                fill_opacity=0.3, # Más opaco para pruebas
-                tooltip=f"Sector: {s['sector']}",
-                popup=folium.Popup(pop_html, max_width=200)
+            nombre_sec = s['sector']
+            geo_dict = json.loads(s['geo'])
+            
+            # 2. Reconstrucción del enlace de acceso (Botón)
+            # Usamos quote para manejar espacios o caracteres especiales en el nombre del sector
+            sector_encoded = urllib.parse.quote(nombre_sec)
+            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.rol}"
+            
+            # 3. Popup con diseño y botón restaurado
+            html_popup = f"""
+            <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
+                <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
+                <table style="width:100%; font-size: 11px; margin-bottom: 10px; border-collapse: collapse;">
+                    <tr><td><b>Población:</b></td><td style="text-align:right;">{s.get('Poblacion', 0):,.0f}</td></tr>
+                    <tr><td><b>Pozos:</b></td><td style="text-align:right;">{s.get('Pozos_Sector', 0)}</td></tr>
+                    <tr><td><b>Fugas:</b></td><td style="text-align:right; color:#ff4b4b;">{s.get('Fugas_Tot', 0)}</td></tr>
+                </table>
+                
+                <a href="{url_acceso}" target="_blank" 
+                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
+                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
+                          border-radius: 5px; transition: 0.3s;">
+                   🚀 ABRIR SECTOR
+                </a>
+            </div>
+            """
+
+            # 4. Lógica de visibilidad (Siempre presentes en el código)
+            estilo = {
+                'fillColor': '#00d4ff',
+                'color': '#00d4ff' if ver_sectores else 'transparent',
+                'weight': 1.5 if ver_sectores else 0,
+                'fillOpacity': 0.12 if ver_sectores else 0.0001 # Invisible pero "clicable"
+            }
+
+            folium.GeoJson(
+                geo_dict,
+                style_function=lambda x, stl=estilo: stl,
+                highlight_function=lambda x: {
+                    'fillColor': '#00d4ff', 
+                    'color': '#ffffff', 
+                    'weight': 3, 
+                    'fillOpacity': 0.4
+                },
+                tooltip=f"Sector: {nombre_sec}",
+                popup=folium.Popup(html_popup, max_width=260)
             ).add_to(fg_sectores)
-        except Exception as e:
-            st.sidebar.error(f"Error dibujando {s['sector']}: {e}")
+
+        except Exception:
+            continue
 
     fg_sectores.add_to(m)
     
