@@ -270,10 +270,10 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_mysql_telemetria_engine()
+    conn = get_mysql_telemetria_engine() # Asegúrate de que use_pure=True esté en la conexión
     if not conn: return []
     try:
-        # Añadimos los campos numéricos solicitados en la consulta
+        # 1. Traemos 'geom' como texto plano ya que así está en tu DB
         query = """
             SELECT sector, "Pozos_Sector", 
                    "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
@@ -281,12 +281,37 @@ def cargar_sectores_poligonos():
                    "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
                    "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
                    "Recaudacion", "Dotacion", "Balance_Estimado",
-                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
-            FROM "Sectores_hidr"
+                   geom as coordenadas_texto 
+            FROM Sectores_hidr
         """
         df = pd.read_sql(query, conn)
-        conn.close()
-        return df.to_dict('records')
+        
+        # 2. Convertimos el texto de coordenadas a un formato GeoJSON manualmente
+        sectores_procesados = []
+        for _, row in df.iterrows():
+            texto = row['coordenadas_texto']
+            if texto:
+                try:
+                    # Convertimos la cadena "lat long, lat long" en una lista de listas [[long, lat], ...]
+                    # Nota: GeoJSON usa [Longitud, Latitud]
+                    coords_list = []
+                    puntos = texto.split(',')
+                    for p in puntos:
+                        c = p.strip().split(' ')
+                        if len(c) >= 2:
+                            coords_list.append([float(c[0]), float(c[1])])
+                    
+                    # Creamos la estructura GeoJSON que esperaba tu mapa original
+                    row['geo'] = json.dumps({
+                        "type": "Polygon",
+                        "coordinates": [coords_list]
+                    })
+                except Exception as e:
+                    row['geo'] = None
+            
+            sectores_procesados.append(row.to_dict())
+
+        return sectores_procesados
     except Exception as e:
         st.error(f"Error al cargar sectores: {e}")
         return []
