@@ -16,6 +16,8 @@ import urllib.parse
 from shapely import wkt
 
 
+
+
 st.set_page_config(
     page_title="Sistema Scada", 
     page_icon="https://www.miaa.mx/favicon.ico", 
@@ -271,48 +273,40 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
+    engine = get_mysql_telemetria_engine()
+    if not engine: return []
+    
     try:
-        # 1. Conexión a MySQL (Telemetría 2)
-        # Usamos el motor de sqlalchemy que ya tienes configurado en tu login
-        engine_mysql = create_engine("mysql+mysqlconnector://miaamx_telemetria2:bWkrw1Uum1O%26@miaa.mx/miaamx_telemetria2")
-        
-        # 2. Consulta a la tabla de MySQL
-        # Seleccionamos todas las columnas que necesitas. Importante: geom se trae tal cual.
+        # Consulta con comillas invertidas para campos con guiones
         query = """
-            SELECT 
-                sector, geom, Pozos_Sector, Superficie, Long_Red, Vol_Prod, 
-                U_Domesticos, U_NoDom, U_Tot, Poblacion, Cons_m3, 
-                Faltas_Agua, Fugas_Tot, FTC, FTA, Vol_Medid, Vol_Fact, 
-                Kwh, `costoKw-hr`, Recaudacion, Dotacion, Balance_Estimado
-            FROM Sectores_hidr
+            SELECT sector, geom, Pozos_Sector, Superficie, Poblacion, Fugas_Tot, `costoKw-hr`
+            FROM Sectores_hidr 
+            WHERE geom IS NOT NULL AND geom != ''
         """
-        df = pd.read_sql(query, engine_mysql)
+        df = pd.read_sql(query, engine)
         
-        sectores_procesados = []
-        
+        sectores_listos = []
         for _, row in df.iterrows():
-            if row['geom']:
-                try:
-                    # Convertimos el WKT a objeto shapely
-                    poly = wkt.loads(row['geom'])
-                    
-                    # Convertimos a coordenadas [lat, lon] que es lo que Folium entiende
-                    if poly.geom_type == 'Polygon':
-                        coords = [[p[1], p[0]] for p in poly.exterior.coords]
-                    elif poly.geom_type == 'MultiPolygon':
-                        coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly.geoms]
-                    
-                    # Creamos un diccionario compatible con tu lógica anterior
-                    d = row.to_dict()
-                    d['coords_folium'] = coords # Nueva llave para dibujar directo
-                    sectores_procesados.append(d)
-                except Exception as e:
-                    continue 
-
-        return sectores_procesados
-
+            try:
+                # El campo TEXTO 'geom' se convierte a objeto de geometría
+                # MySQL entrega Longitude, Latitude
+                poly_obj = wkt.loads(row['geom'])
+                
+                # Invertimos a Latitude, Longitude para Folium
+                if poly_obj.geom_type == 'Polygon':
+                    coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
+                elif poly_obj.geom_type == 'MultiPolygon':
+                    coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly_obj.geoms]
+                
+                d = row.to_dict()
+                d['coords_procesadas'] = coords
+                sectores_listos.append(d)
+            except:
+                continue 
+                
+        return sectores_listos
     except Exception as e:
-        st.error(f"Error al cargar sectores desde MySQL: {e}")
+        st.error(f"Error en consulta de sectores: {e}")
         return []
 
 def formato_hora(decimal):
@@ -1192,25 +1186,21 @@ def get_sector_style(feature, visible):
         'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
     }
 
-# 1. Cargamos los datos con la nueva función que lee de MySQL
+# Cargar datos desde MySQL
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
-    # Creamos el grupo para poder prender/apagar la capa
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", z_index=1)
     
     for s in sectores_data:
         try:
-            # CAMBIO CLAVE: Ahora usamos 'coords_folium' en lugar de 'geo'
-            if 'coords_folium' not in s: continue
-            
             nombre_sec = s['sector']
             
-            # 2. Reconstrucción del enlace de acceso (Se mantiene igual)
+            # Preparar URL de acceso
             sector_encoded = urllib.parse.quote(nombre_sec)
-            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'admin')}"
             
-            # 3. Popup con tu diseño original (Se mantiene igual)
+            # Diseño del Popup HUD
             html_popup = f"""
             <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
                 <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
@@ -1222,36 +1212,25 @@ if sectores_data:
                 <a href="{url_acceso}" target="_blank" 
                    style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
                           text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
-                          border-radius: 5px; transition: 0.3s;">
-                    🚀 ABRIR SECTOR
-                </a>
+                          border-radius: 5px;">🚀 ABRIR SECTOR</a>
             </div>
             """
 
-            # 4. Lógica de Estilo para folium.Polygon
-            # Ajustamos según tu variable 'ver_sectores'
-            color_borde = '#00d4ff' if ver_sectores else 'transparent'
-            opacidad_relleno = 0.12 if ver_sectores else 0.0001
-            grosor_borde = 1.5 if ver_sectores else 0
-
-            # 5. Dibujo del Polígono (Sustituye a folium.GeoJson)
-            # Manejamos si es MultiPolígono (lista de listas) o Polígono simple
-            coords = s['coords_folium']
+            # Dibujo de Polígono (Maneja Polygons y MultiPolygons)
+            locations = s['coords_procesadas']
             
-            # Si es MultiPolígono, folium necesita que se agreguen por separado o como lista anidada
             folium.Polygon(
-                locations=coords,
-                color=color_borde,
-                weight=grosor_borde,
+                locations=locations,
+                color='#00d4ff' if ver_sectores else 'transparent',
+                weight=1.5 if ver_sectores else 0,
                 fill=True,
                 fill_color='#00d4ff',
-                fill_opacity=opacidad_relleno,
+                fill_opacity=0.12 if ver_sectores else 0.0001,
                 tooltip=f"Sector: {nombre_sec}",
                 popup=folium.Popup(html_popup, max_width=260)
             ).add_to(fg_sectores)
-
-        except Exception as e:
-            # print(f"Error dibujando sector {s.get('sector')}: {e}")
+            
+        except:
             continue
 
     fg_sectores.add_to(m)
