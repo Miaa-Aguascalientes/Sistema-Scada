@@ -291,39 +291,37 @@ def cargar_sectores_poligonos():
         st.error(f"Error al cargar sectores: {e}")
         return []
 
+# --- FUNCIÓN DE CARGA CORREGIDA CON NOMBRES REALES DE TU TABLA ---
 @st.cache_data(ttl=5)
 def cargar_registradores_desde_db():
     engine = get_mysql_telemetria_engine()
-    if not engine: 
-        return {"error": "No hay conexión al motor de MySQL"}
+    if not engine: return {}
     try:
-        # Consulta directa
+        # Usamos el nombre que me diste: Diccionario_registradores
         df = pd.read_sql("SELECT * FROM Diccionario_registradores", engine)
-        
-        if df.empty:
-            return {"error": "La tabla 'Diccionario_registradores' está VACÍA en MySQL"}
-            
-        data_dict = {}
+        d_res = {}
         for _, r in df.iterrows():
             try:
-                # Limpieza de coordenadas estilo pozo
-                c = str(r['coord']).replace('(','').replace(')','').strip()
-                lat, lon = map(float, c.split(','))
+                # 1. Limpieza extrema de coordenadas
+                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
+                lat_s, lon_s = raw_c.split(',')
                 
-                # Usamos la Serie o Registrador como ID
-                idx = str(r.get('Registrador', r.get('Serie', 'S/N')))
-                data_dict[idx] = {
-                    "nombre": str(r['Nombre_registrador']),
-                    "coord": [lat, lon],
-                    "sector": str(r['Sector']).strip(),
-                    "tag_p1": r['presion_1']
+                # 2. Mapeo según los nombres de columna de tu imagen
+                # Usamos .get() por si acaso algún nombre varía
+                nombre = r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))
+                id_reg = r.get('Serie', r.get('Registrador', 'ID'))
+                
+                d_res[str(id_reg)] = {
+                    "nombre": str(nombre),
+                    "coord": [float(lat_s), float(lon_s)],
+                    "sector": str(r['Sector']).split('.')[0].strip(),
+                    "tag_p1": r.get('presion_1')
                 }
-            except Exception as e:
-                print(f"Fila omitida por error de formato: {e}")
-                continue
-        return data_dict
-    except Exception as e:
-        return {"error": f"Error de SQL: {str(e)}"}
+            except: continue
+        return d_res
+    except: return {}
+
+
 
 
 def formato_hora(decimal):
