@@ -804,22 +804,21 @@ if sector_seleccionado:
     # 1. Título superior fijo
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
+    # Buscamos los datos del sector asegurando que la comparación sea limpia
     datos_s = next((s for s in sectores if str(s['sector']).strip() == str(sector_seleccionado).strip()), None)
     
     if datos_s:
         st.markdown("""
             <style>
-                .block-container { padding-top: 3.5rem !important; margin-top: 0px !important; }
+                .block-container { padding-top: 3.5rem !important; }
                 .metrics-container { position: relative; z-index: 9999; margin-top: -700px; margin-bottom: 5px; }
-                .micro-card { background: #0b1a29; border: 1px solid #1f4068; border-radius: 5px; padding: 8px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+                .micro-card { background: #0b1a29; border: 1px solid #1f4068; border-radius: 5px; padding: 8px; text-align: center; }
+                .micro-label { color: #888; font-size: 10px; text-transform: uppercase; }
                 .micro-value { color: #00d4ff; font-size: 15px; font-weight: bold; }
-                hr { margin-top: 5px !important; margin-bottom: 10px !important; opacity: 0.3; }
-                iframe { margin-top: 0px !important; }
             </style>
         """, unsafe_allow_html=True)
 
-        # Renderizado de métricas
+        # Renderizado de métricas (Población, U. Totales, etc.)
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -832,98 +831,91 @@ if sector_seleccionado:
 
         st.divider()
 
-        # --- 1. FILTRADO DE REGISTRADORES (CON LIMPIEZA) ---
+        # --- 1. CARGA Y FILTRADO DE REGISTRADORES ---
         dict_todos_registradores = cargar_registradores_desde_db()
+        
+        # Filtro: Comparamos el campo 'sector' del diccionario con el sector seleccionado
         registradores_sector = {
             k: v for k, v in dict_todos_registradores.items() 
             if str(v.get('sector', '')).strip() == str(sector_seleccionado).strip()
         }
 
-        # --- 2. INICIALIZACIÓN DEL MAPA ---
+        # --- 2. CONFIGURACIÓN DEL MAPA ---
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
         Fullscreen().add_to(m_sec)
         
+        # Dibujar el Polígono del Sector (GeoJSON)
         geojson_sector = folium.GeoJson(
             json.loads(datos_s['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.1}
         ).add_to(m_sec)
 
-        # --- 3. DIBUJAR POZOS ---
-        ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+        # Función lambda para obtener datos de telemetría
         d = lambda tag: data_scada.get(tag, (0, "N/A"))
 
+        # --- 3. DIBUJAR POZOS DEL SECTOR ---
+        ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
         for id_p in ids_pozos:
             if id_p in mapa_pozos_dict:
                 info = mapa_pozos_dict[id_p]
-                is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                q_p, _ = d(info['caudal'])
+                p_p, _ = d(info['presion'])
                 
-                q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
-                p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
-                tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
-                v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
-                a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
+                folium.CircleMarker(
+                    location=info['coord'], radius=6, color=info['color_final'], 
+                    fill=True, fill_opacity=1, 
+                    popup=folium.Popup(f"<b>POZO {id_p}</b><br>Q: {q_p:.2f}<br>P: {p_p:.2f}", max_width=200)
+                ).add_to(m_sec)
 
-                html_popup_sec = f"""
-                <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 350px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                    <b style="color: #00d4ff;">POZO {id_p}</b> [{info['status_label']}]<br>
-                    <hr opacity:0.2>
-                    💧 Q: <b>{q:.2f} L/s</b> <br>
-                    🚀 P: <b>{p:.2f} kg</b> <br>
-                    🔋 Tanque: <b>{tanq:.2f} m</b>
+        # --- 4. DIBUJAR REGISTRADORES (HEXÁGONOS CIAN) ---
+        for id_reg, info_reg in registradores_sector.items():
+            # Verificamos que existan coordenadas válidas
+            if info_reg['coord'] and info_reg['coord'] != (0, 0):
+                # Extraemos valores usando los tags definidos en tu diccionario
+                p1, _ = d(info_reg.get('tag_presion_1'))
+                p2, _ = d(info_reg.get('tag_presion_2'))
+                q_reg, _ = d(info_reg.get('tag_caudal'))
+
+                html_reg = f"""
+                <div style="background:#001a1a; color:#00ffcc; padding:10px; border-radius:8px; border:1px solid #00ffcc; min-width:160px; font-family:sans-serif;">
+                    <b style="font-size:12px;">📡 {info_reg['nombre']}</b>
+                    <hr style="margin:5px 0; opacity:0.3; border:0; border-top:1px solid #00ffcc;">
+                    <div style="font-size:11px;">
+                        P1: <b>{p1:.2f}</b> kg/cm²<br>
+                        P2: <b>{p2:.2f}</b> kg/cm²<br>
+                        Q: <b>{q_reg:.2f}</b> Lps
+                    </div>
                 </div>
                 """
 
-                if info.get('blink'):
-                    folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                                  popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
-                else:
-                    folium.CircleMarker(location=info['coord'], radius=5, color=info['color_final'], fill=True,
-                                        fill_color=info['color_final'], fill_opacity=1,
-                                        popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
-                
-                folium.Marker(location=info['coord'], icon=folium.DivIcon(icon_anchor=(-12, 12),
-                    html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]};">{id_p}</div>')).add_to(m_sec)
+                # Marcador Hexagonal
+                folium.RegularPolygonMarker(
+                    location=info_reg['coord'],
+                    number_of_sides=6,
+                    radius=10,
+                    color='#00ffcc',
+                    fill=True,
+                    fill_color='#002222',
+                    fill_opacity=0.9,
+                    popup=folium.Popup(html_reg, max_width=250)
+                ).add_to(m_sec)
 
-        # --- 4. DIBUJAR REGISTRADORES (DENTRO DEL MAPA) ---
-        for id_reg, info_reg in registradores_sector.items():
-            val_p1, f_p1 = d(info_reg.get('tag_presion_1'))
-            val_p2, f_p2 = d(info_reg.get('tag_presion_2'))
-            val_q, f_q = d(info_reg.get('tag_caudal'))
+                # Etiqueta con el nombre del registrador
+                folium.Marker(
+                    location=info_reg['coord'],
+                    icon=folium.DivIcon(
+                        icon_anchor=(-15, -15),
+                        html=f'<div style="font-size:8pt; color:#00ffcc; font-weight:bold; text-shadow:1px 1px #000; white-space:nowrap;">{info_reg["nombre"]}</div>'
+                    )
+                ).add_to(m_sec)
 
-            html_reg = f"""
-            <div style="background: #001a1a; color: #00ffcc; padding: 10px; border-radius: 8px; width: 220px; border: 1px solid #00ffcc; font-family: sans-serif;">
-                <b style="font-size: 13px;">📡 REG: {info_reg['nombre']}</b><br>
-                <hr style="margin: 5px 0; opacity: 0.3;">
-                <div style="font-size: 11px;">
-                    P1: <b>{val_p1:.2f}</b> | P2: <b>{val_p2:.2f}</b> <small>kg/cm²</small><br>
-                    Q: <b>{val_q:.2f}</b> <small>Lps</small>
-                </div>
-            </div>
-            """
-
-            folium.RegularPolygonMarker(
-                location=info_reg['coord'],
-                number_of_sides=6,
-                radius=9,
-                color='#00ffcc',
-                fill=True,
-                fill_color='#002222',
-                fill_opacity=0.9,
-                popup=folium.Popup(html_reg, max_width=250)
-            ).add_to(m_sec)
-
-            folium.Marker(
-                location=info_reg['coord'],
-                icon=folium.DivIcon(icon_anchor=(-10, -10),
-                    html=f'<div style="font-size: 8px; color: #00ffcc; font-weight: bold; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 3px;">{info_reg["nombre"]}</div>')
-            ).add_to(m_sec)
-
-        # --- 5. AJUSTE DE VISTA Y RENDERIZADO FINAL ---
+        # Ajuste de cámara automático al sector
         try:
             m_sec.fit_bounds(geojson_sector.get_bounds())
         except: pass
 
         folium_static(m_sec, width=None, height=750)
+        
     else:
         st.error(f"No se encontró información para el sector {sector_seleccionado}")
     
