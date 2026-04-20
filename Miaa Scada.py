@@ -804,7 +804,6 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7 SECCIÓN --------------------------------------------------------------
 # 7 VISTA DETALLE DEL SECTOR ---------------------------------------------
 if sector_seleccionado:
     # 1. Título superior fijo
@@ -814,28 +813,25 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # --- A. CSS PARA COMPACTAR INDICADORES Y MAPA ---
+        # --- A. ESTILOS PARA KPI Y COMPACIDAD ---
         st.markdown("""
             <style>
                 .block-container { padding-top: 1rem !important; }
                 .metrics-container { 
-                    margin-top: -35px; /* Subimos los KPIs hacia el título */
+                    margin-top: -38px; 
                     margin-bottom: 5px;
-                    position: relative;
-                    z-index: 10;
+                    position: relative; z-index: 999;
                 }
                 .micro-card {
-                    background: rgba(11, 26, 41, 0.9); 
-                    border: 1px solid #1f4068;
+                    background: rgba(11, 26, 41, 0.95); border: 1px solid #1f4068;
                     border-radius: 4px; padding: 4px; text-align: center;
                 }
-                .micro-label { color: #888; font-size: 9px; text-transform: uppercase; margin-bottom: 0px; }
+                .micro-label { color: #888; font-size: 9px; text-transform: uppercase; }
                 .micro-value { color: #00d4ff; font-size: 14px; font-weight: bold; }
-                hr { margin: 5px 0 !important; opacity: 0.2; }
             </style>
         """, unsafe_allow_html=True)
 
-        # Renderizado de KPIs
+        # KPIs superiores
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -845,98 +841,131 @@ if sector_seleccionado:
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-
         st.divider()
 
-        # --- B. LAYOUT Y FILTROS ---
+        # --- B. LAYOUT: MAPA (IZQ) | GRÁFICO (DER) ---
         col_izq, col_der = st.columns([1.1, 0.9])
-        
+
         with col_der:
-            # Selector de fechas horizontal como pediste
             filtro_t = st.radio("Rango del gráfico:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True)
-            
             f_fin_h = datetime.now()
-            if filtro_t == "Hoy": f_ini_h = f_fin_h.replace(hour=0, minute=0)
-            elif filtro_t == "Ayer": f_ini_h = (f_fin_h - timedelta(days=1)).replace(hour=0, minute=0); f_fin_h = f_fin_h.replace(hour=0, minute=0)
+            if filtro_t == "Hoy": f_ini_h = f_fin_h.replace(hour=0, minute=0, second=0)
+            elif filtro_t == "Ayer": 
+                f_ini_h = (f_fin_h - timedelta(days=1)).replace(hour=0, minute=0, second=0)
+                f_fin_h = f_fin_h.replace(hour=0, minute=0, second=0)
             elif filtro_t == "Semana": f_ini_h = f_fin_h - timedelta(days=7)
             else:
                 cf1, cf2 = st.columns(2)
                 f_ini_h = cf1.date_input("Inicio", f_fin_h)
                 f_fin_h = cf2.date_input("Fin", f_fin_h)
 
-        # --- C. MAPA (FOCO EN SECTOR) ---
         with col_izq:
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
-            # 1. Dibujar Polígono (Este manda la posición)
-            geo_layer = None
+            # 1. POLÍGONO (Enfoque del mapa)
             try:
-                geo_layer = folium.GeoJson(
-                    json.loads(datos_s['geo']),
+                geo_data = json.loads(datos_s['geo'])
+                folium_geo = folium.GeoJson(
+                    geo_data,
                     style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
                 ).add_to(m_sec)
-                # Centrar mapa en el sector
-                m_sec.fit_bounds(geo_layer.get_bounds())
+                m_sec.fit_bounds(folium_geo.get_bounds())
             except: pass
 
-            # 2. Dibujar Registradores (Estrellas)
+            # 2. REGISTRADORES (CON POPUP RESTAURADO)
             dict_reg = cargar_registradores_desde_db()
-            scada_mapa = cargar_datos_scada([r.get('tag_p1') for r in dict_reg.values() if r.get('tag_p1')])
+            t_r = []
+            for r in dict_reg.values():
+                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
+                    if r.get(k): t_r.append(r.get(k))
+            scada_r = cargar_datos_scada(list(set(t_r)))
 
             for r in dict_reg.values():
-                val_p1, _ = scada_mapa.get(r.get('tag_p1'), (0.0, "N/A"))
-                folium.Marker(
-                    location=r['coord'],
-                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
-                    popup=f"<b>{r['nombre']}</b><br>Presión: {val_p1:.2f} kg"
-                ).add_to(m_sec)
+                def gd(key):
+                    v, f = scada_r.get(r.get(key), (0.0, "N/A"))
+                    try: return float(v), f
+                    except: return 0.0, "N/A"
+                p1, f1 = gd('tag_p1'); p2, _ = gd('tag_p2'); cau, _ = gd('tag_q')
+                vbat, _ = gd('tag_vbat'); idx, _ = gd('tag_idx')
 
-            # 3. Dibujar Pozos del Sector (Popups completos)
+                html_reg = f"""
+                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:230px; font-family:sans-serif;">
+                    <b style="color:#00FFFF;">REGISTRADOR: {r['nombre']}</b><hr style="opacity:0.2; margin:5px 0;">
+                    <div style="font-size:11px;">
+                        💧 Caudal: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b> | P2: <b>{p2:.2f} kg</b><br>
+                        🔢 Índice: <b>{idx:,.1f} m³</b><br>🔋 Batería: <b>{vbat:.2f} V</b>
+                        <p style="color:yellow; font-size:9px; margin-top:5px;">Lectura: {f1}</p>
+                    </div>
+                </div>"""
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
+                              popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
+
+            # 3. POZOS (CON POPUP ORIGINAL COMPLETO)
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
                     info = mapa_pozos_dict[id_p]
-                    # Aquí se procesa toda la lógica de popups que ya tenías (Hidráulica, Eléctrico, etc.)
-                    # Usando tu variable html_popup_sec original...
+                    d = lambda tag: data_scada.get(tag, (0, "N/A"))
+                    is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                    q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
+                    p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+                    sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
+                    dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
+                    tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
+                    col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
+                    h_arr_val, f_h_arr = d(info['h_arranque']); h_par_val, f_h_par = d(info['h_paro'])
+                    v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
+
+                    html_popup_sec = f"""
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 340px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                        <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
+                        <hr style="opacity:0.2;">
+                        <div style="font-size:11px;">
+                            💧 Q: <b>{q:.1f} L/s</b> | 🚀 P: <b>{p:.1f} kg</b><br>
+                            🔋 Tanque: <b>{tanq:.1f} m</b> | 📉 Dinámico: <b>{dinam:.1f} m</b><br>
+                            📏 Sumergencia: <b>{sumer:.1f} m</b> | 🏗️ Columna: <b>{col:.1f} m</b>
+                        </div>
+                        <table style="width: 100%; font-size: 10px; margin-top:8px; border-top:1px solid #222;">
+                            <tr style="color:#00d4ff;"><th>Fase</th><th>Voltaje</th><th>Amp</th></tr>
+                            <tr><td>L1-L2</td><td>{v[0][0]:.1f}V</td><td>{a[0][0]:.1f}A</td></tr>
+                        </table>
+                    </div>"""
+                    
                     if info.get('blink'):
-                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final']))).add_to(m_sec)
+                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
+                                      popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
                     else:
-                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True).add_to(m_sec)
+                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1,
+                                            popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
             folium_static(m_sec, width=None, height=700)
 
-        # --- D. GRÁFICO (DERECHA) ---
         with col_der:
-            st.markdown("### Tendencia de Registrador")
-            nombres_r = {v['nombre']: k for k, v in dict_reg.items()}
-            sel_r = st.selectbox("Seleccionar equipo:", list(nombres_r.keys()))
-            id_reg = nombres_r[sel_r]
-            r_info = dict_reg[id_reg]
+            # --- C. GRÁFICO DE TENDENCIA ---
+            reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+            sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
+            r_info = dict_reg[reg_nombres[sel_r]]
+            t_hist = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
+            t_hist = [t for t in t_hist if t]
 
-            # Query a vfitagnumhistory (Histórico)
-            tags_h = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
-            tags_h = [t for t in tags_h if t]
-
-            if tags_h:
+            if t_hist:
                 engine_h = get_mysql_scada_engine()
                 q_hist = f"""
                     SELECT h.FECHA, h.VALUE, r.NAME as TAG
                     FROM vfitagnumhistory h
                     JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{"', '".join(tags_h)}')
+                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
                     AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
                     ORDER BY h.FECHA ASC
                 """
                 df_hist = pd.read_sql(q_hist, engine_h)
-                
                 if not df_hist.empty:
                     import plotly.express as px
                     fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
-                    fig.update_layout(height=550, margin=dict(l=0, r=0, t=0, b=0))
+                    fig.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
                     st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("No hay datos históricos para este periodo.")
+                else: st.info("Sin datos para este rango.")
 
     st.stop()
     
