@@ -270,57 +270,44 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    # Es obligatorio usar use_pure=True para que el texto largo de coordenadas no se corrompa
     conn = get_mysql_telemetria_engine() 
     if not conn: return []
     
     try:
-        # Traemos la columna 'geom' que tiene el texto de coordenadas
-        query = "SELECT *, geom as texto_raw FROM Sectores_hidr"
+        # Traemos el texto de las coordenadas
+        query = "SELECT *, geom as coordenadas_txt FROM Sectores_hidr"
         df = pd.read_sql(query, conn)
         conn.close()
         
-        sectores_listos = []
+        sectores_procesados = []
         for _, row in df.iterrows():
-            texto = row['texto_raw']
+            texto = row['coordenadas_txt']
             if texto and isinstance(texto, str):
                 try:
-                    # 1. Separamos cada punto (lat/long) usando la coma
+                    # Convertimos el string "-102.3 21.8, -102.2 21.8" en lista de listas
                     puntos = [p.strip() for p in texto.split(',') if p.strip()]
-                    
-                    coordenadas_finales = []
+                    coords_lista = []
                     for p in puntos:
-                        # 2. Separamos la Longitud de la Latitud por el espacio
-                        partes = p.split()
-                        if len(partes) >= 2:
-                            # Formato GeoJSON: [Longitud, Latitud]
-                            lon = float(partes[0])
-                            lat = float(partes[1])
-                            coordenadas_finales.append([lon, lat])
+                        c = p.split()
+                        if len(c) >= 2:
+                            # GeoJSON: [Longitud, Latitud]
+                            coords_lista.append([float(c[0]), float(c[1])])
                     
-                    # 3. EL TRUCO FINAL: Si el polígono no se cierra, el mapa no dibuja nada
-                    if coordenadas_finales:
-                        if coordenadas_finales[0] != coordenadas_finales[-1]:
-                            coordenadas_finales.append(coordenadas_finales[0])
-                        
-                        # Construimos la estructura de polígono que Folium/Leaflet entienden
-                        row['geo'] = json.dumps({
-                            "type": "Polygon",
-                            "coordinates": [coordenadas_finales]
-                        })
-                    else:
-                        row['geo'] = None
-                except Exception:
-                    row['geo'] = None # Si un sector falla, que no rompa los demás
+                    # Forzamos el cierre del polígono
+                    if coords_lista and coords_lista[0] != coords_lista[-1]:
+                        coords_lista.append(coords_lista[0])
+                    
+                    # GUARDAMOS COMO LISTA, NO COMO STRING JSON TODAVÍA
+                    row['geometria_lista'] = coords_lista
+                except:
+                    row['geometria_lista'] = None
             else:
-                row['geo'] = None
-                
-            sectores_listos.append(row.to_dict())
-
-        return sectores_listos
-
+                row['geometria_lista'] = None
+            
+            sectores_procesados.append(row.to_dict())
+        return sectores_procesados
     except Exception as e:
-        st.error(f"Error al procesar los datos de la base de datos: {e}")
+        st.error(f"Error: {e}")
         return []
 
 def formato_hora(decimal):
