@@ -270,45 +270,27 @@ def obtener_historia_7_dias(tag_name):
 
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_mysql_telemetria_engine() 
+    conn = get_postgres_conn()
     if not conn: return []
-    
     try:
-        # Traemos el texto de las coordenadas
-        query = "SELECT *, geom as coordenadas_txt FROM Sectores_hidr"
+        # Añadimos los campos numéricos solicitados en la consulta
+        query = """
+            SELECT sector, "Pozos_Sector", 
+                   "Superficie", "Long_Red", "Vol_Prod", "U_Domesticos", 
+                   "U_NoDom", "U_Tot", "Poblacion", "Cons_m3", 
+                   "Faltas_Agua", "Fugas_Tot", "FTC", "FTA", 
+                   "Vol_Medid", "Vol_Fact", "Kwh", "costoKw-hr", 
+                   "Recaudacion", "Dotacion", "Balance_Estimado",
+                   ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
+            FROM "Sectorizacion"."Sectores_hidr"
+        """
         df = pd.read_sql(query, conn)
         conn.close()
-        
-        sectores_procesados = []
-        for _, row in df.iterrows():
-            texto = row['coordenadas_txt']
-            if texto and isinstance(texto, str):
-                try:
-                    # Convertimos el string "-102.3 21.8, -102.2 21.8" en lista de listas
-                    puntos = [p.strip() for p in texto.split(',') if p.strip()]
-                    coords_lista = []
-                    for p in puntos:
-                        c = p.split()
-                        if len(c) >= 2:
-                            # GeoJSON: [Longitud, Latitud]
-                            coords_lista.append([float(c[0]), float(c[1])])
-                    
-                    # Forzamos el cierre del polígono
-                    if coords_lista and coords_lista[0] != coords_lista[-1]:
-                        coords_lista.append(coords_lista[0])
-                    
-                    # GUARDAMOS COMO LISTA, NO COMO STRING JSON TODAVÍA
-                    row['geometria_lista'] = coords_lista
-                except:
-                    row['geometria_lista'] = None
-            else:
-                row['geometria_lista'] = None
-            
-            sectores_procesados.append(row.to_dict())
-        return sectores_procesados
+        return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error al cargar sectores: {e}")
         return []
+
 
 def formato_hora(decimal):
     try:
