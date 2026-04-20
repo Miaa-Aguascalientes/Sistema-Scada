@@ -213,15 +213,17 @@ def get_mysql_scada_engine():
         return engine
     except: return None
 
-@st.cache_resource
 def get_mysql_telemetria_engine():
     try:
-        c = st.secrets["mysql_telemetria"]
-        pwd = urllib.parse.quote_plus(c["password"])
-        engine = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-        with engine.connect() as conn: pass 
-        return engine
-    except: return None
+        creds = st.secrets["mysql_telemetria"]
+        # Escapamos el password por el carácter '&'
+        pass_encoded = urllib.parse.quote_plus(creds["password"])
+        # Forzamos charset utf8 para que el texto de la geometría no se corrompa
+        url = f"mysql+mysqlconnector://{creds['user']}:{pass_encoded}@{creds['host']}/{creds['database']}?charset=utf8"
+        return create_engine(url)
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return None
 
 @st.cache_resource
 def get_postgres_conn():
@@ -276,30 +278,41 @@ def cargar_sectores_poligonos():
     engine = get_mysql_telemetria_engine()
     if not engine: return []
     try:
-        # Traemos el campo geom (que es texto) y los datos del HUD
-        query = "SELECT sector, geom, Pozos_Sector, Superficie, Poblacion, Fugas_Tot FROM Sectores_hidr WHERE geom IS NOT NULL"
+        query = "SELECT sector, geom, Pozos_Sector, Superficie, Poblacion, Fugas_Tot FROM Sectores_hidr"
         df = pd.read_sql(query, engine)
         
-        sectores_listos = []
+        sectores_procesados = []
         for _, row in df.iterrows():
+            wkt_text = row['geom']
+            if not wkt_text: continue
+            
             try:
-                # shapely lee el texto 'POLYGON((...))'
-                poly_obj = wkt.loads(row['geom'])
+                # Limpieza preventiva: eliminamos posibles espacios o prefijos SRID
+                if ";" in str(wkt_text):
+                    wkt_text = str(wkt_text).split(";")[-1]
                 
-                # Folium necesita [Lat, Lon], MySQL da [Lon, Lat]. Aquí los volteamos:
+                # Convertimos el texto a objeto geométrico
+                poly_obj = wkt.loads(str(wkt_text))
+                
+                # Invertimos coordenadas: MySQL(Lon, Lat) -> Folium(Lat, Lon)
                 if poly_obj.geom_type == 'Polygon':
                     coords = [[p[1], p[0]] for p in poly_obj.exterior.coords]
                 elif poly_obj.geom_type == 'MultiPolygon':
-                    coords = [[[p[1], p[0]] for p in part.exterior.coords] for part in poly_obj.geoms]
-                
+                    coords = []
+                    for part in poly_obj.geoms:
+                        coords.append([[p[1], p[0]] for p in part.exterior.coords])
+                else:
+                    continue
+
                 d = row.to_dict()
-                d['coords_procesadas'] = coords
-                sectores_listos.append(d)
-            except:
-                continue 
-        return sectores_listos
+                d['puntos'] = coords
+                sectores_procesados.append(d)
+            except Exception as ex:
+                # print(f"Fallo en sector {row['sector']}: {ex}")
+                continue
+        return sectores_procesados
     except Exception as e:
-        st.error(f"Error consulta: {e}")
+        st.error(f"Error en carga: {e}")
         return []
 
 def formato_hora(decimal):
@@ -1183,36 +1196,38 @@ def get_sector_style(feature, visible):
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
-    fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", z_index=1)
+    # FeatureGroup para control de capas
+    fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos", show=True)
+    
     for s in sectores_data:
         try:
-            # Tu Popup HUD personalizado
-            sector_encoded = urllib.parse.quote(s['sector'])
-            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'admin')}"
+            # Tu lógica de URL y Popup se mantiene igual
+            sector_enc = urllib.parse.quote(s['sector'])
+            url_url = f"/?sector={sector_enc}&access=granted&role={st.session_state.get('rol', 'usuario')}"
             
-            html_popup = f"""
-            <div style="font-family: 'Segoe UI', sans-serif; width: 200px; background-color: #0b1a29; color: white; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff;">
-                <h4 style="margin:0; color:#00d4ff;">{s['sector']}</h4>
-                <hr style="border: 0.5px solid #333;">
-                <p style="font-size:11px;"><b>Población:</b> {s.get('Poblacion', 0):,.0f}<br>
-                <b>Pozos:</b> {s.get('Pozos_Sector', 0)}</p>
-                <a href="{url_acceso}" target="_blank" style="display:block; text-align:center; background:#00d4ff; color:#0b1a29; font-weight:bold; padding:5px; border-radius:4px; text-decoration:none;">ABRIR</a>
+            popup_content = f"""
+            <div style="background-color:#0b1a29; color:white; padding:10px; border-radius:5px; border:1px solid #00d4ff; width:180px;">
+                <b style="color:#00d4ff;">{s['sector']}</b><br>
+                <small>Pozos: {s.get('Pozos_Sector', 0)}</small><br>
+                <a href="{url_url}" target="_blank" style="color:cyan; text-decoration:none;">[ ABRIR SECTOR ]</a>
             </div>
             """
 
-            # DIBUJAR EL POLÍGONO
+            # DIBUJO DIRECTO
+            # Si el sector es MultiPolygon, 'puntos' es una lista de listas
             folium.Polygon(
-                locations=s['coords_procesadas'],
-                color='#00d4ff', 
+                locations=s['puntos'],
+                color='#00d4ff',
                 weight=2 if ver_sectores else 0,
                 fill=True,
                 fill_color='#00d4ff',
-                fill_opacity=0.15 if ver_sectores else 0.0001, # Clicable aunque no se vea
-                tooltip=f"Sector: {s['sector']}",
-                popup=folium.Popup(html_popup, max_width=250)
+                fill_opacity=0.15 if ver_sectores else 0.0001,
+                popup=folium.Popup(popup_content, max_width=250),
+                tooltip=f"Sector: {s['sector']}"
             ).add_to(fg_sectores)
         except:
             continue
+            
     fg_sectores.add_to(m)
     
     # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
