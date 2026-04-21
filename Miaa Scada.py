@@ -814,7 +814,7 @@ if sector_seleccionado:
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -50px !important; /* Sube todo el contenido */
+                margin-top: -80px !important; /* Sube todo el contenido */
             }}
 
             /* 3. Estilo del título centrado */
