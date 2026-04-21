@@ -895,6 +895,35 @@ if sector_seleccionado:
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
+        with col_der:
+            # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA
+            reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+            sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
+            r_info = dict_reg[reg_nombres[sel_r]]
+            t_hist = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
+            t_hist = [t for t in t_hist if t]
+
+            if t_hist:
+                engine_h = get_mysql_scada_engine()
+                q_hist = f"""
+                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
+                    FROM vfitagnumhistory h
+                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
+                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
+                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
+                    ORDER BY h.FECHA ASC
+                """
+                df_hist = pd.read_sql(q_hist, engine_h)
+                if not df_hist.empty:
+                    import plotly.express as px
+                    fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
+                    fig.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
+                    st.plotly_chart(fig, use_container_width=True)
+                else: st.info("Sin datos para este rango.")
+
+    st.stop()
+            
+
             # 7.5. POLÍGONO (Enfoque del mapa)
             try:
                 geo_data = json.loads(datos_s['geo'])
@@ -1021,34 +1050,6 @@ if sector_seleccionado:
                                             popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
             folium_static(m_sec, width=None, height=700)
-
-        with col_der:
-            # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA
-            reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-            sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
-            r_info = dict_reg[reg_nombres[sel_r]]
-            t_hist = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
-            t_hist = [t for t in t_hist if t]
-
-            if t_hist:
-                engine_h = get_mysql_scada_engine()
-                q_hist = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
-                    FROM vfitagnumhistory h
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
-                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
-                    ORDER BY h.FECHA ASC
-                """
-                df_hist = pd.read_sql(q_hist, engine_h)
-                if not df_hist.empty:
-                    import plotly.express as px
-                    fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
-                    fig.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
-                    st.plotly_chart(fig, use_container_width=True)
-                else: st.info("Sin datos para este rango.")
-
-    st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
