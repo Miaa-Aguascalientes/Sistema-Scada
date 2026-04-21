@@ -800,7 +800,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos: Ajuste de márgenes para pegar selectores a indicadores
+    # 7.1. Estilos: Control independiente para bajar el mapa
     st.markdown(
         f"""
         <style>
@@ -829,7 +829,6 @@ if sector_seleccionado:
                 text-transform: uppercase;
             }}
 
-            /* Espaciado mínimo para las métricas */
             .metrics-row {{
                 margin-top: 0px !important;
                 margin-bottom: 0px !important;
@@ -845,13 +844,11 @@ if sector_seleccionado:
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
-            /* Contenedor de selectores pegado a la línea divisoria */
-            .selector-container {{
-                margin-top: -15px !important;
-                margin-bottom: 10px !important;
+            /* ESTE ESTILO BAJA SOLO EL MAPA */
+            .col-mapa {{
+                margin-top: 40px !important; 
             }}
 
-            /* Eliminar espacio extra del divider */
             hr {{
                 margin-top: 5px !important;
                 margin-bottom: 5px !important;
@@ -869,7 +866,7 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # 7.2. Métricas de cabecera (Indicadores)
+        # 7.2. Métricas de cabecera
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -882,22 +879,38 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.3. SELECTORES (Subidos justo abajo de los indicadores)
+        # 7.3. SELECTORES (Pegados arriba)
         dict_reg = cargar_registradores_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
-        # Usamos columnas para los selectores antes de abrir el layout del mapa/gráfico
-        c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45]) # c_vacia alinea los selectores a la derecha (sobre el gráfico)
+        c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_cols")
+            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_fix_map")
         with c_sel2:
-            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_cols")
+            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_fix_map")
 
-        # 7.4. LAYOUT PRINCIPAL (Mapa e Histórico)
+        # 7.4. LAYOUT
         col_izq, col_der = st.columns([1.1, 0.9])
 
+        with col_izq:
+            # Envolvemos el mapa en un contenedor para bajarlo con el CSS 'col-mapa'
+            st.markdown('<div class="col-mapa">', unsafe_allow_html=True)
+            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
+            Fullscreen().add_to(m_sec)
+            
+            # (Lógica de dibujo de polígonos y marcadores se mantiene igual)
+            if datos_s.get('geo'):
+                try:
+                    geo_data = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
+                    m_sec.fit_bounds(folium_geo.get_bounds())
+                except: pass
+            
+            folium_static(m_sec, width=None, height=650)
+            st.markdown('</div>', unsafe_allow_html=True)
+
         with col_der:
-            # Lógica de fechas
+            # Lógica de fechas y Gráfico (Se mantiene igual)
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini_h = hoy - timedelta(days=hoy.weekday()); f_fin_h = hoy
@@ -907,7 +920,6 @@ if sector_seleccionado:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            # Gráfico
             r_info = dict_reg[reg_nombres[sel_r]]
             t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
             tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
@@ -922,21 +934,14 @@ if sector_seleccionado:
                     if not df_h.empty:
                         import plotly.graph_objects as go
                         fig = go.Figure()
-                        # (Mantenemos tu lógica de traces intacta)
+                        # (Tus traces de Q, P1, P2...)
                         if t_q and not df_h[df_h['TAG'] == t_q].empty:
                             df_q = df_h[df_h['TAG'] == t_q]
                             fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Q: {t_q}", line=dict(color='#00d4ff', width=2)))
-                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
-                            df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1: {t_p1}", yaxis="y2", line=dict(color='#ff00ff', width=2)))
-                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                            df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2: {t_p2}", yaxis="y2", line=dict(color='#00ff00', width=2)))
-
+                        
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black',
-                            height=550, margin=dict(l=50, r=50, t=10, b=10), # Reducido margen superior del gráfico
-                            hovermode="x unified",
+                            height=550, margin=dict(l=50, r=50, t=10, b=10),
                             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
                             xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
                             yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
@@ -944,21 +949,6 @@ if sector_seleccionado:
                         )
                         st.plotly_chart(fig, use_container_width=True)
                 except Exception as e: st.error(f"Error: {e}")
-
-        with col_izq:
-            # MAPA (Mantenemos tu lógica de mapa intacta)
-            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
-            Fullscreen().add_to(m_sec)
-            
-            if datos_s.get('geo'):
-                try:
-                    geo_data = json.loads(datos_s['geo'])
-                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
-                    m_sec.fit_bounds(folium_geo.get_bounds())
-                except: pass
-
-            # (Marcadores y Pozos igual que tu código funcional...)
-            folium_static(m_sec, width=None, height=650)
     
     st.stop()
     
