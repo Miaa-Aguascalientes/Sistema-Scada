@@ -824,7 +824,7 @@ if sector_seleccionado:
             }}
             
             .titulo-sector {{
-                font-size: 2.2rem;
+                font-size: 1.2rem;
                 font-weight: 800;
                 color: #00d4ff;
                 margin: 0px;
