@@ -800,48 +800,58 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Título y Estilos (Todo en un solo bloque para control total)
+    # 7.1. Título y Estilos (CONTROL TOTAL DE ESPACIOS)
     st.markdown(
         f"""
         <style>
-            /* Eliminar espacio superior de Streamlit */
-            .block-container {{ padding-top: 1rem !important; }}
-            
-            /* Contenedor del título centrado */
-            .titulo-sector-container {{
-                text-align: center;
-                margin-bottom: 10px;
+            /* 1. Eliminar el espacio muerto superior de la página */
+            .block-container {{
+                padding-top: 0rem !important;
+                padding-bottom: 0rem !important;
+                margin-top: -30px !important;
             }}
             
-            .titulo-superior-centrado {{
-                font-size: 28px;
-                font-weight: bold;
+            /* 2. Forzar que el título esté centrado y sin margen superior */
+            .titulo-sector-contenedor {{
+                text-align: center;
+                width: 100%;
+                margin-top: 0px !important;
+                padding-top: 0px !important;
+            }}
+            
+            .titulo-sector-texto {{
+                font-size: 32px;
+                font-weight: 800;
                 color: #00d4ff;
-                text-shadow: 0px 0px 10px rgba(0, 212, 255, 0.3);
-                margin: 0;
-                padding: 0;
+                margin-bottom: 5px !important;
+                text-transform: uppercase;
+                letter-spacing: 2px;
             }}
 
-            /* Contenedor de métricas pegado al título */
+            /* 3. Pegar los indicadores al título */
             .metrics-container {{
-                margin-top: -5px; 
-                margin-bottom: 15px;
+                margin-top: -10px !important; 
+                margin-bottom: 10px !important;
             }}
 
             .micro-card {{
                 background: rgba(11, 26, 41, 0.9);
                 border: 1px solid #1f4068;
                 border-radius: 4px;
-                padding: 6px;
+                padding: 5px;
                 text-align: center;
-                box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
             }}
-            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }}
+            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
+            
+            /* 4. Ocultar el espacio extra que Streamlit mete entre widgets */
+            [data-testid="stVerticalBlock"] > div:first-child {{
+                margin-top: -50px !important;
+            }}
         </style>
         
-        <div class="titulo-sector-container">
-            <div class="titulo-superior-centrado">ANÁLISIS DE SECTOR: {sector_seleccionado}</div>
+        <div class="titulo-sector-contenedor">
+            <h1 class="titulo-sector-texto">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
         </div>
         """, 
         unsafe_allow_html=True
@@ -851,7 +861,7 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # 7.2. KPIs en columnas sin el margen negativo excesivo
+        # 7.2. KPIs superiores
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         
@@ -862,7 +872,6 @@ if sector_seleccionado:
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
         st.divider()
 
         # 7.4. LAYOUT: MAPA (IZQ) | GRÁFICO (DER)
