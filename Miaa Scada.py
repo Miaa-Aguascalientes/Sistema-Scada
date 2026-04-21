@@ -1030,12 +1030,12 @@ if sector_seleccionado:
                         # Trace Presión 1
                         if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
                             df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"Presión (kg/cm2) aguas abajo", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"Presión P1 (kg/cm2) aguas arriba", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
                         
                         # Trace Presión 2
                         if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
                             df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"Presión (kg/cm2) aguas arriba", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
+                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"Presión P2 (kg/cm2) aguas abajo", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black', height=550, margin=dict(l=50, r=50, t=10, b=10),
