@@ -891,7 +891,7 @@ if sector_seleccionado:
                 f_fin_h = cf2.date_input("Fin", f_fin_h)
 
         with col_izq:
-            st.markdown('<div style="margin-top: 40px;">', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top: 60px;">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
