@@ -804,35 +804,31 @@ if sector_seleccionado:
     st.markdown(
         f"""
         <style>
-            /* 1. Eliminar barra de menú y espacio extra de Streamlit */
             header {{visibility: hidden;}}
             .stAppDeployButton {{display:none;}}
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
             
-            /* 2. Quitar el padding del contenedor principal */
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -80px !important; /* Sube todo el contenido */
+                margin-top: -80px !important;
             }}
 
-            /* 3. Estilo del título centrado */
             .contenedor-centrado {{
                 text-align: center;
                 margin-bottom: 1px;
             }}
             
             .titulo-sector {{
-                font-size: 1.2rem;
-                font-weight: 100;
+                font-size: 1.8rem;
+                font-weight: 800;
                 color: #00d4ff;
                 margin: 0px;
                 padding: 0px;
                 text-transform: uppercase;
             }}
 
-            /* 4. Contenedor de indicadores pegado al título */
             .metrics-row {{
                 margin-top: 0px !important;
                 margin-bottom: -10px !important;
@@ -847,6 +843,11 @@ if sector_seleccionado:
             }}
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
+            
+            /* Separación para el layout de mapa y gráfico */
+            .main-layout-container {{
+                margin-top: 45px !important;
+            }}
         </style>
         
         <div class="contenedor-centrado">
@@ -875,67 +876,78 @@ if sector_seleccionado:
         st.divider()
 
         # 7.4. LAYOUT: MAPA (IZQ) | GRÁFICO (DER)
+        st.markdown('<div class="main-layout-container">', unsafe_allow_html=True)
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
-            filtro_t = st.radio("Rango del gráfico:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True)
-            f_fin_h = datetime.now()
-            if filtro_t == "Hoy": f_ini_h = f_fin_h.replace(hour=0, minute=0, second=0)
-            elif filtro_t == "Ayer": 
-                f_ini_h = (f_fin_h - timedelta(days=1)).replace(hour=0, minute=0, second=0)
-                f_fin_h = f_fin_h.replace(hour=0, minute=0, second=0)
-            elif filtro_t == "Semana": f_ini_h = f_fin_h - timedelta(days=7)
+            opcion_fecha = st.selectbox(
+                "Rango del gráfico:", 
+                ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"],
+                index=2, key="selector_fecha_sector"
+            )
+            
+            hoy = datetime.now().date()
+            if opcion_fecha == "Hoy":
+                f_ini_h, f_fin_h = hoy, hoy
+            elif opcion_fecha == "Esta Semana":
+                f_ini_h = hoy - timedelta(days=hoy.weekday())
+                f_fin_h = hoy
+            elif opcion_fecha == "Últimos 14 días":
+                f_ini_h = hoy - timedelta(days=14)
+                f_fin_h = hoy
+            elif opcion_fecha == "Este Mes":
+                f_ini_h = hoy.replace(day=1)
+                f_fin_h = hoy
             else:
-                cf1, cf2 = st.columns(2)
-                f_ini_h = cf1.date_input("Inicio", f_fin_h)
-                f_fin_h = cf2.date_input("Fin", f_fin_h)
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
+                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-        with col_izq:
-            st.markdown('<div style="margin-top: 60px;">', unsafe_allow_html=True)
-            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
-            Fullscreen().add_to(m_sec)
-
-        with col_der:
-            # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA
+            # 7.8. GRÁFICO DE TENDENCIA
+            dict_reg = cargar_registradores_desde_db()
             reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
             sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
             r_info = dict_reg[reg_nombres[sel_r]]
-            t_hist = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
-            t_hist = [t for t in t_hist if t]
+            t_hist = [t for t in [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')] if t]
 
             if t_hist:
-                engine_h = get_mysql_scada_engine()
-                q_hist = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
-                    FROM vfitagnumhistory h
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
-                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
-                    ORDER BY h.FECHA ASC
-                """
-                df_hist = pd.read_sql(q_hist, engine_h)
-                if not df_hist.empty:
-                    import plotly.express as px
-                    fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
-                    fig.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
-                    st.plotly_chart(fig, use_container_width=True)
-                else: st.info("Sin datos para este rango.")
+                try:
+                    engine_h = get_mysql_scada_engine()
+                    q_hist = f"""
+                        SELECT h.FECHA, h.VALUE, r.NAME as TAG
+                        FROM vfitagnumhistory h
+                        JOIN VfiTagRef r ON h.GATEID = r.GATEID
+                        WHERE r.NAME IN ('{"', '".join(t_hist)}')
+                        AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                        ORDER BY h.FECHA ASC
+                    """
+                    df_hist = pd.read_sql(q_hist, engine_h)
+                    if not df_hist.empty:
+                        import plotly.express as px
+                        fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
+                        fig.update_layout(height=450, margin=dict(l=0, r=0, t=10, b=0))
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("Sin datos para este rango.")
+                except Exception as e:
+                    st.error(f"Error en gráfico: {e}")
 
-            st.stop()
-            
+        with col_izq:
+            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
+            Fullscreen().add_to(m_sec)
 
             # 7.5. POLÍGONO (Enfoque del mapa)
-                try:
-                geo_data = json.loads(datos_s['geo'])
-                folium_geo = folium.GeoJson(
-                    geo_data,
-                    style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
-                ).add_to(m_sec)
-                m_sec.fit_bounds(folium_geo.get_bounds())
-            except: pass
+            try:
+                if datos_s.get('geo'):
+                    geo_data = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(
+                        geo_data,
+                        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
+                    ).add_to(m_sec)
+                    m_sec.fit_bounds(folium_geo.get_bounds())
+            except:
+                pass
 
-            # 7.6. DESPLIEGUE DE LOS REGISTRADORES EN EL MAPA 
-            dict_reg = cargar_registradores_desde_db()
+            # 7.6. DESPLIEGUE DE LOS REGISTRADORES
             t_r = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
@@ -947,8 +959,9 @@ if sector_seleccionado:
                     v, f = scada_r.get(r.get(key), (0.0, "N/A"))
                     try: return float(v), f
                     except: return 0.0, "N/A"
-                p1, f1 = gd('tag_p1'); p2, _ = gd('tag_p2'); cau, _ = gd('tag_q')
-                vbat, _ = gd('tag_vbat'); idx, _ = gd('tag_idx')
+                
+                p1, f1 = gd('tag_p1'); p2, _ = gd('tag_p2')
+                cau, _ = gd('tag_q'); vbat, _ = gd('tag_vbat'); idx, _ = gd('tag_idx')
 
                 html_reg = f"""
                 <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:230px; font-family:sans-serif;">
@@ -959,97 +972,43 @@ if sector_seleccionado:
                         <p style="color:yellow; font-size:9px; margin-top:5px;">Lectura: {f1}</p>
                     </div>
                 </div>"""
-                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
-                              popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
+                folium.Marker(location=r['coord'], 
+                             icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
+                             popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
 
-            # 7.7. DESPLIEGUE DE LOS POZOS EN EL MAPA 
+            # 7.7. DESPLIEGUE DE LOS POZOS
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
                     info = mapa_pozos_dict[id_p]
                     d = lambda tag: data_scada.get(tag, (0, "N/A"))
                     is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                    
                     q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
                     p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
-                    sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
-                    dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
                     tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
-                    col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
-                    h_arr_val, f_h_arr = d(info['h_arranque']); h_par_val, f_h_par = d(info['h_paro'])
-                    v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
-
+                    
                     html_popup_sec = f"""
-                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 340px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 300px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                         <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
                         <hr style="opacity:0.2;">
                         <div style="font-size:11px;">
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
+                            💧 Caudal: <b>{q:.2f} L/s</b> | 🚀 Presión: <b>{p:.2f} kg</b><br>
+                            🔋 Tanque: <b>{tanq:.2f} m</b>
+                            <p style="color:yellow; font-size:9px; margin-top:5px;">Lectura: {f_q}</p>
                         </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
-                            <span>🚀 Presión: <b>{p:.2f} kg</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px;">
-                        <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
-                    </div>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
-                        <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
-                            <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
-                                <th style="padding: 4px;">Fase</th>
-                                <th style="padding: 4px;">Voltaje / Act.</th>
-                                <th style="padding: 4px;">Amp / Act.</th>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #222;">
-                                <td style="padding: 6px 4px;">L1-L2</td>
-                                <td><b>{v[0][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[0][1]}</span></td>
-                                <td><b>{a[0][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[0][1]}</span></td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #222;">
-                                <td style="padding: 6px 4px;">L2-L3</td>
-                                <td><b>{v[1][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[1][1]}</span></td>
-                                <td><b>{a[1][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[1][1]}</span></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 6px 4px;">L1-L3</td>
-                                <td><b>{v[2][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[2][1]}</span></td>
-                                <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
-                            </tr>
-                        </table>
-
-                    </div>
-                </div>
-                """
+                    </div>"""
                     
                     if info.get('blink'):
                         folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                                      popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                                     popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1,
-                                            popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                                           popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-            folium_static(m_sec, width=None, height=700)
+            folium_static(m_sec, width=None, height=600)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
