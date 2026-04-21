@@ -882,7 +882,13 @@ if sector_seleccionado:
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_grid_white")
+            # ALINEACIÓN HORIZONTAL DE SELECTORES
+            c_sel1, c_sel2 = st.columns(2)
+            with c_sel1:
+                opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_cols")
+            with c_sel2:
+                sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_cols")
+
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini_h = hoy - timedelta(days=hoy.weekday()); f_fin_h = hoy
@@ -892,12 +898,8 @@ if sector_seleccionado:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_grid_white")
             r_info = dict_reg[reg_nombres[sel_r]]
-            
-            t_q = r_info.get('tag_q')
-            t_p1 = r_info.get('tag_p1')
-            t_p2 = r_info.get('tag_p2')
+            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
             tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
 
             if tags_grafico:
@@ -911,22 +913,18 @@ if sector_seleccionado:
                         import plotly.graph_objects as go
                         fig = go.Figure()
 
-                        if t_q:
+                        if t_q and not df_h[df_h['TAG'] == t_q].empty:
                             df_q = df_h[df_h['TAG'] == t_q]
-                            if not df_q.empty:
-                                fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Q: {t_q}", line=dict(color='#00d4ff', width=2)))
+                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Q: {t_q}", line=dict(color='#00d4ff', width=2)))
 
-                        if t_p1:
+                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
                             df_p1 = df_h[df_h['TAG'] == t_p1]
-                            if not df_p1.empty:
-                                fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1: {t_p1}", yaxis="y2", line=dict(color='#ff00ff', width=2)))
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1: {t_p1}", yaxis="y2", line=dict(color='#ff00ff', width=2)))
                         
-                        if t_p2:
+                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
                             df_p2 = df_h[df_h['TAG'] == t_p2]
-                            if not df_p2.empty:
-                                fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2: {t_p2}", yaxis="y2", line=dict(color='#00ff00', width=2)))
+                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2: {t_p2}", yaxis="y2", line=dict(color='#00ff00', width=2)))
 
-                        # CONFIGURACIÓN DE CUADRÍCULA BLANCA Y LEYENDA SUPERIOR
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black',
                             height=550, margin=dict(l=50, r=50, t=80, b=10),
@@ -936,18 +934,9 @@ if sector_seleccionado:
                                 orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
                                 font=dict(color="white", size=10), bgcolor="rgba(0,0,0,0)"
                             ),
-                            xaxis=dict(
-                                showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', # Cuadrícula Blanca Vertical
-                                color="white", linecolor="#444"
-                            ),
-                            yaxis=dict(
-                                title="Caudal (L/s)", side="left", color="#00d4ff",
-                                showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)' # Cuadrícula Blanca Horizontal
-                            ),
-                            yaxis2=dict(
-                                title="Presión (kg)", side="right", color="#ff00ff",
-                                overlaying="y", showgrid=False # Desactivado para evitar cruce de líneas horizontales
-                            )
+                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white", linecolor="#444"),
+                            yaxis=dict(title="Caudal (L/s)", side="left", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
+                            yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                         )
                         st.plotly_chart(fig, use_container_width=True)
                 except Exception as e: st.error(f"Error Gráfico: {e}")
@@ -978,7 +967,6 @@ if sector_seleccionado:
                 h_r = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:220px;"><b style="color:#00FFFF;">{r['nombre']}</b><hr style="opacity:0.2;"><div style="font-size:11px;">💧 Q: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b><br>🔋 Bat: <b>{vbat:.2f} V</b></div></div>"""
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(h_r, max_width=300)).add_to(m_sec)
 
-            # Pozos
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
