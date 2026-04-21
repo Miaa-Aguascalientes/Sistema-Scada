@@ -14,6 +14,7 @@ import bcrypt
 import time
 import urllib.parse
 from datetime import datetime, timedelta
+import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -983,31 +984,75 @@ if sector_seleccionado:
 
             folium_static(m_sec, width=None, height=700)
 
-        with col_der:
-            # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA
-            reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-            sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
-            r_info = dict_reg[reg_nombres[sel_r]]
-            t_hist = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
-            t_hist = [t for t in t_hist if t]
+           # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA 
+            if not df_hist.empty:
+           
 
-            if t_hist:
-                engine_h = get_mysql_scada_engine()
-                q_hist = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
-                    FROM vfitagnumhistory h
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
-                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
-                    ORDER BY h.FECHA ASC
-                """
-                df_hist = pd.read_sql(q_hist, engine_h)
-                if not df_hist.empty:
-                    import plotly.express as px
-                    fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
-                    fig.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
-                    st.plotly_chart(fig, use_container_width=True)
-                else: st.info("Sin datos para este rango.")
+            # Crear la figura base
+            fig = go.Figure()
+
+            # Identificar los tags para asignarles su eje y color
+            # r_info contiene los tags de caudal (tag_q) y presiones (tag_p1, tag_p2)
+            tag_caudal = r_info.get('tag_q')
+            tags_presion = [r_info.get('tag_p1'), r_info.get('tag_p2')]
+
+            # Iterar por cada TAG en los datos recuperados
+            for tag in df_hist['TAG'].unique():
+                df_tag = df_hist[df_hist['TAG'] == tag]
+                
+                if tag == tag_caudal:
+                    # CONFIGURACIÓN CAUDAL: Eje Izquierdo, Color Azul
+                    fig.add_trace(go.Scatter(
+                        x=df_tag['FECHA'],
+                        y=df_tag['VALUE'],
+                        name=f"Caudal ({tag})",
+                        line=dict(color='blue', width=2),
+                        yaxis='y1',
+                        hovertemplate='%{y:.2f} L/s<extra></extra>'
+                    ))
+                elif tag in tags_presion:
+                    # CONFIGURACIÓN PRESIONES: Eje Derecho, Color Verde
+                    fig.add_trace(go.Scatter(
+                        x=df_tag['FECHA'],
+                        y=df_tag['VALUE'],
+                        name=f"Presión ({tag})",
+                        line=dict(color='green', width=1.5),
+                        yaxis='y2',
+                        hovertemplate='%{y:.2f} kg/cm²<extra></extra>'
+                    ))
+
+            # Configuración del Layout para doble eje y formato
+            fig.update_layout(
+                template="plotly_dark",
+                height=500,
+                margin=dict(l=0, r=0, t=30, b=0),
+                hovermode="x unified",
+                xaxis=dict(title="Fecha y Hora", showgrid=False),
+                
+                # Eje Y Primario (Izquierda) - Caudal
+                yaxis=dict(
+                    title="Caudal (L/s)",
+                    titlefont=dict(color="blue"),
+                    tickfont=dict(color="blue"),
+                    gridcolor="#333"
+                ),
+                
+                # Eje Y Secundario (Derecha) - Presiones
+                yaxis2=dict(
+                    title="Presión (kg/cm²)",
+                    titlefont=dict(color="green"),
+                    tickfont=dict(color="green"),
+                    anchor="x",
+                    overlaying="y",
+                    side="right",
+                    showgrid=False
+                ),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Sin datos para este rango.")
 
     st.stop()
     
