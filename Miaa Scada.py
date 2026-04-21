@@ -1205,7 +1205,7 @@ if sectores_data:
                    🚀 ABRIR SECTOR
                 </a>
             </div>
-            
+            """
 
             # 4. Lógica de visibilidad (Siempre presentes en el código)
             estilo = {
