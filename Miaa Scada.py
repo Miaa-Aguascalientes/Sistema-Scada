@@ -1120,7 +1120,7 @@ with st.sidebar:
                 st.write(f"⚪ {p}")
                 
 # 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
-# 9.1. DASHBOARD
+# 9.1. DASHBOARD PRINCIPAL
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
@@ -1164,14 +1164,14 @@ with col_mapa:
         </style>
         """
 
-# 9.5. RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------
+# 9.5. RENDERIZADO DE SECTORES EN EL MAPA PRINCIPAL   --------------------------------------------
 
 def get_sector_style(feature, visible):
     return {
         'fillColor': '#00d4ff',
         'color': '#00d4ff' if visible else 'transparent',
         'weight': 1.5 if visible else 0,
-        'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
+        'fillOpacity': 0.12 if visible else 0.01,
     }
 
 sectores_data = cargar_sectores_poligonos()
@@ -1206,8 +1206,6 @@ if sectores_data:
                 </a>
             </div>
             """
-
-            # 4. Lógica de visibilidad (Siempre presentes en el código)
             estilo = {
                 'fillColor': '#00d4ff',
                 'color': '#00d4ff' if ver_sectores else 'transparent',
@@ -1233,27 +1231,21 @@ if sectores_data:
 
     fg_sectores.add_to(m)
     
-    # 9.6. RENDERIZADO DE POZOS ---------------------------------------------------------------------------------------------
-    
-    # Usamos solo 'ver_pozos' para controlar ambas cosas
+# 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL  ---------------------------------------------------------------------------------------------
     for id_p, info in mapa_pozos_dict.items():
         if ver_pozos:  # Si el checkbox está activo, dibujamos todo
             d = lambda tag: data_scada.get(tag, (0, "N/A"))
             is_st = (info['status_label'] == 'SIN TELEMETRÍA')
-            
-            # Extracción de datos
             q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
             p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
             sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
             dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
             tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
             col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
-            
             h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
             h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
             h_arr_fmt = formato_hora(h_arr_val)
             h_par_fmt = formato_hora(h_par_val)
-
             v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
             a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
@@ -1330,7 +1322,6 @@ if sectores_data:
                 </div>
                 """
 
-            # 1. Dibujar Etiqueta ID
             folium.Marker(
                 location=info['coord'],
                 icon=folium.DivIcon(
@@ -1340,7 +1331,6 @@ if sectores_data:
                 )
             ).add_to(m)
 
-            # 2. Dibujar Marcador (Punto o Blinker)
             if info.get('blink'):
                 folium.Marker(
                     location=info['coord'],
@@ -1358,7 +1348,7 @@ if sectores_data:
                     popup=folium.Popup(html_popup, max_width=450)
                 ).add_to(m)
 
-# ------------------------------------------------------------------------------------------------- RENDERIZADO DE TANQUES ---------------------------------------------------------------------------------------
+# 9.7. RENDERIZADO DE TANQUES EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------
     if ver_tanques:
         for id_tq, info in mapa_tanques_dict.items():
             try:
@@ -1366,8 +1356,6 @@ if sectores_data:
                 n_max = info['nivel_max'] if info['nivel_max'] else 1.0
                 porcentaje = (val_nivel / n_max) * 100
                 
-                # --- CAMBIO CLAVE: Pegamos la "llave" de acceso a la URL del gráfico ---
-                # Esto permite que al abrir el histórico, la Sección 0 detecte el permiso y no pida login.
                 url_grafico = (
                     f"?graficar_tanque={info['tag_nivel']}"
                     f"&nombre={info['nombre'].replace(' ', '%20')}"
@@ -1411,7 +1399,7 @@ if sectores_data:
                 ).add_to(m)
             except: continue
             
-    # ------------------------------------------------------------------------------- RENDERIZADO DE REBOMBEOS --------------------------------------------------------------------------------------
+# 9.8.  RENDERIZADO DE REBOMBEOS EN EL MAPA PRINCIPAL --------------------------------------------------------------------------------------
     if ver_rebombeos:
         for id_rb, info in mapa_rebombeos_dict.items():
             try:
@@ -1450,6 +1438,4 @@ if sectores_data:
                 folium.Marker(location=info['coord'], icon=folium.DivIcon(icon_anchor=(-15, 15), html=f'<div style="font-size: 10px; font-weight: bold; color: {info["color_final"]}; text-shadow: 1px 1px #000;">{id_rb}</div>')).add_to(m)
             except:
                 continue
-
-    # --- RENDERIZADO FINAL DEL MAPA (FUERA DE LOS IF) ---
     folium_static(m, width=None, height=750)
