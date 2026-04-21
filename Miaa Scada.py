@@ -1038,7 +1038,9 @@ if sector_seleccionado:
                             fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"Presión P2 (kg/cm2) aguas abajo", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
                         fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', height=550, margin=dict(l=50, r=50, t=10, b=10),
+                            paper_bgcolor='black', plot_bgcolor='black', 
+                            height=350, # AQUI SE MODIFICA EL TAMAÑO DE LO ALTO DEL GRAFICO
+                            margin=dict(l=50, r=50, t=10, b=10),
                             hovermode="x unified", # ESTO ACTIVA VER TODOS LOS VALORES A LA VEZ
                             hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
                             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
