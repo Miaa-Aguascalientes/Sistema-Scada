@@ -1011,7 +1011,7 @@ if sector_seleccionado:
             t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
             tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
 
-            if tags_grafico_registradores:
+            if tags_grafico:
                 try:
                     engine_h = get_mysql_scada_engine()
                     tags_in = "', '".join(tags_grafico)
