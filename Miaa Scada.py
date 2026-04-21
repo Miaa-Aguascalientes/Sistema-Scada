@@ -800,15 +800,18 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Limpieza radical de espacio superior y centrado
+    # 7.1. Limpieza radical de espacio superior, ocultar sidebar y estilos CSS
     st.markdown(
         f"""
         <style>
+            /* OCULTAR BARRA LATERAL, HEADER Y BOTONES DE DEPLOY */
+            [data-testid="stSidebar"] {{display: none;}}
             header {{visibility: hidden;}}
             .stAppDeployButton {{display:none;}}
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
             
+            /* REAJUSTE DE CONTENEDOR PARA SUBIR AL TECHO */
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
@@ -844,7 +847,7 @@ if sector_seleccionado:
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
-            /* Separación para el layout de mapa y gráfico */
+            /* SEPARACIÓN PARA EL LAYOUT DE MAPA Y GRÁFICO */
             .main-layout-container {{
                 margin-top: 45px !important;
             }}
@@ -875,7 +878,7 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.4. LAYOUT: MAPA (IZQ) | GRÁFICO (DER)
+        # 7.3. LAYOUT: MAPA (IZQ) | GRÁFICO (DER)
         st.markdown('<div class="main-layout-container">', unsafe_allow_html=True)
         col_izq, col_der = st.columns([1.1, 0.9])
 
@@ -902,10 +905,10 @@ if sector_seleccionado:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            # 7.8. GRÁFICO DE TENDENCIA
+            # 7.4. GRÁFICO DE TENDENCIA (ESTILO SCADA NEGRO)
             dict_reg = cargar_registradores_desde_db()
             reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-            sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
+            sel_r = st.selectbox("Seleccionar equipo:", list(reg_nombres.keys()), key="sel_reg_grafico")
             r_info = dict_reg[reg_nombres[sel_r]]
             t_hist = [t for t in [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')] if t]
 
@@ -921,10 +924,23 @@ if sector_seleccionado:
                         ORDER BY h.FECHA ASC
                     """
                     df_hist = pd.read_sql(q_hist, engine_h)
+                    
                     if not df_hist.empty:
                         import plotly.express as px
-                        fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
-                        fig.update_layout(height=450, margin=dict(l=0, r=0, t=10, b=0))
+                        # Colores neón sobre fondo negro
+                        fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', 
+                                     color_discrete_sequence=['#00d4ff', '#ff00ff', '#00ff00', '#ffff00'])
+                        
+                        fig.update_layout(
+                            paper_bgcolor='rgba(0,0,0,1)', 
+                            plot_bgcolor='rgba(0,0,0,1)',
+                            height=480,
+                            margin=dict(l=10, r=10, t=10, b=10),
+                            showlegend=True,
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="white")),
+                            xaxis=dict(showgrid=False, color="white", linecolor="#333"),
+                            yaxis=dict(showgrid=False, color="white", linecolor="#333", zeroline=False)
+                        )
                         st.plotly_chart(fig, use_container_width=True)
                     else:
                         st.info("Sin datos para este rango.")
@@ -976,7 +992,7 @@ if sector_seleccionado:
                              icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
                              popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
 
-            # 7.7. DESPLIEGUE DE LOS POZOS
+            # 7.7. DESPLIEGUE DE LOS POZOS DEL SECTOR
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
@@ -1006,9 +1022,11 @@ if sector_seleccionado:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1,
                                            popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-            folium_static(m_sec, width=None, height=600)
+            folium_static(m_sec, width=None, height=650)
         
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        # FINALIZAR EJECUCIÓN PARA QUE NO APAREZCA NADA DEBAJO
         st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
