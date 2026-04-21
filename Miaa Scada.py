@@ -885,20 +885,20 @@ if sector_seleccionado:
                         df_tag = df_hist[df_hist['TAG'] == tag]
                         
                         if tag == tag_caudal:
-                            # --- CAUDAL: AZUL, EJE IZQUIERDO, 2 DECIMALES ---
+                            # --- CAUDAL: AZUL (#0000FF), EJE IZQUIERDO (Y1) ---
                             fig.add_trace(go.Scatter(
                                 x=df_tag['FECHA'], y=df_tag['VALUE'],
                                 name=f"Caudal ({tag})",
-                                line=dict(color='blue', width=2.5),
+                                line=dict(color='#0000FF', width=2.5),
                                 yaxis='y1',
                                 hovertemplate='Caudal: %{y:.2f} L/s<extra></extra>'
                             ))
                         elif tag in tags_presion:
-                            # --- PRESIONES: VERDE, EJE DERECHO, 2 DECIMALES ---
+                            # --- PRESIONES: VERDE (#00FF00), EJE DERECHO (Y2) ---
                             fig.add_trace(go.Scatter(
                                 x=df_tag['FECHA'], y=df_tag['VALUE'],
                                 name=f"Presión ({tag})",
-                                line=dict(color='green', width=1.5),
+                                line=dict(color='#00FF00', width=1.5),
                                 yaxis='y2',
                                 hovertemplate='Presión: %{y:.2f} kg/cm²<extra></extra>'
                             ))
@@ -908,15 +908,15 @@ if sector_seleccionado:
                         margin=dict(l=10, r=10, t=35, b=10),
                         hovermode="x unified",
                         xaxis=dict(title="Cronología", showgrid=False),
-                        # Eje Izquierdo: Caudal
+                        # Eje Y Primario: Caudal
                         yaxis=dict(
-                            title="Caudal (L/s)", titlefont=dict(color="blue"), 
-                            tickfont=dict(color="blue"), gridcolor="#222"
+                            title="Caudal (L/s)", titlefont=dict(color="#0000FF"), 
+                            tickfont=dict(color="#0000FF"), gridcolor="#222"
                         ),
-                        # Eje Derecho: Presión
+                        # Eje Y Secundario: Presión (Crítico para que no se vea como en tu imagen)
                         yaxis2=dict(
-                            title="Presión (kg/cm²)", titlefont=dict(color="green"), 
-                            tickfont=dict(color="green"), anchor="x", 
+                            title="Presión (kg/cm²)", titlefont=dict(color="#00FF00"), 
+                            tickfont=dict(color="#00FF00"), anchor="x", 
                             overlaying="y", side="right", showgrid=False
                         ),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
