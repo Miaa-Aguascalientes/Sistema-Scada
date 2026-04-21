@@ -455,7 +455,7 @@ if tag_a_graficar:
     
     st.title(f"📊 Análisis de Nivel: {nombre_tq}")
     
-    # --- FILTROS DE FECHA ---
+    # 4.1. FILTROS DE FECHA ---
     col_f1, col_f2 = st.columns([1, 2])
     with col_f1:
         opcion_fecha = st.selectbox(
@@ -467,7 +467,7 @@ if tag_a_graficar:
 
     hoy = datetime.date.today()
     
-    # Lógica de selección de fechas
+    # 4.2. Lógica de selección de fechas
     if opcion_fecha == "Hoy":
         fecha_inicio = hoy
         fecha_fin = hoy
@@ -485,7 +485,7 @@ if tag_a_graficar:
             rango = st.date_input("Periodo:", value=(hoy - datetime.timedelta(days=7), hoy), max_value=hoy, key="pop_cal_v8")
             fecha_inicio, fecha_fin = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-    # --- CONSULTA A LA BASE DE DATOS ---
+    # 4.3. CONSULTA A LA BASE DE DATOS
     try:
         engine = get_mysql_scada_engine()
         f_desde = f"{fecha_inicio} 00:00:00"
@@ -506,7 +506,7 @@ if tag_a_graficar:
             df_hist['FECHA'] = pd.to_datetime(df_hist['FECHA'])
             df_hist['VALUE'] = df_hist['VALUE'].round(2)
             
-            # --- CREACIÓN DEL GRÁFICO DE ÁREA DESVANECIDA ---
+            # 4.4. CREACIÓN DEL GRÁFICO DE ÁREA DESVANECIDA
             fig = go.Figure()
 
             fig.add_trace(go.Scatter(
@@ -520,7 +520,7 @@ if tag_a_graficar:
                 hovertemplate="<b>%{y:.2f} m</b><extra></extra>"
             ))
             
-            # --- CONFIGURACIÓN DE LA LÍNEA GUÍA (PUNTEADA GRIS) ---
+            # 4.5. CONFIGURACIÓN DE LA LÍNEA GUÍA (PUNTEADA GRIS)
             fig.update_xaxes(
                 showspikes=True, 
                 spikecolor="gray", 
@@ -563,7 +563,8 @@ if tag_a_graficar:
         st.error(f"Error en la consulta: {e}")
     
     st.stop()
-# 5  SECCION-----------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
+    
+# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
         /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
@@ -687,54 +688,55 @@ st.markdown("""
         .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
-# 6 SECCION------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
 
-# 1. Carga de datos base
+# 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
+
+# 6.1. Carga de datos base
 sectores = cargar_sectores_poligonos()
 mapa_pozos_dict = cargar_mapa_pozos_desde_db()
 mapa_tanques_dict = cargar_tanques_desde_db()
 mapa_rebombeos_dict = cargar_rebombeos_desde_db()
 
-# 2. Recolección de tags para la consulta masiva
+# 6.2. Recolección de tags para la consulta masiva
 tags_a_consultar = []
 
 for p in mapa_pozos_dict.values():
-    # Añadimos los campos que te faltaban: nivel_dinamico, sumergencia y columna
+    # 6.3. Añadimos los campos que te faltaban: nivel_dinamico, sumergencia y columna
     tags_a_consultar.extend([
         p['bomba'], 
         p['caudal'], 
         p['presion'], 
         p['nivel_tanque'],
-        p['nivel_dinamico'], # <-- AGREGADO
-        p['sumergencia'],     # <-- AGREGADO
-        p['columna']          # <-- AGREGADO
+        p['nivel_dinamico'],
+        p['sumergencia'],
+        p['columna']
     ])
-    # Voltajes y amperajes
+    # 6.4. Voltajes y amperajes
     tags_a_consultar.extend(p['voltajes_l'] + p['amperajes_l'])
 
-# Tags de Tanques
+# 6.5. Tags de Tanques
 for t in mapa_tanques_dict.values():
     if t['tag_nivel']: tags_a_consultar.append(t['tag_nivel'])
 
-# Tags de Rebombeos
+# 6.6. Tags de Rebombeos
 for r in mapa_rebombeos_dict.values():
     tags_a_consultar.extend([r['presion'], r['nivel_tanque']])
     tags_a_consultar.extend(r['voltajes_l'] + r['amperajes_l'])
 
-# Limpieza de la lista
+# 6.7. Limpieza de la lista
 tags_finales = list(set([str(t).strip() for t in tags_a_consultar if t and str(t) not in ['0', 'Sin telemetria', 'None']]))
 
-# 3. Consulta al SCADA pasando la LISTA corregida
+# 6.8. Consulta al SCADA pasando la LISTA corregida
 data_scada = cargar_datos_scada(tags_finales)
 
-# 4. Inicialización de contadores
+# 6.9. Inicialización de contadores
 pozos_on, pozos_off, pozos_sin_telemetria, pozos_falla_com = [], [], [], []
 total_q, total_p = 0.0, 0.0
 
 import datetime as dt
 ahora = dt.datetime.utcnow() - dt.timedelta(hours=6) 
 
-# --- LÓGICA DE POZOS ---
+# 6.10. LÓGICA DE POZOS
 for id_p, info in mapa_pozos_dict.items():
     bomba_val = str(info['bomba']).strip()
     if bomba_val == "Sin telemetria":
@@ -767,10 +769,9 @@ for id_p, info in mapa_pozos_dict.items():
             info.update({'status_label': 'APAGADO', 'color_final': '#FF0000', 'blink': True})
             pozos_off.append(id_p)
 
-# --- LÓGICA DE REBOMBEOS (CORREGIDA) ---
+# 6.11. LÓGICA DE REBOMBEOS (CORREGIDA) 
 for id_rb, info in mapa_rebombeos_dict.items():
-    # 1. Validar primero si el equipo está marcado como "Sin telemetria"
-    # Convertimos a string y quitamos espacios para asegurar la comparación
+
     telemetria_status = str(info.get('telemetria', '')).strip().lower()
     
     if telemetria_status == "sin telemetria":
@@ -780,7 +781,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
             'blink': False
         })
     else:
-        # 2. Si tiene telemetría, aplicar la lógica de presión actual
+        # 6.12. Si tiene telemetría, aplicar la lógica de presión actual
         pres_val, _ = data_scada.get(info['presion'], (0, "N/A"))
         if pres_val < 0.10:
             info.update({
@@ -796,16 +797,16 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7 VISTA DETALLE DEL SECTOR ---------------------------------------------
+# 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 1. Título superior fijo
+    # 7.1. Título superior fijo
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # --- A. ESTILOS PARA KPI Y COMPACIDAD ---
+        # 7.2. ESTILOS PARA KPI Y COMPACIDAD
         st.markdown("""
             <style>
                 .block-container { padding-top: 1rem !important; }
@@ -823,7 +824,7 @@ if sector_seleccionado:
             </style>
         """, unsafe_allow_html=True)
 
-        # KPIs superiores
+        # 7.3. KPIs superiores
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -835,7 +836,7 @@ if sector_seleccionado:
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
-        # --- B. LAYOUT: MAPA (IZQ) | GRÁFICO (DER) ---
+        # 7.4. LAYOUT: MAPA (IZQ) | GRÁFICO (DER)
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
@@ -855,7 +856,7 @@ if sector_seleccionado:
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
-            # 1. POLÍGONO (Enfoque del mapa)
+            # 7.5. POLÍGONO (Enfoque del mapa)
             try:
                 geo_data = json.loads(datos_s['geo'])
                 folium_geo = folium.GeoJson(
@@ -865,7 +866,7 @@ if sector_seleccionado:
                 m_sec.fit_bounds(folium_geo.get_bounds())
             except: pass
 
-            # 2. REGISTRADORES (CON POPUP RESTAURADO)
+            # 7.6. DESPLIEGUE DE LOS REGISTRADORES EN EL MAPA 
             dict_reg = cargar_registradores_desde_db()
             t_r = []
             for r in dict_reg.values():
@@ -893,7 +894,7 @@ if sector_seleccionado:
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
                               popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
 
-            # 3. POZOS (CON POPUP ORIGINAL COMPLETO)
+            # 7.7. DESPLIEGUE DE LOS POZOS EN EL MAPA 
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
@@ -909,20 +910,78 @@ if sector_seleccionado:
                     h_arr_val, f_h_arr = d(info['h_arranque']); h_par_val, f_h_par = d(info['h_paro'])
                     v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
 
-                    html_popup_sec = f"""
-                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 340px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                        <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
-                        <hr style="opacity:0.2;">
-                        <div style="font-size:11px;">
-                            💧 Q: <b>{q:.1f} L/s</b> | 🚀 P: <b>{p:.1f} kg</b><br>
-                            🔋 Tanque: <b>{tanq:.1f} m</b> | 📉 Dinámico: <b>{dinam:.1f} m</b><br>
-                            📏 Sumergencia: <b>{sumer:.1f} m</b> | 🏗️ Columna: <b>{col:.1f} m</b>
+               html_popup_sec = f"""
+                <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
+                        <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
+                        <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
                         </div>
-                        <table style="width: 100%; font-size: 10px; margin-top:8px; border-top:1px solid #222;">
-                            <tr style="color:#00d4ff;"><th>Fase</th><th>Voltaje</th><th>Amp</th></tr>
-                            <tr><td>L1-L2</td><td>{v[0][0]:.1f}V</td><td>{a[0][0]:.1f}A</td></tr>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>🚀 Presión: <b>{p:.2f} kg</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
+                    </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
+                        <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
+                            <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
+                                <th style="padding: 4px;">Fase</th>
+                                <th style="padding: 4px;">Voltaje / Act.</th>
+                                <th style="padding: 4px;">Amp / Act.</th>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #222;">
+                                <td style="padding: 6px 4px;">L1-L2</td>
+                                <td><b>{v[0][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[0][1]}</span></td>
+                                <td><b>{a[0][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[0][1]}</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #222;">
+                                <td style="padding: 6px 4px;">L2-L3</td>
+                                <td><b>{v[1][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[1][1]}</span></td>
+                                <td><b>{a[1][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[1][1]}</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 4px;">L1-L3</td>
+                                <td><b>{v[2][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[2][1]}</span></td>
+                                <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
+                            </tr>
                         </table>
-                    </div>"""
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>▶️ Arranque: <b>{h_arr_fmt}</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_arr}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>⏹️ Paro: <b>{h_par_fmt}</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
+                        </div>
+                    </div>
+                </div>
+                """
                     
                     if info.get('blink'):
                         folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
