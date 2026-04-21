@@ -800,40 +800,55 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Título superior fijo
-    st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
+    # 7.1. Título superior centrado
+    st.markdown(
+        f"""
+        <style>
+            .titulo-superior-centrado {{
+                text-align: center;
+                font-size: 24px;
+                font-weight: bold;
+                color: white;
+                margin-bottom: 10px;
+                padding: 10px 0;
+            }}
+            .metrics-container {{ 
+                margin-top: 0px; 
+                margin-bottom: 10px;
+                position: relative; 
+                z-index: 999;
+            }}
+            .micro-card {{
+                background: rgba(11, 26, 41, 0.95); 
+                border: 1px solid #1f4068;
+                border-radius: 4px; 
+                padding: 4px; 
+                text-align: center;
+            }}
+            .micro-label {{ color: #888; font-size: 9px; text-transform: uppercase; }}
+            .micro-value {{ color: #00d4ff; font-size: 14px; font-weight: bold; }}
+            .block-container {{ padding-top: 1rem !important; }}
+        </style>
+        <div class="titulo-superior-centrado">Análisis de Sector: {sector_seleccionado}</div>
+        """, 
+        unsafe_allow_html=True
+    )
     
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # 7.2. ESTILOS PARA KPI Y COMPACIDAD
-        st.markdown("""
-            <style>
-                .block-container { padding-top: 1rem !important; }
-                .metrics-container { 
-                    margin-top: -38px; 
-                    margin-bottom: 5px;
-                    position: relative; z-index: 999;
-                }
-                .micro-card {
-                    background: rgba(11, 26, 41, 0.95); border: 1px solid #1f4068;
-                    border-radius: 4px; padding: 4px; text-align: center;
-                }
-                .micro-label { color: #888; font-size: 9px; text-transform: uppercase; }
-                .micro-value { color: #00d4ff; font-size: 14px; font-weight: bold; }
-            </style>
-        """, unsafe_allow_html=True)
-
-        # 7.3. KPIs superiores
+        # 7.3. KPIs superiores organizados en columnas
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
+        
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
         with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
         with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
