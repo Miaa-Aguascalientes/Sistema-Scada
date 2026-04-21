@@ -911,7 +911,7 @@ if sector_seleccionado:
                     v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
 
                 # Tu HTML personalizado integrado
-                html_popup_sec = f"""
+                    html_popup_sec = f"""
                 <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
                         <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
