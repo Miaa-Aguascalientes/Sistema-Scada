@@ -925,7 +925,7 @@ if sector_seleccionado:
             
 
             # 7.5. POLÍGONO (Enfoque del mapa)
-            try:
+    try:
                 geo_data = json.loads(datos_s['geo'])
                 folium_geo = folium.GeoJson(
                     geo_data,
