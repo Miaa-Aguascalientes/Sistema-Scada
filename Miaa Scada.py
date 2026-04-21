@@ -980,8 +980,7 @@ if sector_seleccionado:
                             <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
                         </div>
                     </div>
-                </div>
-                """
+                </div>"""
                     
                     if info.get('blink'):
                         folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
