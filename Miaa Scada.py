@@ -921,11 +921,11 @@ if sector_seleccionado:
                     st.plotly_chart(fig, use_container_width=True)
                 else: st.info("Sin datos para este rango.")
 
-    st.stop()
+            st.stop()
             
 
             # 7.5. POLÍGONO (Enfoque del mapa)
-    try:
+                try:
                 geo_data = json.loads(datos_s['geo'])
                 folium_geo = folium.GeoJson(
                     geo_data,
