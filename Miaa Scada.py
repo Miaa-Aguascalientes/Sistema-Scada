@@ -863,9 +863,9 @@ if sector_seleccionado:
     
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
-    
+
+    # 7.2. Métricas de cabecera
     if datos_s:
-        # 7.2. Métricas de cabecera
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -903,14 +903,14 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # CARGA DATOS REGISTRADORES
+            # 7.5. CARGA DATOS REGISTRADORES
             tags_reg = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): tags_reg.append(r.get(k))
             scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
 
-            # Marcadores de Registradores
+            # 7.6. Marcadores de Registradores
             for r in dict_reg.values():
                 def get_rv(k):
                     val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
@@ -931,7 +931,7 @@ if sector_seleccionado:
                 """
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
 
-            # Marcadores de Pozos (Popup 380px Restaurado)
+            # 7.7. Marcadores de Pozos (Popup 380px Restaurado)
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
@@ -996,8 +996,8 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
+         # 7.8. Gráfico Histórico 
         with col_der:
-            # Gráfico Histórico - RESTAURADO NOMBRE DE TAGS
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
@@ -1011,7 +1011,7 @@ if sector_seleccionado:
             t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
             tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
 
-            if tags_grafico:
+            if tags_grafico_registradores:
                 try:
                     engine_h = get_mysql_scada_engine()
                     tags_in = "', '".join(tags_grafico)
