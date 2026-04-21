@@ -1039,7 +1039,7 @@ if sector_seleccionado:
 
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black', 
-                            height=350, # AQUI SE MODIFICA EL TAMAÑO DE LO ALTO DEL GRAFICO
+                            height=300, # AQUI SE MODIFICA EL TAMAÑO DE LO ALTO DEL GRAFICO
                             margin=dict(l=50, r=50, t=10, b=10),
                             hovermode="x unified", # ESTO ACTIVA VER TODOS LOS VALORES A LA VEZ
                             hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
