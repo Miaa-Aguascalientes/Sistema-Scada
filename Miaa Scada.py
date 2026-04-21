@@ -841,8 +841,7 @@ if sector_seleccionado:
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
-            # --- FILTROS DE TIEMPO ---
-            filtro_t = st.radio("Rango del gráfico:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True, key="filtro_t_sector")
+            filtro_t = st.radio("Rango del gráfico:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True)
             f_fin_h = datetime.now()
             if filtro_t == "Hoy": f_ini_h = f_fin_h.replace(hour=0, minute=0, second=0)
             elif filtro_t == "Ayer": 
@@ -854,90 +853,11 @@ if sector_seleccionado:
                 f_ini_h = cf1.date_input("Inicio", f_fin_h)
                 f_fin_h = cf2.date_input("Fin", f_fin_h)
 
-            # --- SELECCIÓN DE EQUIPO Y GRÁFICO ---
-            import plotly.graph_objects as go
-            dict_reg = cargar_registradores_desde_db()
-            reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-            sel_r = st.selectbox("Seleccionar equipo:", list(reg_nombres.keys()), key="sel_reg_sector")
-            r_info = dict_reg[reg_nombres[sel_r]]
-            
-            # Tags del equipo seleccionado
-            t_q = r_info.get('tag_q')
-            t_p1 = r_info.get('tag_p1')
-            t_p2 = r_info.get('tag_p2')
-            tags_busqueda = [t for t in [t_q, t_p1, t_p2] if t]
-
-            if tags_busqueda:
-                engine_h = get_mysql_scada_engine()
-                q_hist = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
-                    FROM vfitagnumhistory h
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{"', '".join(tags_busqueda)}')
-                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
-                    ORDER BY h.FECHA ASC
-                """
-                df_hist = pd.read_sql(q_hist, engine_h)
-
-                if not df_hist.empty:
-                    fig = go.Figure()
-
-                    # 1. TRAZAR CAUDAL (EJE Y1 - AZUL)
-                    if t_q:
-                        df_q = df_hist[df_hist['TAG'] == t_q]
-                        if not df_q.empty:
-                            fig.add_trace(go.Scatter(
-                                x=df_q['FECHA'], y=df_q['VALUE'],
-                                name=f"Caudal ({t_q})",
-                                line=dict(color='#0070FF', width=3),
-                                yaxis='y'
-                            ))
-
-                    # 2. TRAZAR PRESIONES (EJE Y2 - VERDE)
-                    for tp in [t_p1, t_p2]:
-                        if tp:
-                            df_p = df_hist[df_hist['TAG'] == tp]
-                            if not df_p.empty:
-                                fig.add_trace(go.Scatter(
-                                    x=df_p['FECHA'], y=df_p['VALUE'],
-                                    name=f"Presión ({tp})",
-                                    line=dict(color='#00FF00', width=1.5),
-                                    yaxis='y2'
-                                ))
-
-                    # 3. CONFIGURACIÓN FORZADA DEL LAYOUT
-                    fig.update_layout(
-                        template="plotly_dark", height=550,
-                        margin=dict(l=5, r=5, t=35, b=5),
-                        hovermode="x unified",
-                        xaxis=dict(title="Cronología", showgrid=False),
-                        # Eje Y1: Caudal (Izquierda)
-                        yaxis=dict(
-                            title="Caudal (L/s)", 
-                            titlefont=dict(color="#0070FF"), 
-                            tickfont=dict(color="#0070FF")
-                        ),
-                        # Eje Y2: Presión (Derecha)
-                        yaxis2=dict(
-                            title="Presión (kg/cm²)", 
-                            titlefont=dict(color="#00FF00"), 
-                            tickfont=dict(color="#00FF00"),
-                            overlaying='y', 
-                            side='right', 
-                            anchor='x',
-                            showgrid=False
-                        ),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.warning("No hay datos históricos para el periodo seleccionado.")
-
         with col_izq:
-            # 7.5. MAPA DEL SECTOR
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
+            # 7.5. POLÍGONO (Enfoque del mapa)
             try:
                 geo_data = json.loads(datos_s['geo'])
                 folium_geo = folium.GeoJson(
@@ -947,43 +867,148 @@ if sector_seleccionado:
                 m_sec.fit_bounds(folium_geo.get_bounds())
             except: pass
 
-            # 7.6. REGISTRADORES (Popups)
-            tags_r_mapa = []
+            # 7.6. DESPLIEGUE DE LOS REGISTRADORES EN EL MAPA 
+            dict_reg = cargar_registradores_desde_db()
+            t_r = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
-                    if r.get(k): tags_r_mapa.append(r.get(k))
-            scada_r = cargar_datos_scada(list(set(tags_r_mapa)))
+                    if r.get(k): t_r.append(r.get(k))
+            scada_r = cargar_datos_scada(list(set(t_r)))
 
             for r in dict_reg.values():
-                def gd(k):
-                    v, f = scada_r.get(r.get(k), (0.0, "N/A"))
+                def gd(key):
+                    v, f = scada_r.get(r.get(key), (0.0, "N/A"))
                     try: return float(v), f
                     except: return 0.0, "N/A"
-                c, _ = gd('tag_q'); p1, f1 = gd('tag_p1'); p2, _ = gd('tag_p2')
-                vb, _ = gd('tag_vbat'); idx, _ = gd('tag_idx')
+                p1, f1 = gd('tag_p1'); p2, _ = gd('tag_p2'); cau, _ = gd('tag_q')
+                vbat, _ = gd('tag_vbat'); idx, _ = gd('tag_idx')
 
-                h_r = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:220px; font-family:sans-serif;">
-                            <b style="color:#00FFFF;">{r['nombre']}</b><hr style="opacity:0.2; margin:5px 0;">
-                            <div style="font-size:11px;">💧 Q: <b>{c:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f}</b> | P2: <b>{p2:.2f}</b><br>🔋 Bat: <b>{vb:.2f}V</b><br> Lectura: {f1}</div>
-                          </div>"""
+                html_reg = f"""
+                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:230px; font-family:sans-serif;">
+                    <b style="color:#00FFFF;">REGISTRADOR: {r['nombre']}</b><hr style="opacity:0.2; margin:5px 0;">
+                    <div style="font-size:11px;">
+                        💧 Caudal: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b> | P2: <b>{p2:.2f} kg</b><br>
+                        🔢 Índice: <b>{idx:,.1f} m³</b><br>🔋 Batería: <b>{vbat:.2f} V</b>
+                        <p style="color:yellow; font-size:9px; margin-top:5px;">Lectura: {f1}</p>
+                    </div>
+                </div>"""
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
-                            popup=folium.Popup(h_r, max_width=300)).add_to(m_sec)
+                              popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
 
-            # 7.7. POZOS (Popups)
+            # 7.7. DESPLIEGUE DE LOS POZOS EN EL MAPA 
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
                     info = mapa_pozos_dict[id_p]
-                    d_p = lambda t: data_scada.get(t, (0, "N/A"))
-                    q_p, _ = d_p(info['caudal']); p_p, _ = d_p(info['presion'])
-                    h_p = f"""<div style="background:#050505; color:white; padding:10px; border-radius:8px; border:1px solid {info['color_final']}; width:200px;">
-                                <b style="color:#00d4ff;">POZO {id_p}</b><hr style="opacity:0.2;">
-                                <div style="font-size:11px;">💧 Q: <b>{q_p:.2f} L/s</b><br>🚀 P: <b>{p_p:.2f} kg</b></div>
-                              </div>"""
-                    folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True,
-                                        popup=folium.Popup(h_p, max_width=250)).add_to(m_sec)
+                    d = lambda tag: data_scada.get(tag, (0, "N/A"))
+                    is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                    q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
+                    p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+                    sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
+                    dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
+                    tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
+                    col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
+                    h_arr_val, f_h_arr = d(info['h_arranque']); h_par_val, f_h_par = d(info['h_paro'])
+                    v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
+
+                    html_popup_sec = f"""
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 340px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                        <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
+                        <hr style="opacity:0.2;">
+                        <div style="font-size:11px;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>🚀 Presión: <b>{p:.2f} kg</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
+                    </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
+                        <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
+                            <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
+                                <th style="padding: 4px;">Fase</th>
+                                <th style="padding: 4px;">Voltaje / Act.</th>
+                                <th style="padding: 4px;">Amp / Act.</th>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #222;">
+                                <td style="padding: 6px 4px;">L1-L2</td>
+                                <td><b>{v[0][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[0][1]}</span></td>
+                                <td><b>{a[0][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[0][1]}</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #222;">
+                                <td style="padding: 6px 4px;">L2-L3</td>
+                                <td><b>{v[1][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[1][1]}</span></td>
+                                <td><b>{a[1][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[1][1]}</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 4px;">L1-L3</td>
+                                <td><b>{v[2][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[2][1]}</span></td>
+                                <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
+                            </tr>
+                        </table>
+
+                    </div>
+                </div>
+                """
+                    
+                    if info.get('blink'):
+                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
+                                      popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                    else:
+                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1,
+                                            popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
             folium_static(m_sec, width=None, height=700)
+
+        with col_der:
+            # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA
+            reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+            sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
+            r_info = dict_reg[reg_nombres[sel_r]]
+            t_hist = [r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')]
+            t_hist = [t for t in t_hist if t]
+
+            if t_hist:
+                engine_h = get_mysql_scada_engine()
+                q_hist = f"""
+                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
+                    FROM vfitagnumhistory h
+                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
+                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
+                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
+                    ORDER BY h.FECHA ASC
+                """
+                df_hist = pd.read_sql(q_hist, engine_h)
+                if not df_hist.empty:
+                    import plotly.express as px
+                    fig = px.line(df_hist, x='FECHA', y='VALUE', color='TAG', template="plotly_dark")
+                    fig.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
+                    st.plotly_chart(fig, use_container_width=True)
+                else: st.info("Sin datos para este rango.")
 
     st.stop()
     
