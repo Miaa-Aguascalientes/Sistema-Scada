@@ -844,7 +844,6 @@ if sector_seleccionado:
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
-            /* BAJA SOLO EL MAPA */
             .col-mapa-offset {{
                 margin-top: 40px !important; 
             }}
@@ -879,15 +878,15 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.3. SELECTORES (Pegados arriba)
+        # 7.3. SELECTORES
         dict_reg = cargar_registradores_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_det_final")
+            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_hover_rest")
         with c_sel2:
-            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="reg_det_final")
+            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="reg_hover_rest")
 
         # 7.4. LAYOUT PRINCIPAL
         col_izq, col_der = st.columns([1.1, 0.9])
@@ -897,7 +896,6 @@ if sector_seleccionado:
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
-            # Dibujar Polígono del Sector
             if datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
@@ -905,14 +903,13 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # CARGAR DATOS PARA MARCADORES
+            # Lógica de marcadores (Mantenida exactamente igual para no romper popups)
             t_m = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): t_m.append(r.get(k))
             scada_data_m = cargar_datos_scada(list(set(t_m)))
 
-            # Marcadores de Registradores
             for r in dict_reg.values():
                 def gv(k):
                     val, f = scada_data_m.get(r.get(k), (0.0, "N/A"))
@@ -922,12 +919,11 @@ if sector_seleccionado:
                 h_r = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:220px;"><b style="color:#00FFFF;">{r['nombre']}</b><hr style="opacity:0.2;"><div style="font-size:11px;">💧 Q: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b><br>🔋 Bat: <b>{vbat:.2f} V</b></div></div>"""
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(h_r, max_width=300)).add_to(m_sec)
 
-            # Marcadores de Pozos del Sector
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
                     info = mapa_pozos_dict[id_p]
-                    d_sc = lambda t: data_scada.get(t, (0, "N/A")) # Usar data_scada global ya cargada
+                    d_sc = lambda t: data_scada.get(t, (0, "N/A"))
                     is_st = (info['status_label'] == 'SIN TELEMETRÍA')
                     q, _ = d_sc(info['caudal']) if not is_st else (0.0, "N/A")
                     p, _ = d_sc(info['presion']) if not is_st else (0.0, "N/A")
@@ -941,14 +937,14 @@ if sector_seleccionado:
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col_der:
-            # Gráfico Histórico
+            # Gráfico Histórico con HOVER UNIFIED RESTAURADO
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
             elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
             elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
             else:
-                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_det")
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_det_final")
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
             r_info = dict_reg[reg_nombres[sel_r]]
@@ -965,18 +961,26 @@ if sector_seleccionado:
                     if not df_h.empty:
                         import plotly.graph_objects as go
                         fig = go.Figure()
+                        
+                        # Trace Caudal
                         if t_q and not df_h[df_h['TAG'] == t_q].empty:
                             df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Q: {t_q}", line=dict(color='#00d4ff', width=2)))
+                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Caudal", line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
+                        
+                        # Trace Presión 1
                         if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
                             df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1: {t_p1}", yaxis="y2", line=dict(color='#ff00ff', width=2)))
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
+                        
+                        # Trace Presión 2
                         if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
                             df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2: {t_p2}", yaxis="y2", line=dict(color='#00ff00', width=2)))
+                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black', height=550, margin=dict(l=50, r=50, t=10, b=10),
+                            hovermode="x unified", # ESTO ACTIVA VER TODOS LOS VALORES A LA VEZ
+                            hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
                             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
                             xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
                             yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
