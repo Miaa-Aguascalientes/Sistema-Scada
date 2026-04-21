@@ -841,22 +841,21 @@ if sector_seleccionado:
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
-            # Filtros de tiempo para el gráfico
+            # --- FILTROS DE TIEMPO ---
             filtro_t = st.radio("Rango del gráfico:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True)
             f_fin_h = datetime.now()
             if filtro_t == "Hoy": f_ini_h = f_fin_h.replace(hour=0, minute=0, second=0)
             elif filtro_t == "Ayer": 
                 f_ini_h = (f_fin_h - timedelta(days=1)).replace(hour=0, minute=0, second=0)
-                f_fin_h = f_fin_h.replace(hour=0, minute=0, second=0)
+                f_fin_h = (datetime.now()).replace(hour=0, minute=0, second=0)
             elif filtro_t == "Semana": f_ini_h = f_fin_h - timedelta(days=7)
             else:
                 cf1, cf2 = st.columns(2)
                 f_ini_h = cf1.date_input("Inicio", f_fin_h)
                 f_fin_h = cf2.date_input("Fin", f_fin_h)
 
-            # --- 7.8. LÓGICA DE DATOS HISTÓRICOS Y GRÁFICO (DENTRO DE COL_DER) ---
+            # --- SELECCIÓN DE EQUIPO Y OBTENCIÓN DE DATOS ---
             import plotly.graph_objects as go
-            
             dict_reg = cargar_registradores_desde_db()
             reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
             sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
@@ -884,39 +883,50 @@ if sector_seleccionado:
 
                     for tag in df_hist['TAG'].unique():
                         df_tag = df_hist[df_hist['TAG'] == tag]
+                        
                         if tag == tag_caudal:
+                            # --- CAUDAL: AZUL, EJE IZQUIERDO, 2 DECIMALES ---
                             fig.add_trace(go.Scatter(
                                 x=df_tag['FECHA'], y=df_tag['VALUE'],
                                 name=f"Caudal ({tag})",
-                                line=dict(color='blue', width=2),
+                                line=dict(color='blue', width=2.5),
                                 yaxis='y1',
                                 hovertemplate='Caudal: %{y:.2f} L/s<extra></extra>'
                             ))
                         elif tag in tags_presion:
+                            # --- PRESIONES: VERDE, EJE DERECHO, 2 DECIMALES ---
                             fig.add_trace(go.Scatter(
                                 x=df_tag['FECHA'], y=df_tag['VALUE'],
                                 name=f"Presión ({tag})",
                                 line=dict(color='green', width=1.5),
                                 yaxis='y2',
-                                hovertemplate='Presión: %{y:.2f} kg<extra></extra>'
+                                hovertemplate='Presión: %{y:.2f} kg/cm²<extra></extra>'
                             ))
 
                     fig.update_layout(
-                        template="plotly_dark", height=500,
-                        margin=dict(l=0, r=0, t=30, b=0),
+                        template="plotly_dark", height=550,
+                        margin=dict(l=10, r=10, t=35, b=10),
                         hovermode="x unified",
-                        xaxis=dict(title="Fecha y Hora", showgrid=False),
-                        yaxis=dict(title="Caudal (L/s)", titlefont=dict(color="blue"), tickfont=dict(color="blue"), gridcolor="#333"),
-                        yaxis2=dict(title="Presión (kg/cm²)", titlefont=dict(color="green"), tickfont=dict(color="green"), 
-                                    anchor="x", overlaying="y", side="right", showgrid=False),
+                        xaxis=dict(title="Cronología", showgrid=False),
+                        # Eje Izquierdo: Caudal
+                        yaxis=dict(
+                            title="Caudal (L/s)", titlefont=dict(color="blue"), 
+                            tickfont=dict(color="blue"), gridcolor="#222"
+                        ),
+                        # Eje Derecho: Presión
+                        yaxis2=dict(
+                            title="Presión (kg/cm²)", titlefont=dict(color="green"), 
+                            tickfont=dict(color="green"), anchor="x", 
+                            overlaying="y", side="right", showgrid=False
+                        ),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.info("Sin datos para este rango.")
+                    st.info("Sin registros históricos en este periodo.")
 
         with col_izq:
-            # 7.5. MAPA Y POLÍGONO
+            # 7.5. MAPA Y POLÍGONO DEL SECTOR
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
@@ -929,7 +939,7 @@ if sector_seleccionado:
                 m_sec.fit_bounds(folium_geo.get_bounds())
             except: pass
 
-            # 7.6. REGISTRADORES EN MAPA (Manteniendo tu lógica de popups)
+            # 7.6. REGISTRADORES (Popups intactos)
             t_r = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
@@ -956,7 +966,7 @@ if sector_seleccionado:
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
                             popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
 
-            # 7.7. POZOS EN MAPA (Manteniendo tu diseño complejo de popup)
+            # 7.7. POZOS (Popups intactos)
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
@@ -969,8 +979,6 @@ if sector_seleccionado:
                     dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
                     tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
                     col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
-                    
-                    # (Resto de tu lógica de popup idéntica...)
                     v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
 
                     html_popup_sec = f"""
@@ -978,32 +986,16 @@ if sector_seleccionado:
                         <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
                         <hr style="opacity:0.2;">
                         <div style="font-size:11px;">
-                            <div style="margin-bottom: 12px;">
-                                <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
-                                <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                                    <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
-                                    <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
-                                </div>
-                                <div style="display: flex; align-items: baseline; font-size: 11px;">
-                                    <span>🚀 Presión: <b>{p:.2f} kg</b></span>
-                                    <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
-                                </div>
+                            <div style="margin-bottom: 8px;">
+                                <div style="font-size: 10px; color: #888;">HIDRÁULICA</div>
+                                💧 Caudal: <b>{q:.2f} L/s</b> | 🚀 Presión: <b>{p:.2f} kg</b>
                             </div>
-                            <div style="margin-bottom: 12px;">
-                                <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
-                                <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                                    <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
-                                    <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
-                                </div>
-                                <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                                    <span>📉 Nivel Dinámico: <b>{dinam:.2f} m</b></span>
-                                    <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                                </div>
+                            <div style="margin-bottom: 8px;">
+                                <div style="font-size: 10px; color: #888;">NIVELES</div>
+                                🔋 Tanque: <b>{tanq:.2f} m</b> | 📉 Dinámico: <b>{dinam:.2f} m</b>
                             </div>
                             <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
-                                <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
-                                    <th>Fase</th><th>Voltaje</th><th>Amp</th>
-                                </tr>
+                                <tr style="color: #00d4ff; border-bottom: 1px solid #333;"><th>Fase</th><th>Voltaje</th><th>Amp</th></tr>
                                 <tr><td>L1-L2</td><td>{v[0][0]:.1f}V</td><td>{a[0][0]:.1f}A</td></tr>
                                 <tr><td>L2-L3</td><td>{v[1][0]:.1f}V</td><td>{a[1][0]:.1f}A</td></tr>
                                 <tr><td>L1-L3</td><td>{v[2][0]:.1f}V</td><td>{a[2][0]:.1f}A</td></tr>
