@@ -800,32 +800,25 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. TÍTULO SUPERIOR FIJO
+    # 7.1. Título superior
     st.markdown(f'<div class="titulo-superior">Análisis de Sector: {sector_seleccionado}</div>', unsafe_allow_html=True)
     
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # 7.2. ESTILOS PARA KPI Y COMPACIDAD (CSS)
+        # 7.2. ESTILOS CSS
         st.markdown("""
             <style>
                 .block-container { padding-top: 1rem !important; }
-                .metrics-container { 
-                    margin-top: -38px; 
-                    margin-bottom: 5px;
-                    position: relative; z-index: 999;
-                }
-                .micro-card {
-                    background: rgba(11, 26, 41, 0.95); border: 1px solid #1f4068;
-                    border-radius: 4px; padding: 4px; text-align: center;
-                }
+                .metrics-container { margin-top: -38px; margin-bottom: 5px; position: relative; z-index: 999; }
+                .micro-card { background: rgba(11, 26, 41, 0.95); border: 1px solid #1f4068; border-radius: 4px; padding: 4px; text-align: center; }
                 .micro-label { color: #888; font-size: 9px; text-transform: uppercase; }
                 .micro-value { color: #00d4ff; font-size: 14px; font-weight: bold; }
             </style>
         """, unsafe_allow_html=True)
 
-        # 7.3. BLOQUE DE KPIs SUPERIORES
+        # 7.3. KPIs
         st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -837,28 +830,28 @@ if sector_seleccionado:
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
-        # 7.4. DIVISIÓN EN COLUMNAS: MAPA (IZQ) | GRÁFICO (DER)
+        # 7.4. LAYOUT COLUMNAS
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
-            # --- FILTROS DE TIEMPO ---
-            filtro_t = st.radio("Rango del histórico:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True, key="filtro_hist")
+            # FILTROS DE TIEMPO
+            filtro_t = st.radio("Rango:", ["Hoy", "Ayer", "Semana", "Personalizado"], horizontal=True, key="f_h_7")
             f_fin_h = datetime.now()
             if filtro_t == "Hoy": f_ini_h = f_fin_h.replace(hour=0, minute=0, second=0)
             elif filtro_t == "Ayer": 
                 f_ini_h = (f_fin_h - timedelta(days=1)).replace(hour=0, minute=0, second=0)
-                f_fin_h = (datetime.now()).replace(hour=0, minute=0, second=0)
+                f_fin_h = f_fin_h.replace(hour=0, minute=0, second=0)
             elif filtro_t == "Semana": f_ini_h = f_fin_h - timedelta(days=7)
             else:
                 cf1, cf2 = st.columns(2)
                 f_ini_h = cf1.date_input("Inicio", f_fin_h)
                 f_fin_h = cf2.date_input("Fin", f_fin_h)
 
-            # --- OBTENCIÓN DE DATOS HISTÓRICOS ---
+            # DATA FETCHING
             import plotly.graph_objects as go
             dict_reg = cargar_registradores_desde_db()
             reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-            sel_r = st.selectbox("Seleccionar equipo:", list(reg_nombres.keys()), key="sel_equipo_graf")
+            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_7")
             r_info = dict_reg[reg_nombres[sel_r]]
             
             tag_q = r_info.get('tag_q')
@@ -867,137 +860,93 @@ if sector_seleccionado:
 
             if t_hist:
                 engine_h = get_mysql_scada_engine()
-                q_hist = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG
-                    FROM vfitagnumhistory h
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{"', '".join(t_hist)}')
-                    AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
-                    ORDER BY h.FECHA ASC
-                """
+                q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{\"', '\".join(t_hist)}') AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}' ORDER BY h.FECHA ASC"
                 df_hist = pd.read_sql(q_hist, engine_h)
 
                 if not df_hist.empty:
+                    # --- CONSTRUCCIÓN DEL GRÁFICO (REFORZADA) ---
                     fig = go.Figure()
 
-                    # TRAZAR CAUDAL (EJE Y1 - IZQUIERDA)
+                    # 1. Agregar Caudal
                     df_q = df_hist[df_hist['TAG'] == tag_q]
                     if not df_q.empty:
                         fig.add_trace(go.Scatter(
                             x=df_q['FECHA'], y=df_q['VALUE'],
                             name="Caudal (L/s)",
-                            line=dict(color='#0000FF', width=3),
-                            yaxis='y1',
-                            hovertemplate='Caudal: %{y:.2f} L/s<extra></extra>'
+                            line=dict(color='#007bff', width=3),
+                            yaxis='y' # Eje principal
                         ))
 
-                    # TRAZAR PRESIONES (EJE Y2 - DERECHA)
+                    # 2. Agregar Presiones
                     for tp in tags_p:
                         df_p = df_hist[df_hist['TAG'] == tp]
                         if not df_p.empty:
                             fig.add_trace(go.Scatter(
                                 x=df_p['FECHA'], y=df_p['VALUE'],
-                                name=f"Presión ({tp})",
-                                line=dict(color='#00FF00', width=1.5),
-                                yaxis='y2',
-                                hovertemplate='Presión: %{y:.2f} kg/cm²<extra></extra>'
+                                name=f"Presión {tp}",
+                                line=dict(color='#28a745', width=2),
+                                yaxis='y2' # SEGUNDO EJE FORZADO
                             ))
 
-                    # CONFIGURACIÓN DE DOBLE EJE Y LAYOUT
+                    # 3. LAYOUT DEFINITIVO PARA DOBLE EJE
                     fig.update_layout(
-                        template="plotly_dark", height=550,
-                        margin=dict(l=10, r=10, t=35, b=10),
+                        template="plotly_dark",
+                        height=550,
+                        margin=dict(l=5, r=5, t=30, b=5),
                         hovermode="x unified",
                         xaxis=dict(title="Tiempo", showgrid=False),
+                        # Configuración Eje Izquierdo (Caudal)
                         yaxis=dict(
-                            title="Caudal (L/s)", titlefont=dict(color="#0000FF"), 
-                            tickfont=dict(color="#0000FF"), gridcolor="#222"
+                            title="Caudal (L/s)",
+                            titlefont=dict(color="#007bff"),
+                            tickfont=dict(color="#007bff"),
+                            gridcolor="#333"
                         ),
+                        # Configuración Eje Derecho (Presión)
                         yaxis2=dict(
-                            title="Presión (kg/cm²)", titlefont=dict(color="#00FF00"), 
-                            tickfont=dict(color="#00FF00"), anchor="x", 
-                            overlaying="y", side="right", showgrid=False
+                            title="Presión (kg/cm²)",
+                            titlefont=dict(color="#28a745"),
+                            tickfont=dict(color="#28a745"),
+                            anchor="x",
+                            overlaying="y",
+                            side="right",
+                            showgrid=False,
+                            # Forzamos un rango razonable para que la escala sea visible
+                            range=[0, max(df_hist[df_hist['TAG'].isin(tags_p)]['VALUE'].max() * 1.2, 5) if not df_hist[df_hist['TAG'].isin(tags_p)].empty else [0,10]]
                         ),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
                     st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("Sin registros históricos para este equipo en las fechas seleccionadas.")
 
         with col_izq:
-            # --- MAPA DEL SECTOR ---
+            # --- MAPA ---
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
 
-            # Polígono del Sector
+            # Polígono
             try:
                 geo_data = json.loads(datos_s['geo'])
-                folium_geo = folium.GeoJson(
-                    geo_data,
-                    style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
-                ).add_to(m_sec)
+                folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
                 m_sec.fit_bounds(folium_geo.get_bounds())
             except: pass
 
-            # Marcadores de Registradores
-            t_r = []
+            # Registradores en Mapa
+            scada_r = cargar_datos_scada(list(set(t_r))) if 't_r' in locals() else {}
             for r in dict_reg.values():
-                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat', 'tag_idx']:
-                    if r.get(k): t_r.append(r.get(k))
-            scada_r = cargar_datos_scada(list(set(t_r)))
+                val_q, _ = scada_r.get(r.get('tag_q'), (0.0, "N/A"))
+                p1, _ = scada_r.get(r.get('tag_p1'), (0.0, "N/A"))
+                html_r = f'<div style="background:#000; color:#fff; padding:8px; border:1px solid #00FFFF; border-radius:5px; font-size:11px;"><b>{r["nombre"]}</b><br>Q: {val_q} L/s<br>P1: {p1} kg</div>'
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_r, max_width=200)).add_to(m_sec)
 
-            for r in dict_reg.values():
-                def gd(key):
-                    val, f = scada_r.get(r.get(key), (0.0, "N/A"))
-                    try: return float(val), f
-                    except: return 0.0, "N/A"
-                p1, f1 = gd('tag_p1'); p2, _ = gd('tag_p2'); cau, _ = gd('tag_q')
-                vbat, _ = gd('tag_vbat'); idx, _ = gd('tag_idx')
-
-                html_reg = f"""
-                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:230px; font-family:sans-serif;">
-                    <b style="color:#00FFFF;">REGISTRADOR: {r['nombre']}</b><hr style="opacity:0.2; margin:5px 0;">
-                    <div style="font-size:11px;">
-                        💧 Caudal: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b> | P2: <b>{p2:.2f} kg</b><br>
-                        🔢 Índice: <b>{idx:,.1f} m³</b><br>🔋 Batería: <b>{vbat:.2f} V</b>
-                        <p style="color:yellow; font-size:9px; margin-top:5px;">Lectura: {f1}</p>
-                    </div>
-                </div>"""
-                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
-                            popup=folium.Popup(html_reg, max_width=300)).add_to(m_sec)
-
-            # Marcadores de Pozos
+            # Pozos en Mapa
             ids_pozos = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_pozos:
                 if id_p in mapa_pozos_dict:
                     info = mapa_pozos_dict[id_p]
-                    d = lambda tag: data_scada.get(tag, (0, "N/A"))
-                    q, _ = d(info['caudal']); p, _ = d(info['presion'])
-                    tanq, _ = d(info['nivel_tanque']); dinam, _ = d(info['nivel_dinamico'])
-                    v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
-
-                    html_popup_sec = f"""
-                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 340px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                        <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
-                        <hr style="opacity:0.2;">
-                        <div style="font-size:11px;">
-                            💧 Caudal: <b>{q:.2f} L/s</b> | 🚀 Presión: <b>{p:.2f} kg</b><br>
-                            🔋 Tanque: <b>{tanq:.2f} m</b> | 📉 Dinámico: <b>{dinam:.2f} m</b>
-                            <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-top:5px;">
-                                <tr style="color: #00d4ff; border-bottom: 1px solid #333;"><th>Fase</th><th>V</th><th>A</th></tr>
-                                <tr><td>L1-L2</td><td>{v[0][0]:.0f}V</td><td>{a[0][0]:.1f}A</td></tr>
-                                <tr><td>L2-L3</td><td>{v[1][0]:.0f}V</td><td>{a[1][0]:.1f}A</td></tr>
-                                <tr><td>L1-L3</td><td>{v[2][0]:.0f}V</td><td>{a[2][0]:.1f}A</td></tr>
-                            </table>
-                        </div>
-                    </div>"""
-                    
-                    if info.get('blink'):
-                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                                    popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
-                    else:
-                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1,
-                                            popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                    q_p, _ = data_scada.get(info['caudal'], (0, "N/A"))
+                    p_p, _ = data_scada.get(info['presion'], (0, "N/A"))
+                    html_p = f'<div style="background:#000; color:#fff; padding:8px; border:1px solid {info["color_final"]}; border-radius:5px; font-size:11px;"><b>POZO {id_p}</b><br>Q: {q_p} L/s<br>P: {p_p} kg</div>'
+                    folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, popup=folium.Popup(html_p, max_width=250)).add_to(m_sec)
 
             folium_static(m_sec, width=None, height=700)
 
