@@ -834,7 +834,7 @@ if sector_seleccionado:
 
             /* 4. Contenedor de indicadores pegado al título */
             .metrics-row {{
-                margin-top: 60px !important;
+                margin-top: 10px !important;
                 margin-bottom: -10px !important;
             }}
 
