@@ -1009,6 +1009,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=600)
         
         st.markdown('</div>', unsafe_allow_html=True)
+        st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
