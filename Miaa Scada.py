@@ -910,7 +910,6 @@ if sector_seleccionado:
                     h_arr_val, f_h_arr = d(info['h_arranque']); h_par_val, f_h_par = d(info['h_paro'])
                     v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
 
-                # Tu HTML personalizado integrado
                     html_popup_sec = f"""
                     <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 340px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                         <b style="color: #00d4ff;">POZO {id_p}</b> <span style="font-size:9px; float:right; background:{info['color_final']}; color:black; padding:2px 5px; border-radius:3px; font-weight:bold;">{info['status_label']}</span>
@@ -985,7 +984,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=700)
 
         with col_der:
-            # --- C. GRÁFICO DE TENDENCIA ---
+            # 7.8. GRÁFICO DE TENDENCIA EN LA PARTE DERECHA DEL MAPA
             reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
             sel_r = st.selectbox("Seleccionar equipo para tendencia:", list(reg_nombres.keys()))
             r_info = dict_reg[reg_nombres[sel_r]]
@@ -1012,17 +1011,17 @@ if sector_seleccionado:
 
     st.stop()
     
-# 8 SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
+# 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
-    # Contenedor del logo
+    # 8.1. Contenedor del logo
     st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg"></div>', unsafe_allow_html=True)
 
-    # 1. Inicializamos variables de estado (Solo si no existen)
+    # 8.2. Inicializamos variables de estado (Solo si no existen)
     if 'centro_mapa' not in st.session_state:
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
 
-    # --- RESUMEN GLOBAL ---
+    # 8.3. RESUMEN GLOBAL
     st.markdown(f"""
         <div class="resumen-card">
             <h4 style="color:#00d4ff; margin-top:0;">RESUMEN GLOBAL</h4>
@@ -1031,7 +1030,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
     
-    # --- ESTADO DE LAS CONEXIONES ---    
+    # 8.4. ESTADO DE LAS CONEXIONES
     with st.expander("🔌 Estado de las Conexiones", expanded=False):
         status_mysql_scada = "OK" if get_mysql_scada_engine() else "ERROR"
         status_mysql_tele = "OK" if get_mysql_telemetria_engine() else "ERROR"
@@ -1051,7 +1050,7 @@ with st.sidebar:
         render_status_line("BD-Diccionarios:", status_mysql_tele)
         render_status_line("BD-PostgreSQL:", status_postgres)
     
-    # 2. Buscador de Pozos
+    # 8.5. Buscador de Pozos
     lista_pozos_nombres = sorted(list(mapa_pozos_dict.keys()))
     pozo_buscado = st.selectbox(
         "🔍 Localizar Sitio",
@@ -1059,7 +1058,7 @@ with st.sidebar:
         format_func=lambda x: "Seleccionar Sitio..." if x == "" else f" {x}"
     )
 
-    # 3. Buscador de Sectores
+    # 8.6. Buscador de Sectores
     lista_sectores = sorted([s['sector'] for s in sectores])
     sector_buscado = st.selectbox(
         "🏘️ Localizar Sector",
@@ -1068,15 +1067,12 @@ with st.sidebar:
         key="busqueda_sectores"
     )
 
-    # 4. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
+    # 8.7. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
     datos_sector_resaltado = None
-
     if pozo_buscado:
-        # Prioridad 1: Pozo seleccionado
         st.session_state.centro_mapa = mapa_pozos_dict[pozo_buscado]['coord']
         st.session_state.zoom_inicial = 18
     elif sector_buscado:
-        # Prioridad 2: Sector seleccionado
         datos_s = next((s for s in sectores if s['sector'] == sector_buscado), None)
         if datos_s:
             datos_sector_resaltado = datos_s
@@ -1088,24 +1084,23 @@ with st.sidebar:
             except:
                 pass
     else:
-        # Prioridad 3: Si no hay nada seleccionado, mantener o resetear a vista general
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
         
-    # --- BOTON ACTUALIZAR ---
+    # 8.8. BOTON ACTUALIZAR ---
     if st.button("♻️ Actualizar Datos", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
         st.rerun()
         
-    # --- CONTROL DE CAPAS ---
+    # 8.9. CONTROL DE CAPAS ---
     with st.expander("🗺️ Control de Capas", expanded=False):
         ver_sectores = st.checkbox("Mostrar Sectores", value=True)
         ver_pozos = st.checkbox("Mostrar Pozos", value=True)
         ver_tanques = st.checkbox("Mostrar Tanques", value=False)
         ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=False)
     
-    # --- LISTADO DE ESTADOS ---
+    # 8.10, LISTADO DE ESTADOS ---
     with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
         for p in sorted(pozos_on): 
             st.write(f"🟢 {p}")
@@ -1123,14 +1118,13 @@ with st.sidebar:
         with st.expander(f"⚪ Sin Telemetría ({len(pozos_sin_telemetria)})", expanded=False):
             for p in sorted(pozos_sin_telemetria): 
                 st.write(f"⚪ {p}")
-# 9  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
-# DASHBOARD
+                
+# 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
+# 9.1. DASHBOARD
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
-# Proporción ultra-ancha para el mapa (90% mapa, 10% capas)
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
 with col_mapa:
-    # Usamos las variables guardadas en el estado de la sesión
     m = folium.Map(
         location=st.session_state.centro_mapa, 
         zoom_start=st.session_state.zoom_inicial, 
@@ -1138,14 +1132,14 @@ with col_mapa:
     )
     Fullscreen().add_to(m)
 
-# Añadir el resaltado del sector si existe
+# 9.2. Añadir el resaltado del sector si existe
     if datos_sector_resaltado:
         folium.GeoJson(
             json.loads(datos_sector_resaltado['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 3, 'fillOpacity': 0.4}
         ).add_to(m)
 
-    # FUNCIÓN PARA HORARIO 00:00
+    # 9.3. FUNCIÓN PARA HORARIO 00:00
     def formato_hora(decimal):
         try:
             if decimal == "N/A" or decimal is None: return "00:00"
@@ -1155,7 +1149,7 @@ with col_mapa:
         except:
             return "00:00"
 
-    # FUNCIÓN PARA ICONO PARPADEANTE PEQUEÑO (8px)
+    # 9.4. FUNCIÓN PARA ICONO PARPADEANTE PEQUEÑO (8px)
     def get_blink_icon(color):
         return f"""
         <div style="
@@ -1170,9 +1164,8 @@ with col_mapa:
         </style>
         """
 
-# -------------------------------------------------------------------------------------- RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------------------------------------
+# 9.5. RENDERIZADO DE SECTORES (CON RESALTADO RESTAURADO) --------------------------------------------
 
-# 1. Definimos una función de estilo estática para evitar cálculos pesados en el loop
 def get_sector_style(feature, visible):
     return {
         'fillColor': '#00d4ff',
@@ -1181,7 +1174,6 @@ def get_sector_style(feature, visible):
         'fillOpacity': 0.12 if visible else 0.01, # Nunca 0 para que el objeto exista en el DOM
     }
 
-# 1. Cargamos los datos con tu función de caché
 sectores_data = cargar_sectores_poligonos()
 
 if sectores_data:
@@ -1194,12 +1186,9 @@ if sectores_data:
             nombre_sec = s['sector']
             geo_dict = json.loads(s['geo'])
             
-            # 2. Reconstrucción del enlace de acceso (Botón)
-            # Usamos quote para manejar espacios o caracteres especiales en el nombre del sector
             sector_encoded = urllib.parse.quote(nombre_sec)
             url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.rol}"
             
-            # 3. Popup con diseño y botón restaurado
             html_popup = f"""
             <div style="font-family: 'Segoe UI', sans-serif; width: 220px; background-color: #0b1a29; color: white; padding: 12px; border-radius: 10px; border: 1px dashed #00d4ff;">
                 <h4 style="margin:0 0 8px 0; color:#00d4ff; text-align:center;">{nombre_sec}</h4>
@@ -1244,7 +1233,8 @@ if sectores_data:
 
     fg_sectores.add_to(m)
     
-    # ------------------------------------------------------------------------------ RENDERIZADO DE POZOS (UNIFICADO) ---------------------------------------------------------------------------------------------
+    # 9.6. RENDERIZADO DE POZOS ---------------------------------------------------------------------------------------------
+    
     # Usamos solo 'ver_pozos' para controlar ambas cosas
     for id_p, info in mapa_pozos_dict.items():
         if ver_pozos:  # Si el checkbox está activo, dibujamos todo
