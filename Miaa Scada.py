@@ -910,7 +910,8 @@ if sector_seleccionado:
                     h_arr_val, f_h_arr = d(info['h_arranque']); h_par_val, f_h_par = d(info['h_paro'])
                     v = [d(t) for t in info['voltajes_l']]; a = [d(t) for t in info['amperajes_l']]
 
-               html_popup_sec = f"""
+                # Tu HTML personalizado integrado
+                html_popup_sec = f"""
                 <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
                         <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
@@ -980,7 +981,8 @@ if sector_seleccionado:
                             <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
                         </div>
                     </div>
-                </div>"""
+                </div>
+                """
                     
                     if info.get('blink'):
                         folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
