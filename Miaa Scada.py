@@ -800,7 +800,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos Estrictos: Sin márgenes negativos que rompan el layout
+    # 7.1. Estilos: Limpieza de interfaz y configuración CSS
     st.markdown(
         f"""
         <style>
@@ -811,30 +811,42 @@ if sector_seleccionado:
             footer {{visibility: hidden;}}
             
             .block-container {{
-                padding-top: 1rem !important;
+                padding-top: 0px !important;
+                padding-bottom: 0px !important;
+                margin-top: -80px !important;
             }}
 
             .contenedor-centrado {{
                 text-align: center;
-                margin-bottom: 10px;
+                margin-bottom: 1px;
             }}
             
             .titulo-sector {{
                 font-size: 1.8rem;
                 font-weight: 800;
                 color: #00d4ff;
+                margin: 0px;
                 text-transform: uppercase;
+            }}
+
+            .metrics-row {{
+                margin-top: 0px !important;
+                margin-bottom: -10px !important;
             }}
 
             .micro-card {{
                 background: rgba(11, 26, 41, 0.95);
                 border: 1px solid #1f4068;
                 border-radius: 4px;
-                padding: 8px;
+                padding: 5px;
                 text-align: center;
             }}
-            .micro-label {{ color: #888; font-size: 11px; text-transform: uppercase; }}
+            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
+            
+            .main-layout-container {{
+                margin-top: 45px !important;
+            }}
         </style>
         
         <div class="contenedor-centrado">
@@ -848,7 +860,8 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # 7.2. Métricas (Fila superior)
+        # 7.2. Métricas de cabecera
+        st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -856,14 +869,79 @@ if sector_seleccionado:
         with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         
-        st.write("---")
+        st.divider()
 
-        # 7.3. Cuerpo: Mapa (Izq) y Gráfico con Selectores (Der)
+        # 7.3. PREPARACIÓN DE DATOS
+        dict_reg = cargar_registradores_desde_db()
+        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+
+        # 7.4. LAYOUT
+        st.markdown('<div class="main-layout-container">', unsafe_allow_html=True)
         col_izq, col_der = st.columns([1.1, 0.9])
 
+        with col_der:
+            # ALINEACIÓN HORIZONTAL DE SELECTORES
+            c_sel1, c_sel2 = st.columns(2)
+            with c_sel1:
+                opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_cols")
+            with c_sel2:
+                sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_cols")
+
+            hoy = datetime.now().date()
+            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
+            elif opcion_fecha == "Esta Semana": f_ini_h = hoy - timedelta(days=hoy.weekday()); f_fin_h = hoy
+            elif opcion_fecha == "Últimos 14 días": f_ini_h = hoy - timedelta(days=14); f_fin_h = hoy
+            elif opcion_fecha == "Este Mes": f_ini_h = hoy.replace(day=1); f_fin_h = hoy
+            else:
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
+                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
+
+            r_info = dict_reg[reg_nombres[sel_r]]
+            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
+            tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
+
+            if tags_grafico:
+                try:
+                    engine_h = get_mysql_scada_engine()
+                    tags_in = "', '".join(tags_grafico)
+                    q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
+                    df_h = pd.read_sql(q_hist, engine_h)
+                    
+                    if not df_h.empty:
+                        import plotly.graph_objects as go
+                        fig = go.Figure()
+
+                        if t_q and not df_h[df_h['TAG'] == t_q].empty:
+                            df_q = df_h[df_h['TAG'] == t_q]
+                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Q: {t_q}", line=dict(color='#00d4ff', width=2)))
+
+                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
+                            df_p1 = df_h[df_h['TAG'] == t_p1]
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1: {t_p1}", yaxis="y2", line=dict(color='#ff00ff', width=2)))
+                        
+                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
+                            df_p2 = df_h[df_h['TAG'] == t_p2]
+                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2: {t_p2}", yaxis="y2", line=dict(color='#00ff00', width=2)))
+
+                        fig.update_layout(
+                            paper_bgcolor='black', plot_bgcolor='black',
+                            height=550, margin=dict(l=50, r=50, t=80, b=10),
+                            hovermode="x unified",
+                            hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.9)", font_size=12),
+                            legend=dict(
+                                orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+                                font=dict(color="white", size=10), bgcolor="rgba(0,0,0,0)"
+                            ),
+                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white", linecolor="#444"),
+                            yaxis=dict(title="Caudal (L/s)", side="left", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
+                            yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                except Exception as e: st.error(f"Error Gráfico: {e}")
+
         with col_izq:
-            # MAPA
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
@@ -873,70 +951,39 @@ if sector_seleccionado:
                     folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
-            
-            folium_static(m_sec, width=None, height=600)
 
-        with col_der:
-            # SELECTORES ALINEADOS
-            c_sel1, c_sel2 = st.columns(2)
-            with c_sel1:
-                opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="range_final")
-            with c_sel2:
-                dict_reg = cargar_registradores_desde_db()
-                reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-                sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="equip_final")
+            t_m = []
+            for r in dict_reg.values():
+                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
+                    if r.get(k): t_m.append(r.get(k))
+            scada_data_m = cargar_datos_scada(list(set(t_m)))
 
-            # Lógica de fechas corregida
-            hoy = datetime.now().date()
-            if opcion_fecha == "Hoy": f_ini, f_fin = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini, f_fin = hoy - timedelta(days=hoy.weekday()), hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini, f_fin = hoy - timedelta(days=14), hoy
-            elif opcion_fecha == "Este Mes": f_ini, f_fin = hoy.replace(day=1), hoy
-            else:
-                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
-                f_ini, f_fin = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
+            for r in dict_reg.values():
+                def gv(k):
+                    val, f = scada_data_m.get(r.get(k), (0.0, "N/A"))
+                    try: return float(val), f
+                    except: return 0.0, "N/A"
+                p1, _ = gv('tag_p1'); cau, _ = gv('tag_q'); vbat, _ = gv('tag_vbat')
+                h_r = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:220px;"><b style="color:#00FFFF;">{r['nombre']}</b><hr style="opacity:0.2;"><div style="font-size:11px;">💧 Q: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b><br>🔋 Bat: <b>{vbat:.2f} V</b></div></div>"""
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(h_r, max_width=300)).add_to(m_sec)
 
-            # GRÁFICO
-            r_info = dict_reg[reg_nombres[sel_r]]
-            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
-            tags_list = [t for t in [t_q, t_p1, t_p2] if t]
-
-            if tags_list:
-                try:
-                    engine = get_mysql_scada_engine()
-                    tags_sql = "', '".join(tags_list)
-                    q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_sql}') AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC"
-                    df_h = pd.read_sql(q_hist, engine)
-                    
-                    if not df_h.empty:
-                        import plotly.graph_objects as go
-                        fig = go.Figure()
-
-                        if t_q and not df_h[df_h['TAG'] == t_q].empty:
-                            df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (L/s)", line=dict(color='#00d4ff', width=2)))
-
-                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
-                            df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="P1 (kg)", yaxis="y2", line=dict(color='#ff00ff', width=2)))
-                        
-                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                            df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="P2 (kg)", yaxis="y2", line=dict(color='#00ff00', width=2)))
-
-                        fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black',
-                            height=500, margin=dict(l=10, r=10, t=50, b=10),
-                            hovermode="x unified",
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white")),
-                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
-                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
-                            yaxis2=dict(title="Presión (kg)", color="#ff00ff", overlaying="y", side="right", showgrid=False)
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
+            ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+            for id_p in ids_p:
+                if id_p in mapa_pozos_dict:
+                    info = mapa_pozos_dict[id_p]
+                    d_sc = lambda t: data_scada.get(t, (0, "N/A"))
+                    is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                    q, _ = d_sc(info['caudal']) if not is_st else (0.0, "N/A")
+                    p, _ = d_sc(info['presion']) if not is_st else (0.0, "N/A")
+                    h_p = f"""<div style="background:#050505; color:white; padding:10px; border-radius:10px; border:1px solid {info['color_final']};"><b>POZO {id_p}</b><hr style="opacity:0.2;">Q: {q:.2f} L/s | P: {p:.2f} kg</div>"""
+                    if info.get('blink'):
+                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(h_p, max_width=350)).add_to(m_sec)
                     else:
-                        st.warning("No hay datos en este rango.")
-                except Exception as e: st.error(f"Error: {e}")
+                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(h_p, max_width=350)).add_to(m_sec)
+
+            folium_static(m_sec, width=None, height=650)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.stop()
     
