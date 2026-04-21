@@ -820,7 +820,7 @@ if sector_seleccionado:
             /* 3. Estilo del título centrado */
             .contenedor-centrado {{
                 text-align: center;
-                margin-bottom: 5px;
+                margin-bottom: 1px;
             }}
             
             .titulo-sector {{
