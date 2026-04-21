@@ -800,7 +800,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos: Control estricto de márgenes y limpieza
+    # 7.1. Estilos: CSS limpio para métricas y títulos
     st.markdown(
         f"""
         <style>
@@ -811,28 +811,30 @@ if sector_seleccionado:
             footer {{visibility: hidden;}}
             
             .block-container {{
-                padding-top: 0px !important;
-                padding-bottom: 0px !important;
-                margin-top: -80px !important;
+                padding-top: 2rem !important;
             }}
 
             .contenedor-centrado {{
                 text-align: center;
-                margin-bottom: 5px;
+                margin-bottom: 20px;
             }}
             
             .titulo-sector {{
-                font-size: 1.8rem;
+                font-size: 2rem;
                 font-weight: 800;
                 color: #00d4ff;
-                margin: 0px;
                 text-transform: uppercase;
             }}
 
-            .metrics-row {{
-                margin-top: 0px !important;
-                margin-bottom: 15px !important;
+            .micro-card {{
+                background: rgba(11, 26, 41, 0.9);
+                border: 1px solid #1f4068;
+                border-radius: 4px;
+                padding: 10px;
+                text-align: center;
             }}
+            .micro-label {{ color: #888; font-size: 12px; text-transform: uppercase; }}
+            .micro-value {{ color: #ffffff; font-size: 18px; font-weight: bold; }}
         </style>
         
         <div class="contenedor-centrado">
@@ -846,8 +848,7 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
     
     if datos_s:
-        # 7.2. Métricas de cabecera
-        st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
+        # 7.2. Métricas de cabecera (Población, Consumo, etc.)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -855,66 +856,80 @@ if sector_seleccionado:
         with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
         
+        st.write("") # Espacio moderado
         st.divider()
 
-        # 7.3. LAYOUT PRINCIPAL (Mapa izquierda, Datos derecha)
+        # 7.3. CUERPO PRINCIPAL: MAPA (IZQ) | SELECTORES Y GRAFICO (DER)
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_izq:
-            # El mapa se queda en su lugar original
+            # Mapa estable con sus dimensiones originales
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
-            # Lógica de dibujo de polígono y marcadores... (Omitida para brevedad, mantener igual)
-            folium_static(m_sec, width=None, height=650)
+            # --- Lógica de Polígonos y Marcadores (Cargar solo para este sector) ---
+            if datos_s.get('geo'):
+                try:
+                    geo_data = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
+                    m_sec.fit_bounds(folium_geo.get_bounds())
+                except: pass
+            
+            # (Aquí va tu lógica de marcadores de pozos y registradores que ya tienes definida)
+            folium_static(m_sec, width=None, height=600)
 
         with col_der:
-            # SUBSECCIÓN DE SELECTORES: Aquí es donde se alinean horizontalmente
-            # Usamos columnas internas para que no afecten al resto del layout
-            c_sel_rango, c_sel_equipo = st.columns(2)
+            # 7.4. SELECTORES ALINEADOS HORIZONTALMENTE
+            c_fecha, c_equipo = st.columns(2)
             
-            with c_sel_rango:
-                opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_final")
+            with c_fecha:
+                opcion_fecha = st.selectbox("Rango del gráfico:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="sel_rango_fix")
             
-            with c_sel_equipo:
+            with c_equipo:
                 dict_reg = cargar_registradores_desde_db()
                 reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-                sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="reg_final")
+                sel_r = st.selectbox("Seleccionar equipo:", list(reg_nombres.keys()), key="sel_equipo_fix")
 
-            # Lógica de fechas y consulta SQL...
+            # Lógica de fechas
             hoy = datetime.now().date()
-            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini_h = hoy - timedelta(days=hoy.weekday()); f_fin_h = hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini_h = hoy - timedelta(days=14); f_fin_h = hoy
-            elif opcion_fecha == "Este Mes": f_ini_h = hoy.replace(day=1); f_fin_h = hoy
+            if opcion_fecha == "Hoy": f_ini, f_fin = hoy, hoy
+            elif opcion_fecha == "Esta Semana": f_ini, f_fin = hoy - timedelta(days=hoy.weekday()), hoy
+            elif opcion_fecha == "Últimos 14 días": f_ini, f_fin = hoy - timedelta(days=14), hoy
+            elif opcion_fecha == "Este Mes": f_ini, f_fin = hoy.replace(day=1), hoy
             else:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
-                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
+                f_ini, f_fin = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            # Generación del gráfico con la cuadrícula blanca solicitada
+            # 7.5. GRÁFICO (CON DATOS RECUPERADOS)
             r_info = dict_reg[reg_nombres[sel_r]]
-            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
-            tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
+            tags = [r_info.get(k) for k in ['tag_q', 'tag_p1', 'tag_p2'] if r_info.get(k)]
 
-            if tags_grafico:
+            if tags:
                 try:
-                    engine_h = get_mysql_scada_engine()
-                    tags_in = "', '".join(tags_grafico)
-                    q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
-                    df_h = pd.read_sql(q_hist, engine_h)
+                    engine = get_mysql_scada_engine()
+                    tags_sql = "', '".join(tags)
+                    query = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_sql}') AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC"
+                    df_h = pd.read_sql(query, engine)
                     
                     if not df_h.empty:
                         import plotly.graph_objects as go
                         fig = go.Figure()
 
-                        # Traces de Caudal y Presión... (Mantener lógica de colores)
-                        # ...
+                        # Trace Caudal
+                        if r_info.get('tag_q'):
+                            df_q = df_h[df_h['TAG'] == r_info['tag_q']]
+                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (L/s)", line=dict(color='#00d4ff', width=2)))
+
+                        # Trace Presiones
+                        for p_tag, p_color, p_name in [(r_info.get('tag_p1'), '#ff00ff', 'P1'), (r_info.get('tag_p2'), '#00ff00', 'P2')]:
+                            if p_tag:
+                                df_p = df_h[df_h['TAG'] == p_tag]
+                                fig.add_trace(go.Scatter(x=df_p['FECHA'], y=df_p['VALUE'], name=f"{p_name} (kg)", yaxis="y2", line=dict(color=p_color, width=2)))
 
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black',
-                            height=550, margin=dict(l=40, r=40, t=60, b=10),
+                            height=500, margin=dict(l=10, r=10, t=50, b=10),
                             hovermode="x unified",
                             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
                             xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
@@ -922,9 +937,14 @@ if sector_seleccionado:
                             yaxis2=dict(title="Presión (kg)", color="#ff00ff", overlaying="y", side="right", showgrid=False)
                         )
                         st.plotly_chart(fig, use_container_width=True)
-                except Exception as e: st.error(f"Error: {e}")
-    
-    st.stop()
+                    else:
+                        st.warning("No hay datos históricos para este equipo en el rango seleccionado.")
+                except Exception as e:
+                    st.error(f"Error al cargar datos: {e}")
+            else:
+                st.info("El equipo seleccionado no tiene tags de caudal o presión configurados.")
+
+    st.stop() # Importante para mantener la vista de detalle
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
