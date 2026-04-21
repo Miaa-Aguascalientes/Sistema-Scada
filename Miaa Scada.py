@@ -800,7 +800,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION ---------------------------------------------------------------------- 7. ENLACE A LA VISTA DETALLE DE LOS SECTORES -----------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos: Control independiente para bajar el mapa
+    # 7.1. Estilos: Control de posición del mapa y métricas
     st.markdown(
         f"""
         <style>
@@ -844,8 +844,8 @@ if sector_seleccionado:
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
-            /* ESTE ESTILO BAJA SOLO EL MAPA */
-            .col-mapa {{
+            /* BAJA SOLO EL MAPA */
+            .col-mapa-offset {{
                 margin-top: 40px !important; 
             }}
 
@@ -885,39 +885,70 @@ if sector_seleccionado:
 
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_fix_map")
+            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_det_final")
         with c_sel2:
-            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_fix_map")
+            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="reg_det_final")
 
-        # 7.4. LAYOUT
+        # 7.4. LAYOUT PRINCIPAL
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_izq:
-            # Envolvemos el mapa en un contenedor para bajarlo con el CSS 'col-mapa'
-            st.markdown('<div class="col-mapa">', unsafe_allow_html=True)
+            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
-            # (Lógica de dibujo de polígonos y marcadores se mantiene igual)
+            # Dibujar Polígono del Sector
             if datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
                     folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
-            
+
+            # CARGAR DATOS PARA MARCADORES
+            t_m = []
+            for r in dict_reg.values():
+                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
+                    if r.get(k): t_m.append(r.get(k))
+            scada_data_m = cargar_datos_scada(list(set(t_m)))
+
+            # Marcadores de Registradores
+            for r in dict_reg.values():
+                def gv(k):
+                    val, f = scada_data_m.get(r.get(k), (0.0, "N/A"))
+                    try: return float(val), f
+                    except: return 0.0, "N/A"
+                p1, _ = gv('tag_p1'); cau, _ = gv('tag_q'); vbat, _ = gv('tag_vbat')
+                h_r = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:220px;"><b style="color:#00FFFF;">{r['nombre']}</b><hr style="opacity:0.2;"><div style="font-size:11px;">💧 Q: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b><br>🔋 Bat: <b>{vbat:.2f} V</b></div></div>"""
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(h_r, max_width=300)).add_to(m_sec)
+
+            # Marcadores de Pozos del Sector
+            ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+            for id_p in ids_p:
+                if id_p in mapa_pozos_dict:
+                    info = mapa_pozos_dict[id_p]
+                    d_sc = lambda t: data_scada.get(t, (0, "N/A")) # Usar data_scada global ya cargada
+                    is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                    q, _ = d_sc(info['caudal']) if not is_st else (0.0, "N/A")
+                    p, _ = d_sc(info['presion']) if not is_st else (0.0, "N/A")
+                    h_p = f"""<div style="background:#050505; color:white; padding:10px; border-radius:10px; border:1px solid {info['color_final']};"><b>POZO {id_p}</b><hr style="opacity:0.2;">Q: {q:.2f} L/s | P: {p:.2f} kg</div>"""
+                    if info.get('blink'):
+                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(h_p, max_width=350)).add_to(m_sec)
+                    else:
+                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(h_p, max_width=350)).add_to(m_sec)
+
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col_der:
-            # Lógica de fechas y Gráfico (Se mantiene igual)
+            # Gráfico Histórico
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini_h = hoy - timedelta(days=hoy.weekday()); f_fin_h = hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini_h = hoy - timedelta(days=14); f_fin_h = hoy
-            elif opcion_fecha == "Este Mes": f_ini_h = hoy.replace(day=1); f_fin_h = hoy
+            elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+            elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+            elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
             else:
-                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_det")
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
             r_info = dict_reg[reg_nombres[sel_r]]
@@ -934,14 +965,18 @@ if sector_seleccionado:
                     if not df_h.empty:
                         import plotly.graph_objects as go
                         fig = go.Figure()
-                        # (Tus traces de Q, P1, P2...)
                         if t_q and not df_h[df_h['TAG'] == t_q].empty:
                             df_q = df_h[df_h['TAG'] == t_q]
                             fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Q: {t_q}", line=dict(color='#00d4ff', width=2)))
-                        
+                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
+                            df_p1 = df_h[df_h['TAG'] == t_p1]
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"P1: {t_p1}", yaxis="y2", line=dict(color='#ff00ff', width=2)))
+                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
+                            df_p2 = df_h[df_h['TAG'] == t_p2]
+                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"P2: {t_p2}", yaxis="y2", line=dict(color='#00ff00', width=2)))
+
                         fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black',
-                            height=550, margin=dict(l=50, r=50, t=10, b=10),
+                            paper_bgcolor='black', plot_bgcolor='black', height=550, margin=dict(l=50, r=50, t=10, b=10),
                             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
                             xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
                             yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
