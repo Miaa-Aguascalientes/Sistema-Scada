@@ -835,7 +835,7 @@ if sector_seleccionado:
             /* 4. Contenedor de indicadores pegado al título */
             .metrics-row {{
                 margin-top: 0px !important;
-                margin-bottom: 10px !important;
+                margin-bottom: 50px !important;
             }}
 
             .micro-card {{
