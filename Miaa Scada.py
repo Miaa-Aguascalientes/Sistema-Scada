@@ -882,7 +882,7 @@ if sector_seleccionado:
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_der:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_fixed")
+            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_legend_top")
             
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
@@ -893,7 +893,7 @@ if sector_seleccionado:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy)
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_trend_fixed")
+            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_trend_legend")
             r_info = dict_reg[reg_nombres[sel_r]]
             
             t_q = r_info.get('tag_q')
@@ -904,7 +904,6 @@ if sector_seleccionado:
             if tags_grafico:
                 try:
                     engine_h = get_mysql_scada_engine()
-                    # CORRECCIÓN DE SYNTAX ERROR: Usamos join simple y comillas simples para el IN
                     tags_in = "', '".join(tags_grafico)
                     q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
                     df_h = pd.read_sql(q_hist, engine_h)
@@ -930,12 +929,16 @@ if sector_seleccionado:
 
                         fig.update_layout(
                             paper_bgcolor='black', plot_bgcolor='black',
-                            height=550, margin=dict(l=80, r=50, t=10, b=10),
+                            height=550, margin=dict(l=50, r=50, t=80, b=10), # Aumentamos margen superior para la leyenda
                             hovermode="x unified",
                             hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.9)", font_size=12),
+                            # LEYENDA ARRIBA A LA IZQUIERDA (HORIZONTAL)
                             legend=dict(
-                                orientation="v", yanchor="top", y=1, xanchor="right", x=-0.1,
-                                font=dict(color="white", size=10), bgcolor="rgba(0,0,0,0)"
+                                orientation="h", 
+                                yanchor="bottom", y=1.02, 
+                                xanchor="left", x=0,
+                                font=dict(color="white", size=10), 
+                                bgcolor="rgba(0,0,0,0)"
                             ),
                             xaxis=dict(showgrid=False, color="white"),
                             yaxis=dict(title="Caudal (L/s)", showgrid=False, color="#00d4ff", side="left"),
@@ -955,7 +958,6 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # Datos para marcadores
             t_m = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
@@ -971,7 +973,6 @@ if sector_seleccionado:
                 h_r = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:220px;"><b style="color:#00FFFF;">{r['nombre']}</b><hr style="opacity:0.2;"><div style="font-size:11px;">💧 Q: <b>{cau:.2f} L/s</b><br>🚀 P1: <b>{p1:.2f} kg</b><br>🔋 Bat: <b>{vbat:.2f} V</b></div></div>"""
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(h_r, max_width=300)).add_to(m_sec)
 
-            # Pozos
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
