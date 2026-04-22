@@ -864,16 +864,14 @@ if sector_seleccionado:
         
         st.divider()
 
-# 7.3. Selectores superiores
+# 7.3. Selectores superiores (REEMPLAZO COMPLETO)
         dict_reg = cargar_puntos_de_control_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
-        # Ajustamos las columnas: 
-        # c_sel1 (Fecha) | c_titulo (Título Centrado) | c_sel2 (Equipo)
+        # Nueva estructura: Fecha (Izq) | Título (Centro) | Equipo (Der)
         c_sel1, c_titulo, c_sel2 = st.columns([0.5, 1.1, 0.5])
 
         with c_sel1:
-            # Selector de fechas a la izquierda
             opcion_fecha = st.selectbox(
                 "Rango de fechas:", 
                 ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], 
@@ -882,17 +880,15 @@ if sector_seleccionado:
             )
 
         with c_titulo:
-            # Título centrado en la columna de en medio
             st.markdown(f"""
                 <div style="text-align: center; margin-top: -10px;">
-                    <h1 class="titulo-sector" style="margin-bottom: 0px;">
+                    <h1 class="titulo-sector" style="margin-bottom: 0px; white-space: nowrap;">
                         ANÁLISIS DE SECTOR: {sector_seleccionado}
                     </h1>
                 </div>
             """, unsafe_allow_html=True)
 
         with c_sel2:
-            # Selector de equipo a la derecha
             sel_r = st.selectbox(
                 "Equipo punto de control:", 
                 list(reg_nombres.keys()), 
