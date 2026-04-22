@@ -199,15 +199,7 @@ st.set_page_config(
 )
 
 count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
-if "last_count" not in st.session_state:
-    st.session_state.last_count = count
 
-if count > st.session_state.last_count:
-    # Esta parte solo se ejecutará cuando el cronómetro llegue a los 5 min
-    st.cache_data.clear()
-    st.cache_resource.clear()
-    st.session_state.last_count = count
-    # Opcional: st.toast("Datos actualizados automáticamente", icon="♻️")
 
 # 2.  SECCION------------------------------------------------------------------------------2. FUNCIONES DE CONEXIÓN ------------------------------------------------------------------------------------------------------
 
@@ -425,7 +417,7 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
-# 3.4. Funcion para optener los registradores de la base de datos Diccionario de puntos de control
+# 3.4. Funcion para optener los puntos de control de la base de datos Diccionario de puntos de control
 @st.cache_data(ttl=5)
 def cargar_puntos_de_control_desde_db():
     engine = get_mysql_telemetria_engine()
@@ -445,6 +437,33 @@ def cargar_puntos_de_control_desde_db():
                     "tag_p1": r.get('Presion_1'), 
                     "tag_p2": r.get('Presion_2'), 
                     "tag_q": r.get('Caudal'),     
+                    "tag_vbat": r.get('bateria'), 
+                    "tag_idx": r.get('indice')    
+                }
+            except Exception as e:
+                continue
+        return d_res
+    except Exception as e:
+        return {}
+
+# 3.5. Funcion para optener los puntos criticos de la base de datos Diccionario de puntos criticos
+@st.cache_data(ttl=5)
+def cargar_puntos_criticos_desde_db():
+    engine = get_mysql_telemetria_engine()
+    if not engine: return {}
+    try:
+        df = pd.read_sql("SELECT * FROM Diccionario_punttos_criticos", engine)
+        d_res = {}
+        for _, r in df.iterrows():
+            try:
+                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
+                lat_s, lon_s = raw_c.split(',')
+                id_reg = r.get('Serie', r.get('Registrador', 'ID'))
+                d_res[str(id_reg)] = {
+                    "nombre": str(r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))),
+                    "coord": [float(lat_s), float(lon_s)],
+                    "sector": str(r['Sector']).split('.')[0].strip(),
+                    "tag_p1": r.get('Presion_1'),   
                     "tag_vbat": r.get('bateria'), 
                     "tag_idx": r.get('indice')    
                 }
@@ -922,7 +941,7 @@ if sector_seleccionado:
                     if r.get(k): tags_reg.append(r.get(k))
             scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
 
-            # 7.6. Marcadores de Registradores
+            # 7.6. Marcadores de puntos de control
             for r in dict_reg.values():
                 def get_rv(k):
                     val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
@@ -1008,7 +1027,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-         # 7.8. Gráfico Histórico 
+         # 7.8. Gráfico Histórico puntos de control
         with col_der:
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
