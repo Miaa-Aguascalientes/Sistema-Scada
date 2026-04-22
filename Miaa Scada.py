@@ -886,9 +886,9 @@ if sector_seleccionado:
 
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
-            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_full")
+            sel_r = st.selectbox("Equipo punto de control:", list(reg_nombres.keys()), key="sel_reg_full")
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
