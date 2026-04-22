@@ -444,6 +444,33 @@ def cargar_puntos_de_control_desde_db():
     except Exception as e:
         return {}
 
+# 3.5. Funcion para optener los puntos de criticos de la base de datos Diccionario_puntos_criticos
+@st.cache_data(ttl=5)
+def cargar_puntos_criticos_desde_db():
+    engine = get_mysql_telemetria_engine()
+    if not engine: return {}
+    try:
+        df = pd.read_sql("SELECT * FROM Diccionario_puntos_criticos", engine)
+        d_res = {}
+        for _, r in df.iterrows():
+            try:
+                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
+                lat_s, lon_s = raw_c.split(',')
+                id_reg = r.get('Serie', r.get('Registrador', 'ID'))
+                d_res[str(id_reg)] = {
+                    "nombre": str(r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))),
+                    "coord": [float(lat_s), float(lon_s)],
+                    "sector": str(r['Sector']).split('.')[0].strip(),
+                    "tag_p1": r.get('Presion_1'),
+                    "tag_q": r.get('Caudal'),        
+                }
+            except Exception as e:
+                continue
+        return d_res
+    except Exception as e:
+        return {}
+
+
 
 # 4. SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
 params = st.query_params
@@ -912,6 +939,21 @@ if sector_seleccionado:
                     if r.get(k): tags_reg.append(r.get(k))
             scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
 
+            # 7.5. CARGA DATOS REGISTRADORES
+            tags_reg = []
+            for r in dict_reg.values():
+                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
+                    if r.get(k): tags_reg.append(r.get(k))
+
+            # --- NUEVO: CARGA DE PUNTOS CRÍTICOS SOLO PARA ESTE SECTOR ---
+            mapa_pc_all = cargar_puntos_criticos_desde_db()
+            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v['sector']) == sec_id}
+            for pc in dict_pc_sec.values():
+                if pc.get('tag_p1'): tags_reg.append(pc.get('tag_p1'))
+            # -------------------------------------------------------------
+
+            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
+
             # 7.6. Marcadores de Registradores
             for r in dict_reg.values():
                 def get_rv(k):
@@ -932,6 +974,29 @@ if sector_seleccionado:
                 </div>
                 """
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+
+            # 7.6.1. Marcadores de Puntos Críticos (NUEVO)
+            for id_pc, pc in dict_pc_sec.items():
+                val_p, fec_p = scada_res_reg.get(pc['tag_p1'], (0.0, "N/A"))
+                
+                html_pc = f"""
+                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF00FF; width:180px; font-family:sans-serif;">
+                    <b style="color:#FF00FF; font-size:13px;">PUNTO CRÍTICO</b><br>
+                    <small>{pc['nombre']}</small><br>
+                    <hr style="opacity:0.2; margin:5px 0;">
+                    Presión: <b style="color:#FF00FF;">{val_p:.2f} kg</b><br>
+                    <span style="color:#FFFF00; font-size:9px;">{fec_p}</span>
+                </div>
+                """
+                folium.RegularPolygonMarker(
+                    location=pc['coord'],
+                    number_of_sides=3, # Triángulo
+                    radius=7,
+                    color='#FF00FF',
+                    fill=True,
+                    fill_color='#FF00FF',
+                    popup=folium.Popup(html_pc, max_width=250)
+                ).add_to(m_sec)
 
             # 7.7. Marcadores de Pozos (Popup 380px Restaurado)
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
@@ -1052,6 +1117,32 @@ if sector_seleccionado:
                         )
                         st.plotly_chart(fig, use_container_width=True)
                 except Exception as e: st.error(f"Error: {e}")
+
+    # --- GRÁFICO DE PUNTOS CRÍTICOS (DEBAJO DEL EXISTENTE) ---
+                        if dict_pc_sec:
+                            st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:10px;'>PRESIÓN PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
+                            
+                            nombres_pc = [v['nombre'][:15] for v in dict_pc_sec.values()]
+                            valores_pc = [scada_res_reg.get(v['tag_p1'], (0.0, ""))[0] for v in dict_pc_sec.values()]
+
+                            fig_pc = go.Figure(data=[
+                                go.Bar(
+                                    x=nombres_pc,
+                                    y=valores_pc,
+                                    marker_color='#FF00FF',
+                                    text=[f"{v:.2f}" for v in valores_pc],
+                                    textposition='auto',
+                                )
+                            ])
+
+                            fig_pc.update_layout(
+                                paper_bgcolor='black', plot_bgcolor='black',
+                                height=200, # Más pequeño para que quepa abajo
+                                margin=dict(l=10, r=10, t=10, b=10),
+                                xaxis=dict(tickfont=dict(size=9, color="white")),
+                                yaxis=dict(title="kg", color="white", gridcolor='rgba(255,255,255,0.1)')
+                            )
+                            st.plotly_chart(fig_pc, use_container_width=True)
     
     st.stop()
     
