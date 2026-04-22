@@ -802,7 +802,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS Actualizados
+    # 7.1. Estilos CSS: Ajuste de posición del mapa y UI
     st.markdown(
         f"""
         <style>
@@ -818,14 +818,9 @@ if sector_seleccionado:
                 margin-top: -80px !important;
             }}
 
-            /* Contenedor Flex para alinear selector y título */
-            .cabecera-flexible {{
-                display: flex;
-                align-items: center;
-                justify-content: center; /* Centra el contenido */
-                position: relative;
-                width: 100%;
-                margin-bottom: 10px;
+            .contenedor-centrado {{
+                text-align: center;
+                margin-bottom: 0px;
             }}
             
             .titulo-sector {{
@@ -834,17 +829,38 @@ if sector_seleccionado:
                 color: #00d4ff;
                 margin: 0px;
                 text-transform: uppercase;
-                text-align: center;
-                flex-grow: 0; /* No permite que el título empuje el espacio */
             }}
 
             .metrics-row {{
                 margin-top: 0px !important;
                 margin-bottom: 0px !important;
             }}
-            /* ... (mantener el resto de tus estilos micro-card, etc.) ... */
+
+            .micro-card {{
+                background: rgba(11, 26, 41, 0.95);
+                border: 1px solid #1f4068;
+                border-radius: 4px;
+                padding: 5px;
+                text-align: center;
+            }}
+            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
+            .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
+            
+            .col-mapa-offset {{
+                margin-top: 40px !important; 
+            }}
+
+            hr {{
+                margin-top: 5px !important;
+                margin-bottom: 5px !important;
+            }}
         </style>
-        """, unsafe_allow_html=True
+        
+        <div class="contenedor-centrado">
+            <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
+        </div>
+        """, 
+        unsafe_allow_html=True
     )
     
     sec_id = str(sector_seleccionado).split('.')[0].strip()
@@ -864,36 +880,15 @@ if sector_seleccionado:
         
         st.divider()
 
-# 7.3. Selectores superiores (REEMPLAZO COMPLETO)
+        # 7.3. Selectores superiores
         dict_reg = cargar_puntos_de_control_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
-        # Nueva estructura: Fecha (Izq) | Título (Centro) | Equipo (Der)
-        c_sel1, c_titulo, c_sel2 = st.columns([0.5, 1.1, 0.5])
-
+        c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            opcion_fecha = st.selectbox(
-                "Rango de fechas:", 
-                ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], 
-                index=2, 
-                key="f_sector_full"
-            )
-
-        with c_titulo:
-            st.markdown(f"""
-                <div style="text-align: center; margin-top: -10px;">
-                    <h1 class="titulo-sector" style="margin-bottom: 0px; white-space: nowrap;">
-                        ANÁLISIS DE SECTOR: {sector_seleccionado}
-                    </h1>
-                </div>
-            """, unsafe_allow_html=True)
-
+            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
-            sel_r = st.selectbox(
-                "Equipo punto de control:", 
-                list(reg_nombres.keys()), 
-                key="sel_reg_full"
-            )
+            sel_r = st.selectbox("Equipo punto de control:", list(reg_nombres.keys()), key="sel_reg_full")
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
