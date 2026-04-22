@@ -910,7 +910,7 @@ if sector_seleccionado:
         st.divider()
 
         # 7.3. Selectores superiores
-        dict_reg = cargar_registradores_desde_db()
+        dict_reg = def cargar_puntos_de_control_desde_db():()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
         
         # Integración de Puntos Críticos en el selector
