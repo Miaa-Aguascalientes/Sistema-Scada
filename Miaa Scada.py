@@ -417,11 +417,11 @@ def cargar_rebombeos_desde_db():
 
 # 3.4. Funcion para optener los registradores de la base de datos Diccionario_registradores
 @st.cache_data(ttl=5)
-def cargar_registradores_desde_db():
+def cargar_puntos_de_control__desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
     try:
-        df = pd.read_sql("SELECT * FROM Diccionario_registradores", engine)
+        df = pd.read_sql("SELECT * FROM Diccionario_puntos_de_control", engine)
         d_res = {}
         for _, r in df.iterrows():
             try:
@@ -881,14 +881,14 @@ if sector_seleccionado:
         st.divider()
 
         # 7.3. Selectores superiores
-        dict_reg = cargar_registradores_desde_db()
+        dict_reg = cargar_puntos_de_control_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
-            sel_r = st.selectbox("Registrador:", list(reg_nombres.keys()), key="sel_reg_full")
+            sel_r = st.selectbox("Equipo:", list(reg_nombres.keys()), key="sel_reg_full")
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
@@ -905,7 +905,7 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # 7.5. CARGA DATOS REGISTRADORES
+            # 7.5. CARGA DATOS DE PUNTOS DE CONTROL
             tags_reg = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
