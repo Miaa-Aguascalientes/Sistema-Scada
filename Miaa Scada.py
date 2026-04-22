@@ -932,25 +932,17 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # 7.5. CARGA DATOS REGISTRADORES
+            # 7.5. CARGA DATOS REGISTRADORES Y PUNTOS CRÍTICOS
             tags_reg = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): tags_reg.append(r.get(k))
-            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
-
-            # 7.5. CARGA DATOS REGISTRADORES
-            tags_reg = []
-            for r in dict_reg.values():
-                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
-                    if r.get(k): tags_reg.append(r.get(k))
-
-            # --- NUEVO: CARGA DE PUNTOS CRÍTICOS SOLO PARA ESTE SECTOR ---
+            
+            # --- Integración Puntos Críticos ---
             mapa_pc_all = cargar_puntos_criticos_desde_db()
             dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v['sector']) == sec_id}
             for pc in dict_pc_sec.values():
                 if pc.get('tag_p1'): tags_reg.append(pc.get('tag_p1'))
-            # -------------------------------------------------------------
 
             scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
 
@@ -975,10 +967,9 @@ if sector_seleccionado:
                 """
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
 
-            # 7.6.1. Marcadores de Puntos Críticos (NUEVO)
+            # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
                 val_p, fec_p = scada_res_reg.get(pc['tag_p1'], (0.0, "N/A"))
-                
                 html_pc = f"""
                 <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF00FF; width:180px; font-family:sans-serif;">
                     <b style="color:#FF00FF; font-size:13px;">PUNTO CRÍTICO</b><br>
@@ -989,16 +980,11 @@ if sector_seleccionado:
                 </div>
                 """
                 folium.RegularPolygonMarker(
-                    location=pc['coord'],
-                    number_of_sides=3, # Triángulo
-                    radius=7,
-                    color='#FF00FF',
-                    fill=True,
-                    fill_color='#FF00FF',
-                    popup=folium.Popup(html_pc, max_width=250)
+                    location=pc['coord'], number_of_sides=3, radius=7, color='#FF00FF',
+                    fill=True, fill_color='#FF00FF', popup=folium.Popup(html_pc, max_width=250)
                 ).add_to(m_sec)
 
-            # 7.7. Marcadores de Pozos (Popup 380px Restaurado)
+            # 7.7. Marcadores de Pozos
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
@@ -1010,9 +996,7 @@ if sector_seleccionado:
 
                     q, f_q = ds(info['caudal']); p, f_p = ds(info['presion'])
                     tanq, f_t = ds(info.get('nivel_tanque')); dinam, f_d = ds(info.get('nivel_dinamico'))
-                    sumer, f_s = ds(info.get('sumergencia')); col, f_col = ds(info.get('columna'))
                     v = [ds(info.get(f'v{i}')) for i in range(1, 4)]; a = [ds(info.get(f'a{i}')) for i in range(1, 4)]
-                    h_arr_fmt, f_h_arr = ds(info.get('h_arranque')); h_par_fmt, f_h_par = ds(info.get('h_paro'))
 
                     html_popup_sec = f"""
                     <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
@@ -1031,18 +1015,7 @@ if sector_seleccionado:
                                 <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
                             </div>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
-                            <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                                <span>🔋 Tanque: <b>{tanq:.2f} mts</b></span>
-                                <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
-                            </div>
-                            <div style="display: flex; align-items: baseline; font-size: 11px;">
-                                <span>📉 Dinámico: <b>{dinam:.2f} m</b></span>
-                                <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                            </div>
-                        </div>
-                        <div style="margin-bottom: 8px;">
+                        <div>
                             <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
                             <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
                                 <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
@@ -1063,7 +1036,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-         # 7.8. Gráfico Histórico 
+        # 7.8. Gráfico Histórico 
         with col_der:
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
@@ -1088,63 +1061,46 @@ if sector_seleccionado:
                     if not df_h.empty:
                         import plotly.graph_objects as go
                         fig = go.Figure()
-                        
-                        # Trace Caudal
                         if t_q and not df_h[df_h['TAG'] == t_q].empty:
                             df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Caudal (lps)", line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
-                        
-                        # Trace Presión 1
+                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", line=dict(color='#00d4ff', width=2)))
                         if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
                             df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"Presión P1 (kg/cm2) aguas arriba", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
-                        
-                        # Trace Presión 2
-                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                            df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"Presión P2 (kg/cm2) aguas abajo", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="P1 (kg)", yaxis="y2", line=dict(color='#ff00ff', width=2)))
 
                         fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', 
-                            height=300, # AQUI SE MODIFICA EL TAMAÑO DE LO ALTO DEL GRAFICO
-                            margin=dict(l=50, r=50, t=10, b=10),
-                            hovermode="x unified", # ESTO ACTIVA VER TODOS LOS VALORES A LA VEZ
-                            hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
-                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
-                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
+                            paper_bgcolor='black', plot_bgcolor='black', height=300,
+                            margin=dict(l=50, r=50, t=10, b=10), hovermode="x unified",
+                            legend=dict(orientation="h", y=1.1, font=dict(color="white", size=10)),
+                            xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', color="white"),
+                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff"),
                             yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                         )
                         st.plotly_chart(fig, use_container_width=True)
-                except Exception as e: st.error(f"Error: {e}")
+                except Exception as e: st.error(f"Error gráfico: {e}")
 
-    # --- GRÁFICO DE PUNTOS CRÍTICOS (DEBAJO DEL EXISTENTE) ---
-            # --- GRÁFICO DE PUNTOS CRÍTICOS (DEBAJO DEL EXISTENTE) ---
-                        if dict_pc_sec:
-                            st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:10px;'>PRESIÓN PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
-                            
-                            nombres_pc = [v['nombre'][:15] for v in dict_pc_sec.values()]
-                            valores_pc = [scada_res_reg.get(v['tag_p1'], (0.0, ""))[0] for v in dict_pc_sec.values()]
+            # --- NUEVO: Gráfico de Barras Puntos Críticos (Debajo del histórico) ---
+            if dict_pc_sec:
+                st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:20px; text-align:center;'>PRESIÓN ACTUAL EN PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
+                nombres_pc = [v['nombre'][:15] for v in dict_pc_sec.values()]
+                valores_pc = [scada_res_reg.get(v['tag_p1'], (0.0, ""))[0] for v in dict_pc_sec.values()]
 
-                            fig_pc = go.Figure(data=[
-                                go.Bar(
-                                    x=nombres_pc,
-                                    y=valores_pc,
-                                    marker_color='#FF00FF',
-                                    text=[f"{v:.2f}" for v in valores_pc],
-                                    textposition='auto',
-                                )
-                            ])
+                fig_pc = go.Figure(data=[
+                    go.Bar(
+                        x=nombres_pc, y=valores_pc,
+                        marker_color='#FF00FF',
+                        text=[f"{v:.2f}" for v in valores_pc],
+                        textposition='auto',
+                    )
+                ])
+                fig_pc.update_layout(
+                    paper_bgcolor='black', plot_bgcolor='black', height=220,
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    xaxis=dict(tickfont=dict(size=9, color="white")),
+                    yaxis=dict(title="kg", color="white", gridcolor='rgba(255,255,255,0.1)')
+                )
+                st.plotly_chart(fig_pc, use_container_width=True)
 
-                            fig_pc.update_layout(
-                                paper_bgcolor='black', plot_bgcolor='black',
-                                height=200, # Más pequeño para que quepa abajo
-                                margin=dict(l=10, r=10, t=10, b=10),
-                                xaxis=dict(tickfont=dict(size=9, color="white")),
-                                yaxis=dict(title="kg", color="white", gridcolor='rgba(255,255,255,0.1)')
-                            )
-                            st.plotly_chart(fig_pc, use_container_width=True)   
-    
     st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
