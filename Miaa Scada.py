@@ -909,7 +909,7 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.3. Selectores superiores
+        # 7.3. Selectores superiores de puntos de control
         dict_reg = cargar_puntos_de_control_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
@@ -919,7 +919,17 @@ if sector_seleccionado:
         with c_sel2:
             sel_r = st.selectbox("Equipo punto de control:", list(reg_nombres.keys()), key="sel_reg_full")
 
-        # 7.4. Layout: Mapa e Histórico
+        # 7.4. Selectores superiores de puntos de criticos
+        dict_reg = cargar_puntos_criticos_desde_db()
+        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+
+        c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
+        with c_sel1:
+            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+        with c_sel2:
+            sel_r = st.selectbox("Equipo punto de control:", list(reg_nombres.keys()), key="sel_reg_full")
+
+        # 7.5. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_izq:
@@ -934,14 +944,21 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # 7.5. CARGA DATOS DE PUNTOS DE CONTROL
+            # 7.6. CARGA DATOS DE PUNTOS DE CONTROL
             tags_reg = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): tags_reg.append(r.get(k))
             scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
 
-            # 7.6. Marcadores de puntos de control
+            # 7.7. CARGA DATOS DE PUNTOS CRITICOS
+            tags_reg = []
+            for r in dict_reg.values():
+                for k in ['tag_p1', 'tag_q', 'tag_vbat']:
+                    if r.get(k): tags_reg.append(r.get(k))
+            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
+
+            # 7.8. Marcadores de puntos de control
             for r in dict_reg.values():
                 def get_rv(k):
                     val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
@@ -962,7 +979,28 @@ if sector_seleccionado:
                 """
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
 
-            # 7.7. Marcadores de Pozos (Popup 380px Restaurado)
+            # 7.9. Marcadores de puntos criticos
+            for r in dict_reg.values():
+                def get_rv(k):
+                    val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
+                    try: return float(val), fec
+                    except: return 0.0, fec
+                rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
+                
+                html_popup_reg = f"""
+                <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
+                    <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
+                    <hr style="opacity:0.2; margin:8px 0;">
+                    <div style="font-size:11px;">
+                        💧 Caudal: <b>{rcau:.2f} L/s</b> <span style="color:#FFFF00; font-size:9px;">{fq}</span><br>
+                        🚀 Presión: <b>{rp1:.2f} kg</b> <span style="color:#FFFF00; font-size:9px;">{fp1}</span><br>
+                        🔋 Batería: <b>{rbat:.2f} V</b> <span style="color:#FFFF00; font-size:9px;">{fb}</span>
+                    </div>
+                </div>
+                """
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+
+            # 7.10. Marcadores de Pozos
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
@@ -1027,7 +1065,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-         # 7.8. Gráfico Histórico puntos de control
+         # 7.11. Gráfico Histórico puntos de control
         with col_der:
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
