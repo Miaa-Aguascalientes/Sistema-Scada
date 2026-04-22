@@ -171,7 +171,9 @@ if not st.session_state.autenticado:
                         st.warning(f"Error en {nombre}: {e}")
                 prog.progress((i + 1) / len(tareas))
                 time.sleep(0.4)
-            
+
+            st.cache_data.clear()
+            st.cache_resource.clear()
             st.session_state.autenticado = True
             st.session_state.rol = st.session_state.temp_rol
             st.session_state.fase_carga = False
