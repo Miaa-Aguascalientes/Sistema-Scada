@@ -197,9 +197,17 @@ st.set_page_config(
     layout="wide", 
     initial_sidebar_state="expanded"
 )
+
+count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
+if "last_count" not in st.session_state:
+    st.session_state.last_count = count
+
+if count > st.session_state.last_count:
+    # Esta parte solo se ejecutará cuando el cronómetro llegue a los 5 min
     st.cache_data.clear()
     st.cache_resource.clear()
-count = st_autorefresh(interval=300000, limit=1000, key="scada_refresh")
+    st.session_state.last_count = count
+    # Opcional: st.toast("Datos actualizados automáticamente", icon="♻️")
 
 # 2.  SECCION------------------------------------------------------------------------------2. FUNCIONES DE CONEXIÓN ------------------------------------------------------------------------------------------------------
 
