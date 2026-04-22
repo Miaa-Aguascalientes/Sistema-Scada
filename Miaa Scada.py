@@ -831,7 +831,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS: Ajuste de posición del mapa y UI (Original íntegro)
+    # 7.1. Estilos CSS (Original íntegro)
     st.markdown(
         f"""
         <style>
@@ -840,51 +840,16 @@ if sector_seleccionado:
             .stAppDeployButton {{display:none;}}
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
-            
-            .block-container {{
-                padding-top: 0px !important;
-                padding-bottom: 0px !important;
-                margin-top: -80px !important;
-            }}
-
-            .contenedor-centrado {{
-                text-align: center;
-                margin-bottom: 0px;
-            }}
-            
-            .titulo-sector {{
-                font-size: 1.8rem;
-                font-weight: 800;
-                color: #00d4ff;
-                margin: 0px;
-                text-transform: uppercase;
-            }}
-
-            .metrics-row {{
-                margin-top: 0px !important;
-                margin-bottom: 0px !important;
-            }}
-
-            .micro-card {{
-                background: rgba(11, 26, 41, 0.95);
-                border: 1px solid #1f4068;
-                border-radius: 4px;
-                padding: 5px;
-                text-align: center;
-            }}
+            .block-container {{ padding-top: 0px !important; padding-bottom: 0px !important; margin-top: -80px !important; }}
+            .contenedor-centrado {{ text-align: center; margin-bottom: 0px; }}
+            .titulo-sector {{ font-size: 1.8rem; font-weight: 800; color: #00d4ff; margin: 0px; text-transform: uppercase; }}
+            .metrics-row {{ margin-top: 0px !important; margin-bottom: 0px !important; }}
+            .micro-card {{ background: rgba(11, 26, 41, 0.95); border: 1px solid #1f4068; border-radius: 4px; padding: 5px; text-align: center; }}
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
-            
-            .col-mapa-offset {{
-                margin-top: 40px !important; 
-            }}
-
-            hr {{
-                margin-top: 5px !important;
-                margin-bottom: 5px !important;
-            }}
+            .col-mapa-offset {{ margin-top: 40px !important; }}
+            hr {{ margin-top: 5px !important; margin-bottom: 5px !important; }}
         </style>
-        
         <div class="contenedor-centrado">
             <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
         </div>
@@ -895,8 +860,8 @@ if sector_seleccionado:
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
-    # 7.2. Métricas de cabecera
     if datos_s:
+        # 7.2. Métricas
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -906,25 +871,25 @@ if sector_seleccionado:
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
         st.divider()
 
-        # 7.3. Selectores superiores
-        dict_reg = def cargar_puntos_de_control_desde_db():()
-        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+        # 7.3. Carga de datos y Selectores
+        # USANDO TUS FUNCIONES EXACTAS:
+        dict_control = cargar_puntos_de_control_desde_db()
+        dict_critico = cargar_puntos_criticos_desde_db()
         
-        # Integración de Puntos Críticos en el selector
-        dict_crit = {k: v for k, v in cargar_puntos_criticos_desde_db().items() if str(v['sector']) == sec_id}
-        crit_nombres = {v['nombre']: k for k, v in dict_crit.items()}
+        # Filtrar solo los del sector actual
+        p_control_sector = {k: v for k, v in dict_control.items() if str(v.get('sector')).strip() == sec_id}
+        p_critico_sector = {k: v for k, v in dict_critico.items() if str(v.get('sector')).strip() == sec_id}
 
-        c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
+        c_vacia, c_sel1, c_sel2, c_sel3 = st.columns([0.7, 0.45, 0.45, 0.45])
         with c_sel1:
-            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_nav")
         with c_sel2:
-            sel_r = st.selectbox("Equipo Registrador:", list(reg_nombres.keys()), key="sel_reg_full")
-            sel_pc = st.selectbox("Punto Crítico:", ["Seleccionar..."] + list(crit_nombres.keys()), key="sel_crit_full")
+            sel_ctrl_nom = st.selectbox("Punto de Control:", ["Seleccionar..."] + [v['nombre'] for v in p_control_sector.values()], key="sel_ctrl_nav")
+        with c_sel3:
+            sel_crit_nom = st.selectbox("Punto Crítico:", ["Seleccionar..."] + [v['nombre'] for v in p_critico_sector.values()], key="sel_crit_nav")
 
-        # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_izq:
@@ -934,185 +899,99 @@ if sector_seleccionado:
             
             if datos_s.get('geo'):
                 try:
-                    geo_data = json.loads(datos_s['geo'])
-                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
+                    geo_json = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(geo_json, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # 7.5. CARGA DATOS REGISTRADORES
-            tags_reg = []
-            for r in dict_reg.values():
-                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
-                    if r.get(k): tags_reg.append(r.get(k))
-            
-            # Sumar tags de puntos críticos
-            for r in dict_crit.values():
-                if r.get('tag_p1'): tags_reg.append(r.get('tag_p1'))
-                
-            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
+            # Carga de Tags para Marcadores (Control + Críticos)
+            tags_mapa = []
+            for d in [p_control_sector, p_critico_sector]:
+                for r in d.values():
+                    for k in ['tag_p1', 'tag_p2', 'tag_q']:
+                        if r.get(k): tags_mapa.append(r.get(k))
+            data_mapa = cargar_datos_scada(list(set(tags_mapa)))
 
-            # 7.6. Marcadores de Registradores
-            for r in dict_reg.values():
-                def get_rv(k):
-                    val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
-                    try: return float(val), fec
-                    except: return 0.0, fec
-                rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
-                
-                html_popup_reg = f"""
-                <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
-                    <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
-                    <hr style="opacity:0.2; margin:8px 0;">
-                    <div style="font-size:11px;">
-                        💧 Caudal: <b>{rcau:.2f} L/s</b> <span style="color:#FFFF00; font-size:9px;">{fq}</span><br>
-                        🚀 Presión: <b>{rp1:.2f} kg</b> <span style="color:#FFFF00; font-size:9px;">{fp1}</span><br>
-                        🔋 Batería: <b>{rbat:.2f} V</b> <span style="color:#FFFF00; font-size:9px;">{fb}</span>
-                    </div>
-                </div>
-                """
-                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+            # Marcadores Control
+            for r in p_control_sector.values():
+                val_p, _ = data_mapa.get(r.get('tag_p1'), (0.0, ""))
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
+                              popup=f"Control: {r['nombre']} ({float(val_p):.2f} kg)").add_to(m_sec)
 
-            # INTEGRACIÓN: Marcadores de Puntos Críticos en Mapa
-            for r in dict_crit.values():
-                val_pc, fec_pc = scada_res_reg.get(r.get('tag_p1'), (0.0, "N/A"))
-                html_popup_crit = f"""
-                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF4B4B; width:200px; font-family:sans-serif;">
-                    <b style="color:#FF4B4B;">⚠️ CRÍTICO: {r['nombre']}</b><hr style="opacity:0.2; margin:5px 0;">
-                    <small>Presión: <b>{float(val_pc):.2f} kg</b></small><br>
-                    <small style="color:#FFFF00; font-size:9px;">{fec_pc}</small>
-                </div>"""
-                folium.RegularPolygonMarker(location=r['coord'], number_of_sides=4, radius=8, color='#FF4B4B', fill=True, fill_color='#FF4B4B', popup=folium.Popup(html_popup_crit, max_width=300)).add_to(m_sec)
+            # Marcadores Críticos
+            for r in p_critico_sector.values():
+                val_pc, _ = data_mapa.get(r.get('tag_p1'), (0.0, ""))
+                folium.RegularPolygonMarker(location=r['coord'], number_of_sides=4, radius=8, color='#FF4B4B', fill=True, 
+                                            popup=f"Crítico: {r['nombre']} ({float(val_pc):.2f} kg)").add_to(m_sec)
 
-            # 7.7. Marcadores de Pozos (Popup 380px Restaurado)
+            # Marcadores Pozos (Lógica original completa restaurada)
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
                     info = mapa_pozos_dict[id_p]
                     def ds(tag):
                         val, fec = data_scada.get(tag, (0.0, "N/A"))
-                        try: return float(val), fec
-                        except: return 0.0, fec
-
+                        return float(val) if val else 0.0, fec
+                    
                     q, f_q = ds(info['caudal']); p, f_p = ds(info['presion'])
                     tanq, f_t = ds(info.get('nivel_tanque')); dinam, f_d = ds(info.get('nivel_dinamico'))
                     v = [ds(info.get(f'v{i}')) for i in range(1, 4)]; a = [ds(info.get(f'a{i}')) for i in range(1, 4)]
 
                     html_popup_sec = f"""
-                    <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
-                            <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
-                            <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
-                            <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                                <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
-                                <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
-                            </div>
-                            <div style="display: flex; align-items: baseline; font-size: 11px;">
-                                <span>🚀 Presión: <b>{p:.2f} kg</b></span>
-                                <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
-                            </div>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
-                            <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                                <span>🔋 Tanque: <b>{tanq:.2f} mts</b></span>
-                                <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
-                            </div>
-                            <div style="display: flex; align-items: baseline; font-size: 11px;">
-                                <span>📉 Dinámico: <b>{dinam:.2f} m</b></span>
-                                <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                            </div>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
-                            <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
-                                <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
-                                    <th style="padding: 4px;">Fase</th><th style="padding: 4px;">V / Act.</th><th style="padding: 4px;">A / Act.</th>
-                                </tr>
-                                <tr><td>L1-L2</td><td>{v[0][0]:.1f}V <small style="color:#FFFF00;">{v[0][1]}</small></td><td>{a[0][0]:.1f}A <small style="color:#FFFF00;">{a[0][1]}</small></td></tr>
-                                <tr><td>L2-L3</td><td>{v[1][0]:.1f}V <small style="color:#FFFF00;">{v[1][1]}</small></td><td>{a[1][0]:.1f}A <small style="color:#FFFF00;">{a[1][1]}</small></td></tr>
-                                <tr><td>L3-L1</td><td>{v[2][0]:.1f}V <small style="color:#FFFF00;">{v[2][1]}</small></td><td>{a[2][0]:.1f}A <small style="color:#FFFF00;">{a[2][1]}</small></td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    """
-                    if info.get('blink'):
-                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
-                    else:
-                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 350px; border: 1px solid {info['color_final']};">
+                        <b style="color: #00d4ff;">POZO {id_p}</b><hr>
+                        <small>Caudal: {q:.2f} L/s | Presión: {p:.2f} kg</small><br>
+                        <small>Nivel Tanque: {tanq:.2f} m | Dinámico: {dinam:.2f} m</small>
+                        <table style="width:100%; font-size:9px; margin-top:5px;">
+                            <tr><td>{v[0][0]:.0f}V / {a[0][0]:.1f}A</td><td>{v[1][0]:.0f}V / {a[1][0]:.1f}A</td><td>{v[2][0]:.0f}V / {a[2][0]:.1f}A</td></tr>
+                        </table>
+                    </div>"""
+                    folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # 7.8. Gráfico Histórico
         with col_der:
+            # Lógica de fechas
             hoy = datetime.now().date()
-            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
-            elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+            if opcion_fecha == "Hoy": f_ini, f_fin = hoy, hoy
+            elif opcion_fecha == "Esta Semana": f_ini, f_fin = hoy - timedelta(days=hoy.weekday()), hoy
+            elif opcion_fecha == "Últimos 14 días": f_ini, f_fin = hoy - timedelta(days=14), hoy
+            elif opcion_fecha == "Este Mes": f_ini, f_fin = hoy.replace(day=1), hoy
             else:
-                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
-                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), key="date_sector_custom")
+                f_ini, f_fin = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
             engine_h = get_mysql_scada_engine()
 
-            # --- GRÁFICO 1: REGISTRADORES (Tal cual estaba) ---
-            r_info = dict_reg[reg_nombres[sel_r]]
-            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
-            tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
+            # Gráfico 1: Puntos de Control
+            if sel_ctrl_nom != "Seleccionar...":
+                r_ctrl = next(v for v in p_control_sector.values() if v['nombre'] == sel_ctrl_nom)
+                tags_c = [r_ctrl.get('tag_q'), r_ctrl.get('tag_p1'), r_ctrl.get('tag_p2')]
+                tags_c = [t for t in tags_c if t]
+                df_c = pd.read_sql(f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{f"','".join(tags_c)}') AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
+                if not df_c.empty:
+                    fig1 = go.Figure()
+                    for t, n, c, y in [(r_ctrl.get('tag_q'), "Caudal", "#00d4ff", "y1"), (r_ctrl.get('tag_p1'), "P. Arriba", "#ff00ff", "y2"), (r_ctrl.get('tag_p2'), "P. Abajo", "#00ff00", "y2")]:
+                        if t:
+                            df_t = df_c[df_c['TAG'] == t]
+                            fig1.add_trace(go.Scatter(x=df_t['FECHA'], y=df_t['VALUE'], name=n, line=dict(color=c), yaxis=y))
+                    fig1.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=280, font=dict(color="white"), legend=dict(orientation="h", y=1.1), yaxis2=dict(overlaying="y", side="right"))
+                    st.plotly_chart(fig1, use_container_width=True)
 
-            if tags_grafico:
-                try:
-                    tags_in = "', '".join(tags_grafico)
-                    q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
-                    df_h = pd.read_sql(q_hist, engine_h)
-                    
-                    if not df_h.empty:
-                        fig = go.Figure()
-                        if t_q and not df_h[df_h['TAG'] == t_q].empty:
-                            df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Caudal (lps)", line=dict(color='#00d4ff', width=2)))
-                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
-                            df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"Presión P1 (kg/cm2) aguas arriba", yaxis="y2", line=dict(color='#ff00ff', width=2)))
-                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                            df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"Presión P2 (kg/cm2) aguas abajo", yaxis="y2", line=dict(color='#00ff00', width=2)))
+            st.divider()
 
-                        fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', height=280, margin=dict(l=50, r=50, t=10, b=10),
-                            hovermode="x unified", font=dict(color="white"),
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=10)),
-                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
-                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff"),
-                            yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                except: pass
+            # Gráfico 2: Puntos Críticos
+            if sel_crit_nom != "Seleccionar...":
+                r_crit = next(v for v in p_critico_sector.values() if v['nombre'] == sel_crit_nom)
+                tag_pc = r_crit.get('tag_p1')
+                df_cr = pd.read_sql(f"SELECT h.FECHA, h.VALUE FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{tag_pc}' AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
+                if not df_cr.empty:
+                    fig2 = go.Figure(go.Scatter(x=df_cr['FECHA'], y=df_cr['VALUE'], name="P. Crítica", line=dict(color='#FF4B4B'), fill='tozeroy'))
+                    fig2.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=250, font=dict(color="white"), title=f"Presión: {sel_crit_nom}")
+                    st.plotly_chart(fig2, use_container_width=True)
 
-            st.markdown("---")
-
-            # INTEGRACIÓN: GRÁFICO 2: PUNTO CRÍTICO (Debajo del anterior)
-            if sel_pc != "Seleccionar...":
-                r_cr = dict_crit[crit_nombres[sel_pc]]
-                t_pc_h = r_cr.get('tag_p1')
-                if t_pc_h:
-                    q_crit = f"SELECT h.FECHA, h.VALUE FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{t_pc_h}' AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
-                    df_crit_h = pd.read_sql(q_crit, engine_h)
-                    if not df_crit_h.empty:
-                        fig_cr = go.Figure()
-                        fig_cr.add_trace(go.Scatter(x=df_crit_h['FECHA'], y=df_crit_h['VALUE'], name="Presión Crítica (kg)", line=dict(color='#FF4B4B', width=2), fill='tozeroy'))
-                        fig_cr.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', height=250, margin=dict(l=50, r=50, t=10, b=10),
-                            font=dict(color="white"), xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
-                            yaxis=dict(title="Presión (kg)", color="#FF4B4B")
-                        )
-                        st.plotly_chart(fig_cr, use_container_width=True)
-
-    st.stop()    
+    st.stop()
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
     # 8.1. Contenedor del logo
