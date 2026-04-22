@@ -1119,6 +1119,7 @@ if sector_seleccionado:
                 except Exception as e: st.error(f"Error: {e}")
 
     # --- GRÁFICO DE PUNTOS CRÍTICOS (DEBAJO DEL EXISTENTE) ---
+            # --- GRÁFICO DE PUNTOS CRÍTICOS (DEBAJO DEL EXISTENTE) ---
                         if dict_pc_sec:
                             st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:10px;'>PRESIÓN PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
                             
@@ -1142,7 +1143,7 @@ if sector_seleccionado:
                                 xaxis=dict(tickfont=dict(size=9, color="white")),
                                 yaxis=dict(title="kg", color="white", gridcolor='rgba(255,255,255,0.1)')
                             )
-                            st.plotly_chart(fig_pc, use_container_width=True)
+                            st.plotly_chart(fig_pc, use_container_width=True)   
     
     st.stop()
     
