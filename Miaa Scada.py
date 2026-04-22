@@ -827,33 +827,19 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7. SECCIÓN DETALLE DE SECTOR
+# 7. SECCION DETALLE DE SECTOR
 # ----------------------------------------------------------------------------------------------------
 if sector_seleccionado:
 
-    # 7.1. Estilos CSS: Ajuste de posición del mapa y UI
+    # 7.1 Estilos CSS
     st.markdown(
         f"""
         <style>
-            [data-testid="stSidebar"] {{
-                display: none;
-            }}
-
-            header {{
-                visibility: hidden;
-            }}
-
-            .stAppDeployButton {{
-                display: none;
-            }}
-
-            #MainMenu {{
-                visibility: hidden;
-            }}
-
-            footer {{
-                visibility: hidden;
-            }}
+            [data-testid="stSidebar"] {{ display: none; }}
+            header {{ visibility: hidden; }}
+            .stAppDeployButton {{ display:none; }}
+            #MainMenu {{ visibility: hidden; }}
+            footer {{ visibility: hidden; }}
 
             .block-container {{
                 padding-top: 0px !important;
@@ -918,84 +904,32 @@ if sector_seleccionado:
         unsafe_allow_html=True
     )
 
-    # 7.1.1 Obtener datos del sector
     sec_id = str(sector_seleccionado).split('.')[0].strip()
-    datos_s = next(
-        (s for s in sectores if str(s['sector']).strip() == sec_id),
-        None
-    )
+    datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
-    # 7.2 Métricas de cabecera
+    # 7.2 Métricas
     if datos_s:
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
 
         c1, c2, c3, c4, c5, c6 = st.columns(6)
 
         with c1:
-            st.markdown(
-                f"""
-                <div class="micro-card">
-                    <div class="micro-label">Población</div>
-                    <div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
 
         with c2:
-            st.markdown(
-                f"""
-                <div class="micro-card">
-                    <div class="micro-label">U. Totales</div>
-                    <div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
 
         with c3:
-            st.markdown(
-                f"""
-                <div class="micro-card">
-                    <div class="micro-label">U. Domésticos</div>
-                    <div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
 
         with c4:
-            st.markdown(
-                f"""
-                <div class="micro-card">
-                    <div class="micro-label">Consumo m³</div>
-                    <div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
 
         with c5:
-            st.markdown(
-                f"""
-                <div class="micro-card">
-                    <div class="micro-label">Dotación</div>
-                    <div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
 
         with c6:
-            st.markdown(
-                f"""
-                <div class="micro-card">
-                    <div class="micro-label">Balance</div>
-                    <div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
@@ -1023,6 +957,161 @@ if sector_seleccionado:
 
         # 7.4 Layout
         col_izq, col_der = st.columns([1.1, 0.9])
+
+        # ===================== MAPA =====================
+        with col_izq:
+            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+
+            m_sec = folium.Map(
+                location=[21.8820, -102.2800],
+                zoom_start=14,
+                tiles="CartoDB dark_matter"
+            )
+
+            Fullscreen().add_to(m_sec)
+
+            if datos_s.get('geo'):
+                try:
+                    geo_data = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(
+                        geo_data,
+                        style_function=lambda x: {
+                            'fillColor': '#00d4ff',
+                            'color': '#ffffff',
+                            'weight': 2,
+                            'fillOpacity': 0.15
+                        }
+                    ).add_to(m_sec)
+
+                    m_sec.fit_bounds(folium_geo.get_bounds())
+                except:
+                    pass
+
+            # 7.5 Carga datos registradores
+            tags_reg = []
+
+            for r in dict_reg.values():
+                for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
+                    if r.get(k):
+                        tags_reg.append(r.get(k))
+
+            # Puntos críticos
+            mapa_pc_all = cargar_puntos_criticos_desde_db()
+            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v['sector']) == sec_id}
+
+            for pc in dict_pc_sec.values():
+                if pc.get('tag_p1'):
+                    tags_reg.append(pc.get('tag_p1'))
+
+            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
+
+            # 7.6 Marcadores registradores
+            for r in dict_reg.values():
+
+                def get_rv(k):
+                    val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
+                    try:
+                        return float(val), fec
+                    except:
+                        return 0.0, fec
+
+                rp1, fp1 = get_rv('tag_p1')
+                rcau, fq = get_rv('tag_q')
+                rbat, fb = get_rv('tag_vbat')
+
+                html_popup_reg = f"""
+                <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px;">
+                    <b style="color:#00FFFF;">{r['nombre']}</b>
+                    <hr>
+                    💧 {rcau:.2f} L/s<br>
+                    🚀 {rp1:.2f} kg<br>
+                    🔋 {rbat:.2f} V
+                </div>
+                """
+
+                folium.Marker(
+                    location=r['coord'],
+                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'),
+                    popup=folium.Popup(html_popup_reg, max_width=300)
+                ).add_to(m_sec)
+
+            # Puntos críticos
+            for pc in dict_pc_sec.values():
+                val_p, fec_p = scada_res_reg.get(pc['tag_p1'], (0.0, "N/A"))
+
+                html_pc = f"""
+                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF00FF;">
+                    <b style="color:#FF00FF;">PUNTO CRÍTICO</b><br>
+                    {pc['nombre']}<br>
+                    Presión: {val_p:.2f} kg
+                </div>
+                """
+
+                folium.RegularPolygonMarker(
+                    location=pc['coord'],
+                    number_of_sides=3,
+                    radius=7,
+                    color='#FF00FF',
+                    fill=True,
+                    fill_color='#FF00FF',
+                    popup=folium.Popup(html_pc, max_width=250)
+                ).add_to(m_sec)
+
+            folium_static(m_sec, height=650)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # ===================== HISTÓRICO =====================
+        with col_der:
+            hoy = datetime.now().date()
+
+            if opcion_fecha == "Hoy":
+                f_ini_h, f_fin_h = hoy, hoy
+            elif opcion_fecha == "Esta Semana":
+                f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+            elif opcion_fecha == "Últimos 14 días":
+                f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+            elif opcion_fecha == "Este Mes":
+                f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+            else:
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy))
+                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) else (hoy, hoy)
+
+            r_info = dict_reg[reg_nombres[sel_r]]
+
+            tags_grafico = [
+                t for t in [
+                    r_info.get('tag_q'),
+                    r_info.get('tag_p1'),
+                    r_info.get('tag_p2')
+                ] if t
+            ]
+
+            if tags_grafico:
+                engine_h = get_mysql_scada_engine()
+
+                tags_in = "', '".join(tags_grafico)
+
+                query = f"""
+                SELECT h.FECHA, h.VALUE, r.NAME as TAG
+                FROM vfitagnumhistory h
+                JOIN VfiTagRef r ON h.GATEID = r.GATEID
+                WHERE r.NAME IN ('{tags_in}')
+                AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                ORDER BY h.FECHA ASC
+                """
+
+                df_h = pd.read_sql(query, engine_h)
+
+                if not df_h.empty:
+                    fig = go.Figure()
+
+                    for tag in tags_grafico:
+                        df_t = df_h[df_h['TAG'] == tag]
+                        fig.add_trace(go.Scatter(x=df_t['FECHA'], y=df_t['VALUE'], name=tag))
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+    st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
