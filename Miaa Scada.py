@@ -415,13 +415,13 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
-# 3.4. Funcion para optener los registradores de la base de datos Diccionario_registradores
+# 3.4. Funcion para optener los puntos de control de la base de datos Diccionario_puntos_de_control
 @st.cache_data(ttl=5)
-def cargar_registradores_desde_db():
+def cargar_puntos_de_control_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
     try:
-        df = pd.read_sql("SELECT * FROM Diccionario_registradores", engine)
+        df = pd.read_sql("SELECT * FROM Diccionario_puntos_de_control", engine)
         d_res = {}
         for _, r in df.iterrows():
             try:
@@ -881,7 +881,7 @@ if sector_seleccionado:
         st.divider()
 
         # 7.3. Selectores superiores
-        dict_reg = cargar_registradores_desde_db()
+        dict_reg = cargar_puntos_de_control_desde_db()
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
 
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
