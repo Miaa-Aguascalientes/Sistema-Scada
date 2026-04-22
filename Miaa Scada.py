@@ -831,7 +831,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS (Sin cambios)
+    # 7.1. Estilos CSS Restaurados
     st.markdown(
         f"""
         <style>
@@ -840,13 +840,16 @@ if sector_seleccionado:
             .stAppDeployButton {{display:none;}}
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
-            .block-container {{ padding-top: 0px !important; padding-bottom: 0px !important; margin-top: -60px !important; }}
-            .titulo-sector {{ font-size: 1.8rem; font-weight: 800; color: #00d4ff; margin: 0px; text-transform: uppercase; text-align: left; }}
-            .metrics-row {{ margin-top: 0px !important; margin-bottom: 0px !important; }}
+            .block-container {{ padding-top: 0px !important; padding-bottom: 0px !important; margin-top: -80px !important; }}
+            
+            /* Título Centrado */
+            .contenedor-centrado {{ text-align: center; width: 100%; margin-bottom: 10px; }}
+            .titulo-sector {{ font-size: 1.8rem; font-weight: 800; color: #00d4ff; margin: 0px; text-transform: uppercase; }}
+            
+            .metrics-row {{ margin-top: 0px !important; margin-bottom: 10px !important; }}
             .micro-card {{ background: rgba(11, 26, 41, 0.95); border: 1px solid #1f4068; border-radius: 4px; padding: 5px; text-align: center; }}
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
-            .col-mapa-offset {{ margin-top: 20px !important; }}
         </style>
         """, 
         unsafe_allow_html=True
@@ -856,125 +859,109 @@ if sector_seleccionado:
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
     if datos_s:
-        # CABECERA: Selector de fecha a la izquierda del título
-        c_fecha, c_tit = st.columns([0.4, 1.6])
-        with c_fecha:
-            opcion_fecha = st.selectbox("📅 Periodo de Análisis:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_global_header")
+        # Fila superior: Selector de fecha a la izquierda y Título Centrado
+        c_f, c_t, c_v = st.columns([0.5, 2, 0.5])
+        with c_f:
+            opcion_fecha = st.selectbox("📅 Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_final")
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini, f_fin = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini, f_fin = hoy - timedelta(days=hoy.weekday()), hoy
             elif opcion_fecha == "Últimos 14 días": f_ini, f_fin = hoy - timedelta(days=14), hoy
             elif opcion_fecha == "Este Mes": f_ini, f_fin = hoy.replace(day=1), hoy
             else:
-                rango = st.date_input("Rango personalizado:", value=(hoy - timedelta(days=7), hoy), key="date_custom_header")
+                rango = st.date_input("Personalizado:", value=(hoy - timedelta(days=7), hoy), key="d_final")
                 f_ini, f_fin = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
-
-        with c_tit:
-            st.markdown(f'<h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>', unsafe_allow_html=True)
+        
+        with c_t:
+            st.markdown(f'<div class="contenedor-centrado"><h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1></div>', unsafe_allow_html=True)
 
         # 7.2. Métricas
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
-        with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
-        with c2: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Totales</div><div class="micro-value">{datos_s.get("U_Tot", 0):,.0f}</div></div>', unsafe_allow_html=True)
-        with c3: st.markdown(f'<div class="micro-card"><div class="micro-label">U. Domésticos</div><div class="micro-value">{datos_s.get("U_Domesticos", 0):,.0f}</div></div>', unsafe_allow_html=True)
-        with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
-        with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
-        with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        cols_m = st.columns(6)
+        metricas = [
+            ("Población", datos_s.get("Poblacion", 0), ":,.0f"),
+            ("U. Totales", datos_s.get("U_Tot", 0), ":,.0f"),
+            ("U. Domésticos", datos_s.get("U_Domesticos", 0), ":,.0f"),
+            ("Consumo m³", datos_s.get("Cons_m3", 0), ":,.1f"),
+            ("Dotación", datos_s.get("Dotacion", 0), ":,.1f"),
+            ("Balance", datos_s.get("Balance_Estimado", 0), ":,.1f")
+        ]
+        for i, (lab, val, form) in enumerate(metricas):
+            val_f = f"{val}{'%' if lab == 'Balance' else ''}"
+            with cols_m[i]: st.markdown(f'<div class="micro-card"><div class="micro-label">{lab}</div><div class="micro-value">{val:{form}}</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        st.divider()
 
-        # 7.3. Carga de Datos
-        d_ctrl_all = cargar_puntos_de_control_desde_db()
-        d_crit_all = cargar_puntos_criticos_desde_db()
-        dict_control = {k: v for k, v in d_ctrl_all.items() if str(v['sector']) == sec_id}
-        dict_criticos = {k: v for k, v in d_crit_all.items() if str(v['sector']) == sec_id}
+        # 7.3. Carga de Datos y Mapas (Sin offsets raros)
+        d_ctrl = {k: v for k, v in cargar_puntos_de_control_desde_db().items() if str(v['sector']) == sec_id}
+        d_crit = {k: v for k, v in cargar_puntos_criticos_desde_db().items() if str(v['sector']) == sec_id}
 
-        # Layout Principal
         col_izq, col_der = st.columns([1.1, 0.9])
 
         with col_izq:
-            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
-            # Polígono
             if datos_s.get('geo'):
                 try:
-                    geo_data = json.loads(datos_s['geo'])
-                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
-                    m_sec.fit_bounds(folium_geo.get_bounds())
+                    geo_json = json.loads(datos_s['geo'])
+                    fol_geo = folium.GeoJson(geo_json, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
+                    m_sec.fit_bounds(fol_geo.get_bounds())
                 except: pass
 
-            # PUNTOS DE CONTROL (ESTRELLAS)
-            for r in dict_control.values():
+            for r in d_ctrl.values():
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=r['nombre']).add_to(m_sec)
 
-            # PUNTOS CRÍTICOS (CUADRADOS)
-            for r in dict_criticos.values():
+            for r in d_crit.values():
                 folium.RegularPolygonMarker(location=r['coord'], number_of_sides=4, radius=8, color='#FF4B4B', fill=True, fill_color='#FF4B4B', popup=r['nombre']).add_to(m_sec)
 
-            # Pozos
-            ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
-            for id_p in ids_p:
-                if id_p in mapa_pozos_dict:
-                    info = mapa_pozos_dict[id_p]
-                    folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1).add_to(m_sec)
-
             folium_static(m_sec, width=None, height=650)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col_der:
             engine_h = get_mysql_scada_engine()
-
-            # --- HISTÓRICO CONTROL ---
+            
+            # --- GRÁFICO CONTROL ---
             st.markdown("### 📊 Histórico: Puntos de Control")
-            n_ctrl = {v['nombre']: k for k, v in dict_control.items()}
-            sel_c = st.selectbox("Seleccionar Equipo Control:", ["Seleccionar..."] + list(n_ctrl.keys()), key="s_ctrl_full")
+            sel_c = st.selectbox("Seleccionar Control:", ["Seleccionar..."] + [v['nombre'] for v in d_ctrl.values()], key="sc_f")
             
             if sel_c != "Seleccionar...":
-                r_c = dict_control[n_ctrl[sel_c]]
-                # Tags originales sin modificar
+                r_c = next(v for v in d_ctrl.values() if v['nombre'] == sel_c)
                 t_q, t_p1, t_p2 = r_c.get('tag_q'), r_c.get('tag_p1'), r_c.get('tag_p2')
-                tags_query = [t for t in [t_q, t_p1, t_p2] if t]
+                df = pd.read_sql(f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{t_q}','{t_p1}','{t_p2}') AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
                 
-                if tags_query:
-                    t_in = "', '".join(tags_query)
-                    df_c = pd.read_sql(f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{t_in}') AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
+                if not df.empty:
+                    fig1 = go.Figure()
+                    for tag, name, color, axis in [(t_q, "Caudal (L/s)", "#00d4ff", "y1"), (t_p1, "Presion Aguas Arriba", "#ff00ff", "y2"), (t_p2, "Presion Aguas Abajo", "#00ff00", "y2")]:
+                        d_p = df[df['TAG'] == tag]
+                        if not d_p.empty: fig1.add_trace(go.Scatter(x=d_p['FECHA'], y=d_p['VALUE'], name=name, line=dict(color=color), yaxis=axis))
                     
-                    if not df_c.empty:
-                        fig1 = go.Figure()
-                        # Caudal
-                        df_q_plot = df_c[df_c['TAG'] == t_q]
-                        if not df_q_plot.empty: fig1.add_trace(go.Scatter(x=df_q_plot['FECHA'], y=df_q_plot['VALUE'], name="Caudal (L/s)", line=dict(color='#00d4ff')))
-                        # Presión Aguas Arriba
-                        df_p1_plot = df_c[df_c['TAG'] == t_p1]
-                        if not df_p1_plot.empty: fig1.add_trace(go.Scatter(x=df_p1_plot['FECHA'], y=df_p1_plot['VALUE'], name="Presion Aguas Arriba", yaxis="y2", line=dict(color='#ff00ff')))
-                        # Presión Aguas Abajo
-                        df_p2_plot = df_c[df_c['TAG'] == t_p2]
-                        if not df_p2_plot.empty: fig1.add_trace(go.Scatter(x=df_p2_plot['FECHA'], y=df_p2_plot['VALUE'], name="Presion Aguas Abajo", yaxis="y2", line=dict(color='#00ff00')))
-                        
-                        fig1.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=280, margin=dict(l=0,r=0,t=20,b=0), hovermode="x unified", font=dict(color="white"))
-                        fig1.update_layout(yaxis=dict(title="Caudal (L/s)"), yaxis2=dict(overlaying="y", side="right", title="Presión (kg)"))
-                        st.plotly_chart(fig1, use_container_width=True)
+                    fig1.update_layout(
+                        paper_bgcolor='black', plot_bgcolor='black', height=280, margin=dict(l=10,r=10,t=30,b=10),
+                        hovermode="x unified", font=dict(color="white"),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0), # LEYENDA ARRIBA IZQUIERDA
+                        yaxis=dict(title="L/s"), yaxis2=dict(overlaying="y", side="right", title="kg")
+                    )
+                    st.plotly_chart(fig1, use_container_width=True)
 
             st.divider()
 
-            # --- HISTÓRICO CRÍTICO ---
+            # --- GRÁFICO CRÍTICO ---
             st.markdown("### 📈 Histórico: Puntos Críticos")
-            n_crit = {v['nombre']: k for k, v in dict_criticos.items()}
-            sel_cr = st.selectbox("Seleccionar Equipo Crítico:", ["Seleccionar..."] + list(n_crit.keys()), key="s_crit_full")
+            sel_cr = st.selectbox("Seleccionar Crítico:", ["Seleccionar..."] + [v['nombre'] for v in d_crit.values()], key="scr_f")
             
             if sel_cr != "Seleccionar...":
-                r_cr = dict_criticos[n_crit[sel_cr]]
-                t_p_crit = r_cr.get('tag_p1')
-                if t_p_crit:
-                    df_cr = pd.read_sql(f"SELECT h.FECHA, h.VALUE FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{t_p_crit}' AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
-                    if not df_cr.empty:
-                        fig2 = go.Figure()
-                        fig2.add_trace(go.Scatter(x=df_cr['FECHA'], y=df_cr['VALUE'], name="Presión Crítica (kg)", line=dict(color='#FF4B4B', width=2), fill='tozeroy'))
-                        fig2.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=280, margin=dict(l=0,r=0,t=20,b=0), font=dict(color="white"))
-                        st.plotly_chart(fig2, use_container_width=True)
+                r_cr = next(v for v in d_crit.values() if v['nombre'] == sel_cr)
+                t_pc = r_cr.get('tag_p1')
+                df_cr = pd.read_sql(f"SELECT h.FECHA, h.VALUE FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{t_pc}' AND h.FECHA BETWEEN '{f_ini} 00:00:00' AND '{f_fin} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
+                
+                if not df_cr.empty:
+                    fig2 = go.Figure()
+                    fig2.add_trace(go.Scatter(x=df_cr['FECHA'], y=df_cr['VALUE'], name="Presión Crítica", line=dict(color='#FF4B4B'), fill='tozeroy'))
+                    fig2.update_layout(
+                        paper_bgcolor='black', plot_bgcolor='black', height=280, margin=dict(l=10,r=10,t=30,b=10),
+                        font=dict(color="white"),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0) # LEYENDA ARRIBA IZQUIERDA
+                    )
+                    st.plotly_chart(fig2, use_container_width=True)
 
     st.stop()
     
