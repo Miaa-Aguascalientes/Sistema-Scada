@@ -415,9 +415,9 @@ def cargar_rebombeos_desde_db():
         return nuevo_mapa_rb
     except: return {}
 
-# 3.4. Funcion para optener los registradores de la base de datos Diccionario_registradores
+# 3.4. Funcion para optener los registradores de la base de datos Diccionario de puntos de control
 @st.cache_data(ttl=5)
-def cargar_puntos_de_control__desde_db():
+def cargar_puntos_de_control_desde_db():
     engine = get_mysql_telemetria_engine()
     if not engine: return {}
     try:
