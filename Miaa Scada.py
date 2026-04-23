@@ -1038,66 +1038,94 @@ if sector_seleccionado:
 
 # 7.8. Sección de Gráficos Históricos (Columna Derecha)
         with col_der:
+            # --- Configuración de Fechas ---
             hoy = datetime.now().date()
-            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
-            elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+            if opcion_fecha == "Hoy": 
+                f_ini_h, f_fin_h = hoy, hoy
+            elif opcion_fecha == "Esta Semana": 
+                f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+            elif opcion_fecha == "Últimos 14 días": 
+                f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+            elif opcion_fecha == "Este Mes": 
+                f_ini_h, f_fin_h = hoy.replace(day=1), hoy
             else:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            # --- OBTENCIÓN DE DATOS REGISTRADOR ---
+            # --- 1. LÓGICA DE PUNTO DE CONTROL (REGISTRADOR) ---
             r_info = dict_reg[reg_nombres[sel_r]]
-            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
-            tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
+            
+            # Validación de Sector: Solo grafica si el registrador pertenece al sector seleccionado
+            if r_info.get('sector') == sel_sector:
+                t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
+                tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
 
-            if tags_grafico:
-                try:
-                    engine_h = get_mysql_scada_engine()
-                    tags_in = "', '".join(tags_grafico)
-                    q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
-                    df_h = pd.read_sql(q_hist, engine_h)
-                    
-                    if not df_h.empty:
-                        # --- GRÁFICO 1: HISTÓRICO PUNTOS DE CONTROL ---
-                        fig = go.Figure()
+                if tags_grafico:
+                    try:
+                        engine_h = get_mysql_scada_engine()
+                        tags_in = "', '".join(tags_grafico)
+                        q_hist = f"""
+                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                            FROM vfitagnumhistory h 
+                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                            WHERE r.NAME IN ('{tags_in}') 
+                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                            ORDER BY h.FECHA ASC
+                        """
+                        df_h = pd.read_sql(q_hist, engine_h)
                         
-                        if t_q and not df_h[df_h['TAG'] == t_q].empty:
-                            df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
-                        
-                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
-                            df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="Presión P1", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
-                        
-                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                            df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="Presión P2", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
+                        if not df_h.empty:
+                            fig = go.Figure()
+                            
+                            # Trace Caudal
+                            if t_q and not df_h[df_h['TAG'] == t_q].empty:
+                                df_q = df_h[df_h['TAG'] == t_q]
+                                fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
+                            
+                            # Trace Presión 1
+                            if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
+                                df_p1 = df_h[df_h['TAG'] == t_p1]
+                                fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="Presión P1", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
+                            
+                            # Trace Presión 2
+                            if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
+                                df_p2 = df_h[df_h['TAG'] == t_p2]
+                                fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="Presión P2", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
-                        fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', height=300,
-                            margin=dict(l=50, r=50, t=30, b=10),
-                            hovermode="x unified",
-                            hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
-                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
-                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
-                            yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
+                            fig.update_layout(
+                                paper_bgcolor='black', plot_bgcolor='black', height=300,
+                                margin=dict(l=50, r=50, t=30, b=10),
+                                hovermode="x unified",
+                                hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
+                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
+                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
+                                yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
+                                yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.info(f"Sin datos históricos para {sel_r}")
+                    except Exception as e: 
+                        st.error(f"Error en Histórico Registrador: {e}")
+            else:
+                # Opcional: Mostrar mensaje si el punto no es del sector, o simplemente dejar vacío
+                st.warning(f"El punto {sel_r} no pertenece al sector {sel_sector}")
 
-                except Exception as e: 
-                    st.error(f"Error en Histórico: {e}")
-
-            # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (JUSTO DEBAJO) ---
+            # --- 2. LÓGICA DE PUNTOS CRÍTICOS (JUSTO DEBAJO) ---
             if dict_pc_sec:
                 tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
                 
                 if tags_pc:
                     try:
                         tags_pc_in = "', '".join(tags_pc)
-                        q_hist_pc = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_pc_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
+                        q_hist_pc = f"""
+                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                            FROM vfitagnumhistory h 
+                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                            WHERE r.NAME IN ('{tags_pc_in}') 
+                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                            ORDER BY h.FECHA ASC
+                        """
                         df_pc_h = pd.read_sql(q_hist_pc, engine_h)
 
                         if not df_pc_h.empty:
