@@ -907,14 +907,14 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.3. Selectores superiores
+# 7.3. Selectores superiores
         dict_reg_all = cargar_puntos_de_control_desde_db() 
         
-        # --- NUEVO: FILTRO PARA QUE SOLO APAREZCAN LOS DEL SECTOR ACTUAL ---
-        # Solo incluimos en dict_reg los equipos cuyo sector coincida con sec_id
-        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')) == str(sec_id)}
+        # --- FILTRO POR SECTOR ---
+        # Solo incluimos los equipos cuyo sector coincida con sec_id (comparación robusta)
+        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         
-        # Actualizamos la lista de nombres para el selectbox con el diccionario ya filtrado
+        # Diccionario para el selectbox con equipos filtrados
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
         
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
@@ -922,50 +922,84 @@ if sector_seleccionado:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         
         with c_sel2:
-            # Si no hay equipos en este sector, evitamos que truene el selectbox
-            opciones_equipo = list(reg_nombres.keys()) if reg_nombres else ["Sin equipos en este sector"]
-            sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
+            opciones_equipo = list(reg_nombres.keys())
+            if not opciones_equipo:
+                opciones_equipo = ["Sin equipos en este sector"]
+                sel_r = opciones_equipo[0]
+                st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full", disabled=True)
+            else:
+                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
+        
         with col_izq:
-            # ... (tu código del mapa se mantiene igual) ...
+            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
+            Fullscreen().add_to(m_sec)
             
+            if datos_s.get('geo'):
+                try:
+                    geo_data = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(
+                        geo_data, 
+                        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
+                    ).add_to(m_sec)
+                    m_sec.fit_bounds(folium_geo.get_bounds())
+                except: 
+                    pass
+
             # 7.5. CARGA DATOS REGISTRADORES Y PUNTOS CRÍTICOS
-            tags_reg = []
-            # Ahora dict_reg ya viene filtrado desde arriba, así que solo iterará los del sector
+            tags_para_scada = []
+            
+            # Tags de Registradores (Solo del sector filtrado)
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
-                    if r.get(k): tags_reg.append(r.get(k))
+                    if r.get(k): 
+                        tags_para_scada.append(r.get(k))
             
-            # --- Integración Puntos Críticos ---
+            # Tags de Puntos Críticos (Filtrados por sector)
             mapa_pc_all = cargar_puntos_criticos_desde_db()
-            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v['sector']) == sec_id}
+            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
             for pc in dict_pc_sec.values():
-                if pc.get('tag_p1'): tags_reg.append(pc.get('tag_p1'))
+                if pc.get('tag_p1'): 
+                    tags_para_scada.append(pc.get('tag_p1'))
 
-            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
+            # Consulta única a SCADA para todos los tags del sector
+            scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
 
-            # 7.6. Marcadores de Registradores
+            # 7.6. Marcadores de Registradores (Solo del sector activo)
             for r in dict_reg.values():
-                def get_rv(k):
-                    val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
-                    try: return float(val), fec
-                    except: return 0.0, fec
-                rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
+                def get_rv(tag_key):
+                    tag = r.get(tag_key)
+                    val, fec = scada_res_reg.get(tag, (0.0, "N/A"))
+                    try:
+                        return float(val), fec
+                    except:
+                        return 0.0, fec
+
+                rp1, fp1 = get_rv('tag_p1')
+                rcau, fq = get_rv('tag_q')
+                rbat, fb = get_rv('tag_vbat')
                 
                 html_popup_reg = f"""
                 <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
                     <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
                     <hr style="opacity:0.2; margin:8px 0;">
                     <div style="font-size:11px;">
-                        💧 Caudal: <b>{rcau:.2f} L/s</b> <span style="color:#FFFF00; font-size:9px;">{fq}</span><br>
-                        🚀 Presión: <b>{rp1:.2f} kg</b> <span style="color:#FFFF00; font-size:9px;">{fp1}</span><br>
-                        🔋 Batería: <b>{rbat:.2f} V</b> <span style="color:#FFFF00; font-size:9px;">{fb}</span>
+                        💧 Caudal: <b>{rcau:.2f} L/s</b> <br><span style="color:#FFFF00; font-size:9px;">{fq}</span><br><br>
+                        🚀 Presión: <b>{rp1:.2f} kg</b> <br><span style="color:#FFFF00; font-size:9px;">{fp1}</span><br><br>
+                        🔋 Batería: <b>{rbat:.2f} V</b> <br><span style="color:#FFFF00; font-size:9px;">{fb}</span>
                     </div>
                 </div>
                 """
-                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+                folium.Marker(
+                    location=r['coord'], 
+                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
+                    popup=folium.Popup(html_popup_reg, max_width=300)
+                ).add_to(m_sec)
+
+            folium_static(m_sec, width=None) # Si usas streamlit-folium
 
             # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
