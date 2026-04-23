@@ -1092,7 +1092,7 @@ if sector_seleccionado:
                 except Exception as e: st.error(f"Error: {e}")
 
 # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (ESTILO LÍNEAS) ---
-if dict_pc_sec:
+        if dict_pc_sec:
                 # Obtenemos todos los tags de presión del sector
                 tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
                 
