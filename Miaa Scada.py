@@ -904,13 +904,11 @@ if sector_seleccionado:
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
         st.divider()
 
         # 7.3. Selectores superiores
         dict_reg = cargar_puntos_de_control_desde_db()
-        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-
+        reg_nombres = {k: v for k, v in dict_reg.items() if str(v['sector']) == sec_id}
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
