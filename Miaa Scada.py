@@ -1093,8 +1093,7 @@ if sector_seleccionado:
 
 # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (ESTILO LÍNEAS) ---
             if dict_pc_sec:
-                st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:10px; text-align:center;'>HISTÓRICO PRESIONES PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
-                
+                                
                 # Selector colocado encima del gráfico
                 opciones_pc = {v['nombre']: v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')}
                 nombre_sel_pc = st.selectbox("Seleccionar Punto Crítico a revisar:", options=list(opciones_pc.keys()), key="sel_pc_hist")
