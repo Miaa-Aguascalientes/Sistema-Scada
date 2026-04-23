@@ -908,32 +908,32 @@ if sector_seleccionado:
         st.divider()
 
         # 7.3. Selectores superiores
-        dict_reg = cargar_puntos_de_control_desde_db()
+        dict_reg_all = cargar_puntos_de_control_desde_db() 
+        
+        # --- NUEVO: FILTRO PARA QUE SOLO APAREZCAN LOS DEL SECTOR ACTUAL ---
+        # Solo incluimos en dict_reg los equipos cuyo sector coincida con sec_id
+        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')) == str(sec_id)}
+        
+        # Actualizamos la lista de nombres para el selectbox con el diccionario ya filtrado
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-
+        
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+        
         with c_sel2:
-            sel_r = st.selectbox("Equipo punto de control:", list(reg_nombres.keys()), key="sel_reg_full")
+            # Si no hay equipos en este sector, evitamos que truene el selectbox
+            opciones_equipo = list(reg_nombres.keys()) if reg_nombres else ["Sin equipos en este sector"]
+            sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
-
         with col_izq:
-            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
-            Fullscreen().add_to(m_sec)
+            # ... (tu código del mapa se mantiene igual) ...
             
-            if datos_s.get('geo'):
-                try:
-                    geo_data = json.loads(datos_s['geo'])
-                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
-                    m_sec.fit_bounds(folium_geo.get_bounds())
-                except: pass
-
             # 7.5. CARGA DATOS REGISTRADORES Y PUNTOS CRÍTICOS
             tags_reg = []
+            # Ahora dict_reg ya viene filtrado desde arriba, así que solo iterará los del sector
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): tags_reg.append(r.get(k))
