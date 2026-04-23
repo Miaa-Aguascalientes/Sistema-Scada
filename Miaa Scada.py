@@ -990,7 +990,7 @@ if sector_seleccionado:
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
                               popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
 
-            folium_static(m_sec, width=None)
+        
 
             # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
