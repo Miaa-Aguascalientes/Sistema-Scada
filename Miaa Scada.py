@@ -909,21 +909,13 @@ if sector_seleccionado:
 
         # 7.3. Selectores superiores
         dict_reg_all = cargar_puntos_de_control_desde_db() 
-        
-        # --- MODIFICACIÓN 1: FILTRADO LÓGICO DE EQUIPOS ---
-        # Filtramos el diccionario global para que solo contenga los del sector actual (sec_id)
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
-        
-        # Generamos los nombres para el selectbox a partir del diccionario ya filtrado
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
         opciones_equipo = list(reg_nombres.keys())
-
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
-        
         with c_sel2:
-            # --- MODIFICACIÓN 2: CONTROL DEL SELECTOR ---
             if not opciones_equipo:
                 sel_r = None
                 st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
@@ -950,14 +942,10 @@ if sector_seleccionado:
 
 # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
-            
-            # --- MODIFICACIÓN 3: TAGS DE REGISTRADORES ---
-            # Al usar dict_reg (ya filtrado arriba), solo pedimos datos de los equipos del sector
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): tags_para_scada.append(r.get(k))
             
-            # Puntos Críticos (Ya lo tenías filtrado)
             mapa_pc_all = cargar_puntos_criticos_desde_db()
             dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
             for pc in dict_pc_sec.values():
@@ -966,8 +954,6 @@ if sector_seleccionado:
             scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
 
 # 7.6. Marcadores de Registradores
-            # --- MODIFICACIÓN 4: DIBUJADO DE MARCADORES ---
-            # Solo dibujará los que pasaron el filtro inicial
             for r in dict_reg.values():
                 def get_rv(tk):
                     v, f = scada_res_reg.get(r.get(tk), (0.0, "N/A"))
@@ -989,8 +975,6 @@ if sector_seleccionado:
                 """
                 folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
                               popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
-
-        
 
             # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
@@ -1061,9 +1045,8 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-# 7.8. Sección de Gráficos Históricos (Columna Derecha)
+# 7.8. Sección de Gráficos Históricos puntos de control
         with col_der:
-            # --- Configuración de Fechas para el Histórico ---
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
@@ -1133,10 +1116,9 @@ if sector_seleccionado:
                     except Exception as e: 
                         st.error(f"Error en Histórico de Control: {e}")
             else:
-                # Si no hay equipos en el sector, mostramos un mensaje informativo
                 st.info("Seleccione un equipo del sector actual para ver el gráfico histórico.")
 
-            # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (JUSTO DEBAJO) ---
+            # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS
             if dict_pc_sec:
                 tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
                 
