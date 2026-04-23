@@ -1036,7 +1036,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # 7.8. Gráfico Histórico 
+        # 7.8. Gráfico Histórico puntos de control
         with col_der:
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
@@ -1061,23 +1061,35 @@ if sector_seleccionado:
                     if not df_h.empty:
                         import plotly.graph_objects as go
                         fig = go.Figure()
+                        
+                        # Trace Caudal
                         if t_q and not df_h[df_h['TAG'] == t_q].empty:
                             df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", line=dict(color='#00d4ff', width=2)))
+                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name=f"Caudal (lps)", line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
+                        
+                        # Trace Presión 1
                         if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
                             df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="P1 (kg)", yaxis="y2", line=dict(color='#ff00ff', width=2)))
+                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name=f"Presión P1 (kg/cm2) aguas arriba", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
+                        
+                        # Trace Presión 2
+                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
+                            df_p2 = df_h[df_h['TAG'] == t_p2]
+                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name=f"Presión P2 (kg/cm2) aguas abajo", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
                         fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', height=300,
-                            margin=dict(l=50, r=50, t=10, b=10), hovermode="x unified",
-                            legend=dict(orientation="h", y=1.1, font=dict(color="white", size=10)),
-                            xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', color="white"),
-                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff"),
+                            paper_bgcolor='black', plot_bgcolor='black', 
+                            height=300, # AQUI SE MODIFICA EL TAMAÑO DE LO ALTO DEL GRAFICO
+                            margin=dict(l=50, r=50, t=10, b=10),
+                            hovermode="x unified", # ESTO ACTIVA VER TODOS LOS VALORES A LA VEZ
+                            hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
+                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)', color="white"),
+                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.2)'),
                             yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                         )
                         st.plotly_chart(fig, use_container_width=True)
-                except Exception as e: st.error(f"Error gráfico: {e}")
+                except Exception as e: st.error(f"Error: {e}")
 
             # --- NUEVO: Gráfico de Barras Puntos Críticos (Debajo del histórico) ---
             if dict_pc_sec:
