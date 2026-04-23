@@ -1092,7 +1092,7 @@ if sector_seleccionado:
                 except Exception as e: st.error(f"Error: {e}")
 
             # 7.9. NUEVO: Gráfico de Barras Puntos Críticos (Debajo del histórico) ---
-if dict_pc_sec:
+        if dict_pc_sec:
                 st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:10px; text-align:center;'>HISTÓRICO PRESIONES PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
                 
                 tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
