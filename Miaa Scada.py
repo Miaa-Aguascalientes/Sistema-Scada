@@ -1093,12 +1093,10 @@ if sector_seleccionado:
 
 # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (ESTILO LÍNEAS) ---
         if dict_pc_sec:
-                # Obtenemos todos los tags de presión del sector
                 tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
                 
                 if tags_pc:
                     try:
-                        # Consulta para traer el histórico de TODOS los tags a la vez
                         tags_pc_in = "', '".join(tags_pc)
                         q_hist_pc = f"""
                             SELECT h.FECHA, h.VALUE, r.NAME as TAG 
@@ -1112,58 +1110,43 @@ if sector_seleccionado:
 
                         if not df_pc_h.empty:
                             fig_pc = go.Figure()
-                            
-                            # Mapeo de Tag -> Nombre real para la leyenda
                             tag_to_name = {v['tag_p1']: v['nombre'] for v in dict_pc_sec.values()}
 
-                            # Añadimos una línea por cada punto crítico encontrado
                             for tag in tags_pc:
                                 df_temp = df_pc_h[df_pc_h['TAG'] == tag]
                                 if not df_temp.empty:
                                     fig_pc.add_trace(go.Scatter(
                                         x=df_temp['FECHA'], 
                                         y=df_temp['VALUE'], 
-                                        name=tag_to_name.get(tag, tag), # Nombre en la leyenda
+                                        name=tag_to_name.get(tag, tag),
                                         mode='lines',
                                         line=dict(width=2),
-                                        hovertemplate='<b>'+tag_to_name.get(tag, tag)+'</b><br>Presión: %{y:.2f} kg<extra></extra>'
+                                        hovertemplate='<b>%{fullData.name}</b><br>Presión: %{y:.2f} kg<extra></extra>'
                                     ))
 
                             fig_pc.update_layout(
                                 paper_bgcolor='black', 
                                 plot_bgcolor='black', 
-                                height=350, # Aumenté un poco el alto para que luzcan varias líneas
-                                margin=dict(l=50, r=20, t=40, b=10),
+                                height=300, # Altura similar al de arriba para simetría
+                                margin=dict(l=50, r=50, t=40, b=10), # 't=40' da espacio a la leyenda
                                 hovermode="x unified",
                                 hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
-                                # La leyenda es clave: permite activar/desactivar al hacer clic
                                 legend=dict(
                                     orientation="h", 
                                     yanchor="bottom", 
                                     y=1.02, 
                                     xanchor="left", 
                                     x=0, 
-                                    font=dict(color="white", size=10),
-                                    itemclick="toggle", # Comportamiento de click
-                                    itemdoubleclick="toggleothers" # Doble click para aislar una sola línea
+                                    font=dict(color="white", size=9),
+                                    itemclick="toggle", 
+                                    itemdoubleclick="toggleothers"
                                 ),
-                                xaxis=dict(
-                                    showgrid=True, 
-                                    gridcolor='rgba(255, 255, 255, 0.1)', 
-                                    color="white"
-                                ),
-                                yaxis=dict(
-                                    title="Presión (kg/cm²)", 
-                                    color="white", 
-                                    showgrid=True, 
-                                    gridcolor='rgba(255, 255, 255, 0.1)'
-                                )
+                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
+                                yaxis=dict(title="Presión PC (kg)", color="#FF00FF", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)')
                             )
                             st.plotly_chart(fig_pc, use_container_width=True)
-                        else:
-                            st.info("Sin datos históricos para los puntos críticos de este sector.")
                     except Exception as e: 
-                        st.error(f"Error cargando puntos críticos: {e}")
+                        st.error(f"Error en Puntos Críticos: {e}")
 
     st.stop()
     
