@@ -911,22 +911,21 @@ if sector_seleccionado:
         dict_reg_all = cargar_puntos_de_control_desde_db() 
         
         # --- FILTRO POR SECTOR ---
-        # Solo incluimos los equipos cuyo sector coincida con sec_id (comparación robusta)
+        # Filtramos asegurándonos de que ambos sean strings y sin espacios
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         
-        # Diccionario para el selectbox con equipos filtrados
+        # Diccionario para el selectbox
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-        
+        opciones_equipo = list(reg_nombres.keys())
+
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         
         with c_sel2:
-            opciones_equipo = list(reg_nombres.keys())
             if not opciones_equipo:
-                opciones_equipo = ["Sin equipos en este sector"]
-                sel_r = opciones_equipo[0]
-                st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full", disabled=True)
+                sel_r = None
+                st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
             else:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
@@ -935,9 +934,11 @@ if sector_seleccionado:
         
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+            # Centrar mapa en Aguascalientes si no hay coordenadas
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
+            # Dibujar polígono del sector
             if datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
@@ -946,37 +947,27 @@ if sector_seleccionado:
                         style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
                     ).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
-                except: 
-                    pass
+                except: pass
 
-            # 7.5. CARGA DATOS REGISTRADORES Y PUNTOS CRÍTICOS
+            # 7.5. CARGA DATOS SCADA (REGISTRADORES + CRÍTICOS)
             tags_para_scada = []
-            
-            # Tags de Registradores (Solo del sector filtrado)
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
-                    if r.get(k): 
-                        tags_para_scada.append(r.get(k))
+                    if r.get(k): tags_para_scada.append(r.get(k))
             
-            # Tags de Puntos Críticos (Filtrados por sector)
             mapa_pc_all = cargar_puntos_criticos_desde_db()
             dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
             for pc in dict_pc_sec.values():
-                if pc.get('tag_p1'): 
-                    tags_para_scada.append(pc.get('tag_p1'))
+                if pc.get('tag_p1'): tags_para_scada.append(pc.get('tag_p1'))
 
-            # Consulta única a SCADA para todos los tags del sector
             scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
 
-            # 7.6. Marcadores de Registradores (Solo del sector activo)
+            # 7.6. Marcadores de Registradores
             for r in dict_reg.values():
-                def get_rv(tag_key):
-                    tag = r.get(tag_key)
-                    val, fec = scada_res_reg.get(tag, (0.0, "N/A"))
-                    try:
-                        return float(val), fec
-                    except:
-                        return 0.0, fec
+                def get_rv(tk):
+                    v, f = scada_res_reg.get(r.get(tk), (0.0, "N/A"))
+                    try: return float(v), f
+                    except: return 0.0, f
 
                 rp1, fp1 = get_rv('tag_p1')
                 rcau, fq = get_rv('tag_q')
@@ -987,19 +978,31 @@ if sector_seleccionado:
                     <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
                     <hr style="opacity:0.2; margin:8px 0;">
                     <div style="font-size:11px;">
-                        💧 Caudal: <b>{rcau:.2f} L/s</b> <br><span style="color:#FFFF00; font-size:9px;">{fq}</span><br><br>
-                        🚀 Presión: <b>{rp1:.2f} kg</b> <br><span style="color:#FFFF00; font-size:9px;">{fp1}</span><br><br>
-                        🔋 Batería: <b>{rbat:.2f} V</b> <br><span style="color:#FFFF00; font-size:9px;">{fb}</span>
+                        💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>
+                        🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>
+                        🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span>
                     </div>
                 </div>
                 """
-                folium.Marker(
-                    location=r['coord'], 
-                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
-                    popup=folium.Popup(html_popup_reg, max_width=300)
-                ).add_to(m_sec)
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
 
-            folium_static(m_sec, width=None) # Si usas streamlit-folium
+            # ESTO RENDERIZA EL MAPA (Asegúrate de tener esta función o folium_static)
+            folium_static(m_sec, width=None)
+
+        # 7.7. COLUMNA DERECHA: HISTÓRICOS
+        with col_der:
+            # Solo intentamos graficar si hay un equipo seleccionado y válido
+            if sel_r and sel_r != "Sin equipos en este sector":
+                # ... (Aquí va tu código de gráficos históricos que ya tienes)
+                st.write(f"### Histórico: {sel_r}")
+                # (Lógica de Plotly que ya tienes)
+            else:
+                st.info("No hay equipos de control registrados en este sector.")
+            
+            # Gráfico de Puntos Críticos (este siempre se intenta mostrar)
+            if dict_pc_sec:
+                st.write("### Puntos Críticos del Sector")
+                # (Lógica de Plotly de PCs que ya tienes)
 
             # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
