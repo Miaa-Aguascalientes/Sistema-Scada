@@ -908,18 +908,31 @@ if sector_seleccionado:
         st.divider()
 
         # 7.3. Selectores superiores
-        dict_reg = cargar_puntos_de_control_desde_db()
+        dict_reg_all = cargar_puntos_de_control_desde_db() 
+        
+        # --- MODIFICACIÓN 1: FILTRADO LÓGICO DE EQUIPOS ---
+        # Filtramos el diccionario global para que solo contenga los del sector actual (sec_id)
+        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+        
+        # Generamos los nombres para el selectbox a partir del diccionario ya filtrado
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+        opciones_equipo = list(reg_nombres.keys())
 
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+        
         with c_sel2:
-            sel_r = st.selectbox("Equipo punto de control:", list(reg_nombres.keys()), key="sel_reg_full")
+            # --- MODIFICACIÓN 2: CONTROL DEL SELECTOR ---
+            if not opciones_equipo:
+                sel_r = None
+                st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
+            else:
+                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
-        # 7.4. Layout: Mapa e Histórico
+# 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
-
+        
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
@@ -928,30 +941,39 @@ if sector_seleccionado:
             if datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
-                    folium_geo = folium.GeoJson(geo_data, style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}).add_to(m_sec)
+                    folium_geo = folium.GeoJson(
+                        geo_data, 
+                        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
+                    ).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # 7.5. CARGA DATOS REGISTRADORES Y PUNTOS CRÍTICOS
-            tags_reg = []
+# 7.5. CARGA DATOS SCADA (FILTRADOS)
+            tags_para_scada = []
+            
+            # --- MODIFICACIÓN 3: TAGS DE REGISTRADORES ---
+            # Al usar dict_reg (ya filtrado arriba), solo pedimos datos de los equipos del sector
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
-                    if r.get(k): tags_reg.append(r.get(k))
+                    if r.get(k): tags_para_scada.append(r.get(k))
             
-            # --- Integración Puntos Críticos ---
+            # Puntos Críticos (Ya lo tenías filtrado)
             mapa_pc_all = cargar_puntos_criticos_desde_db()
-            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v['sector']) == sec_id}
+            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
             for pc in dict_pc_sec.values():
-                if pc.get('tag_p1'): tags_reg.append(pc.get('tag_p1'))
+                if pc.get('tag_p1'): tags_para_scada.append(pc.get('tag_p1'))
 
-            scada_res_reg = cargar_datos_scada(list(set(tags_reg)))
+            scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
 
-            # 7.6. Marcadores de Registradores
+# 7.6. Marcadores de Registradores
+            # --- MODIFICACIÓN 4: DIBUJADO DE MARCADORES ---
+            # Solo dibujará los que pasaron el filtro inicial
             for r in dict_reg.values():
-                def get_rv(k):
-                    val, fec = scada_res_reg.get(r.get(k), (0.0, "N/A"))
-                    try: return float(val), fec
-                    except: return 0.0, fec
+                def get_rv(tk):
+                    v, f = scada_res_reg.get(r.get(tk), (0.0, "N/A"))
+                    try: return float(v), f
+                    except: return 0.0, f
+
                 rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
                 
                 html_popup_reg = f"""
@@ -959,13 +981,16 @@ if sector_seleccionado:
                     <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
                     <hr style="opacity:0.2; margin:8px 0;">
                     <div style="font-size:11px;">
-                        💧 Caudal: <b>{rcau:.2f} L/s</b> <span style="color:#FFFF00; font-size:9px;">{fq}</span><br>
-                        🚀 Presión: <b>{rp1:.2f} kg</b> <span style="color:#FFFF00; font-size:9px;">{fp1}</span><br>
-                        🔋 Batería: <b>{rbat:.2f} V</b> <span style="color:#FFFF00; font-size:9px;">{fb}</span>
+                        💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>
+                        🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>
+                        🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span>
                     </div>
                 </div>
                 """
-                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
+                              popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+
+            folium_static(m_sec, width=None)
 
             # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
@@ -1038,6 +1063,7 @@ if sector_seleccionado:
 
 # 7.8. Sección de Gráficos Históricos (Columna Derecha)
         with col_der:
+            # --- Configuración de Fechas para el Histórico ---
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
             elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
@@ -1047,48 +1073,68 @@ if sector_seleccionado:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-            # --- OBTENCIÓN DE DATOS REGISTRADOR ---
-            r_info = dict_reg[reg_nombres[sel_r]]
-            t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
-            tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
+            # --- OBTENCIÓN DE DATOS REGISTRADOR (Punto de Control) ---
+            # Verificamos que sel_r sea válido y exista en nuestro diccionario filtrado
+            if sel_r and sel_r in reg_nombres:
+                r_info = dict_reg[reg_nombres[sel_r]]
+                t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
+                tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
 
-            if tags_grafico:
-                try:
-                    engine_h = get_mysql_scada_engine()
-                    tags_in = "', '".join(tags_grafico)
-                    q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
-                    df_h = pd.read_sql(q_hist, engine_h)
-                    
-                    if not df_h.empty:
-                        # --- GRÁFICO 1: HISTÓRICO PUNTOS DE CONTROL ---
-                        fig = go.Figure()
+                if tags_grafico:
+                    try:
+                        engine_h = get_mysql_scada_engine()
+                        tags_in = "', '".join(tags_grafico)
+                        q_hist = f"""
+                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                            FROM vfitagnumhistory h 
+                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                            WHERE r.NAME IN ('{tags_in}') 
+                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                            ORDER BY h.FECHA ASC
+                        """
+                        df_h = pd.read_sql(q_hist, engine_h)
                         
-                        if t_q and not df_h[df_h['TAG'] == t_q].empty:
-                            df_q = df_h[df_h['TAG'] == t_q]
-                            fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
-                        
-                        if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
-                            df_p1 = df_h[df_h['TAG'] == t_p1]
-                            fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="Presión P1", yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
-                        
-                        if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                            df_p2 = df_h[df_h['TAG'] == t_p2]
-                            fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="Presión P2", yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
+                        if not df_h.empty:
+                            st.markdown(f"<h3 style='color:#00d4ff; font-size:16px; margin-bottom:0;'>Gráfico de Control: {sel_r}</h3>", unsafe_allow_html=True)
+                            fig = go.Figure()
+                            
+                            # Línea de Caudal
+                            if t_q and not df_h[df_h['TAG'] == t_q].empty:
+                                df_q = df_h[df_h['TAG'] == t_q]
+                                fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", 
+                                                       line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
+                            
+                            # Línea de Presión P1
+                            if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
+                                df_p1 = df_h[df_h['TAG'] == t_p1]
+                                fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="Presión P1", 
+                                                       yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
+                            
+                            # Línea de Presión P2
+                            if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
+                                df_p2 = df_h[df_h['TAG'] == t_p2]
+                                fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="Presión P2", 
+                                                       yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
-                        fig.update_layout(
-                            paper_bgcolor='black', plot_bgcolor='black', height=300,
-                            margin=dict(l=50, r=50, t=30, b=10),
-                            hovermode="x unified",
-                            hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
-                            xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
-                            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
-                            yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
+                            fig.update_layout(
+                                paper_bgcolor='black', plot_bgcolor='black', height=300,
+                                margin=dict(l=50, r=50, t=30, b=10),
+                                hovermode="x unified",
+                                hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
+                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
+                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
+                                yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
+                                yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.warning(f"No hay datos históricos para {sel_r} en el periodo seleccionado.")
 
-                except Exception as e: 
-                    st.error(f"Error en Histórico: {e}")
+                    except Exception as e: 
+                        st.error(f"Error en Histórico de Control: {e}")
+            else:
+                # Si no hay equipos en el sector, mostramos un mensaje informativo
+                st.info("Seleccione un equipo del sector actual para ver el gráfico histórico.")
 
             # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (JUSTO DEBAJO) ---
             if dict_pc_sec:
