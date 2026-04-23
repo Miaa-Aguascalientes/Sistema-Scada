@@ -1091,20 +1091,23 @@ if sector_seleccionado:
                         st.plotly_chart(fig, use_container_width=True)
                 except Exception as e: st.error(f"Error: {e}")
 
-            # 7.9. NUEVO: Gráfico de Barras Puntos Críticos (Debajo del histórico) ---
-        if dict_pc_sec:
+# --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS (ESTILO LÍNEAS) ---
+            if dict_pc_sec:
                 st.markdown("<h4 style='color:#FF00FF; font-size:14px; margin-top:10px; text-align:center;'>HISTÓRICO PRESIONES PUNTOS CRÍTICOS</h4>", unsafe_allow_html=True)
                 
-                tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
-                
-                if tags_pc:
+                # Selector colocado encima del gráfico
+                opciones_pc = {v['nombre']: v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')}
+                nombre_sel_pc = st.selectbox("Seleccionar Punto Crítico a revisar:", options=list(opciones_pc.keys()), key="sel_pc_hist")
+                tag_sel_pc = opciones_pc[nombre_sel_pc]
+
+                if tag_sel_pc:
                     try:
-                        tags_pc_in = "', '".join(tags_pc)
+                        # Consulta optimizada para el tag seleccionado
                         q_hist_pc = f"""
                             SELECT h.FECHA, h.VALUE, r.NAME as TAG 
                             FROM vfitagnumhistory h 
                             JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                            WHERE r.NAME IN ('{tags_pc_in}') 
+                            WHERE r.NAME = '{tag_sel_pc}' 
                             AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
                             ORDER BY h.FECHA ASC
                         """
@@ -1113,33 +1116,44 @@ if sector_seleccionado:
                         if not df_pc_h.empty:
                             fig_pc = go.Figure()
                             
-                            # Mapeo de Tag a Nombre para la leyenda
-                            tag_to_name = {v['tag_p1']: v['nombre'] for v in dict_pc_sec.values()}
-
-                            for tag in tags_pc:
-                                df_temp = df_pc_h[df_pc_h['TAG'] == tag]
-                                if not df_temp.empty:
-                                    fig_pc.add_trace(go.Scatter(
-                                        x=df_temp['FECHA'], 
-                                        y=df_temp['VALUE'], 
-                                        name=tag_to_name.get(tag, tag),
-                                        line=dict(width=2),
-                                        hovertemplate='%{y:.2f} kg'
-                                    ))
+                            fig_pc.add_trace(go.Scatter(
+                                x=df_pc_h['FECHA'], 
+                                y=df_pc_h['VALUE'], 
+                                name=nombre_sel_pc,
+                                line=dict(width=2, color='#FF00FF'), # Color neón consistente
+                                fill='tozeroy', # Opcional: añade un área sombreada para estilo HUD
+                                fillcolor='rgba(255, 0, 255, 0.1)',
+                                hovertemplate='Fecha: %{x}<br>Presión: %{y:.2f} kg<extra></extra>'
+                            ))
 
                             fig_pc.update_layout(
-                                paper_bgcolor='black', plot_bgcolor='black', height=280,
+                                paper_bgcolor='black', 
+                                plot_bgcolor='black', 
+                                height=280,
                                 margin=dict(l=50, r=50, t=30, b=10),
                                 hovermode="x unified",
                                 hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
                                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
-                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
-                                yaxis=dict(title="Presión (kg)", color="#FF00FF", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)')
+                                xaxis=dict(
+                                    showgrid=True, 
+                                    gridcolor='rgba(255, 255, 255, 0.1)', 
+                                    color="white",
+                                    rangemode="tozero"
+                                ),
+                                yaxis=dict(
+                                    title="Presión (kg)", 
+                                    color="#FF00FF", 
+                                    showgrid=True, 
+                                    gridcolor='rgba(255, 255, 255, 0.1)',
+                                    zeroline=True,
+                                    zerolinecolor='rgba(255, 255, 255, 0.2)'
+                                )
                             )
                             st.plotly_chart(fig_pc, use_container_width=True)
                         else:
-                            st.info("Sin datos históricos para los puntos críticos en este rango.")
-                    except Exception as e: st.error(f"Error Puntos Críticos: {e}")
+                            st.info(f"Sin datos para {nombre_sel_pc} en este periodo.")
+                    except Exception as e: 
+                        st.error(f"Error Puntos Críticos: {e}")
 
     st.stop()
     
