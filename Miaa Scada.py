@@ -699,8 +699,8 @@ st.markdown("""
         /* Ajuste Sidebar */
        .sidebar-logo { 
            position: fixed; 
-           top: 0px; 
-           left: 0px; 
+           top: 10px; 
+           left: 10px; 
            width: 200px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
            height: 60px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
            z-index: 999999; 
