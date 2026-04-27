@@ -858,7 +858,7 @@ if sector_seleccionado:
             /* Ajustamos el margin-top negativo para eliminar el espacio del header oculto */
             .block-container {{
                 padding-top: 0px !important;
-                margin-top: -60px !important; /* Prueba con -80px si quieres que suba aún más */
+                margin-top: -60px !important; /* Prueba con -70px si quieres que suba aún más */
             }}
 
             /* 2. ELIMINAR EL ESPACIO ENTRE FILAS */
