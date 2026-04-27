@@ -894,7 +894,7 @@ if sector_seleccionado:
             
             /* 2. ESTO SUBE EL MAPA RESPECTO AL TÍTULO */
             .col-mapa-offset {{
-                margin-top: -90px !important; /* Aumentado de -70px a -90px */
+                margin-top: -190px !important; /* Aumentado de -70px a -90px */
             }}
 
             hr {{
