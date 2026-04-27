@@ -920,7 +920,7 @@ if sector_seleccionado:
 
             /* Reducción de espacio en Selectbox */
             div[data-testid="stSelectbox"] {{
-                margin-top: -15px !important;
+                margin-top: 5px !important;
             }}
             
             /* Separador personalizado */
