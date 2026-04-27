@@ -853,53 +853,42 @@ if sector_seleccionado:
         <style>
             [data-testid="stSidebar"] {{display: none;}}
             header {{visibility: hidden;}}
-            .stAppDeployButton {{display:none;}}
-            #MainMenu {{visibility: hidden;}}
-            footer {{visibility: hidden;}}
             
-            /* 1. ESTO ES LO QUE DETERMINA EL TECHO MÁXIMO */
+            /* 1. Subir todo el tablero al borde superior de la pantalla */
             .block-container {{
                 padding-top: 0px !important;
-                padding-bottom: 0px !important;
-                margin-top: -120px !important; /* Aumentado de -80px a -120px para subir TODO */
+                margin-top: -100px !important;
+            }}
+
+            /* 2. ELIMINAR EL ESPACIO MUERTO ENTRE FILAS (GAP) */
+            [data-testid="stVerticalBlock"] {{
+                gap: 0rem !important;
             }}
 
             .contenedor-centrado {{
                 text-align: center;
-                margin-bottom: 0px;
+                margin-bottom: -10px !important; /* Margen negativo para acercar indicadores */
             }}
             
-            .titulo-sector {{
-                font-size: 1.8rem;
-                font-weight: 800;
-                color: #00d4ff;
-                margin: 0px;
-                text-transform: uppercase;
-            }}
-
-            .metrics-row {{
-                margin-top: 0px !important;
-                margin-bottom: 0px !important;
+            /* 3. FORZAR SUBIDA DEL MAPA USANDO TRANSFORM */
+            .col-mapa-offset {{
+                /* El transform suele saltarse las restricciones de margin que Streamlit impone */
+                transform: translateY(-110px); 
+                margin-bottom: -110px; /* Compensamos abajo para que no quede un hueco al final */
             }}
 
             .micro-card {{
                 background: rgba(11, 26, 41, 0.95);
                 border: 1px solid #1f4068;
-                border-radius: 4px;
                 padding: 5px;
-                text-align: center;
+                border-radius: 4px;
             }}
-            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
-            .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
-            /* 2. ESTO SUBE EL MAPA RESPECTO AL TÍTULO */
-            .col-mapa-offset {{
-                margin-top: -190px !important; /* Aumentado de -70px a -90px */
-            }}
-
+            /* Reducimos el espacio de las líneas horizontales */
             hr {{
-                margin-top: 5px !important;
-                margin-bottom: 5px !important;
+                margin-top: 2px !important;
+                margin-bottom: 2px !important;
+                opacity: 0.3;
             }}
         </style>
         
