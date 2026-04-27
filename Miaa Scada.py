@@ -1245,7 +1245,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Aquí continúa tu código de col_mapa, col_capas...
+st.markdown('<div class="mapa-area">', unsafe_allow_html=True)
 col_mapa, col_capas = st.columns([0.94, 0.06])
 
 with col_mapa:
