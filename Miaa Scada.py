@@ -1273,32 +1273,42 @@ with st.sidebar:
 # 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
+# Variables preparadas para el HUD
+caudal_total = total_q
+# Calculamos el promedio real usando tus datos de pozos encendidos
+presion_promedio = total_P / max(len(pozos_on), 1)
 # Indicadores usando el sistema de Grid para que ocupen todo el ancho
+# 9.1. INDICADORES EN EL ORDEN SOLICITADO
 st.markdown(f"""
-
+    <div class="contenedor-indicadores">
         <div class="card-indicador">
             <p class="card-label">💧 CAUDAL TOTAL</p>
-            <p class="card-value val-caudal">{total_q:.2f} <span style="font-size:0.7rem">l/s</span></p>
+            <p class="card-value val-caudal">{caudal_total:.2f} <span style="font-size:0.7rem">l/s</span></p>
         </div>
+        
         <div class="card-indicador">
             <p class="card-label">📉 PRESIÓN PROM.</p>
-            <p class="card-value val-presion">{total_P:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
+            <p class="card-value val-presion">{presion_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
         </div>
+
         <div class="card-indicador">
             <p class="card-label">🟢 BOMBAS ENCENDIDAS</p>
-            <p class="card-value">{len(pozos_on)}</p>
+            <p class="card-value val-on">{len(pozos_on)}</p>
         </div>
+
         <div class="card-indicador">
             <p class="card-label">🔴 BOMBAS APAGADAS</p>
-            <p class="card-value">{len(pozos_off)}</p>
+            <p class="card-value val-off">{len(pozos_off)}</p>
         </div>
+
         <div class="card-indicador">
-            <p class="card-label">⚠️ SITIOS CON FALLA DE COMUNICACION</p>
-            <p class="card-value">{len(pozos_falla_com) if pozos_falla_com else 0}</p>
+            <p class="card-label">⚠️ FALLA DE COM.</p>
+            <p class="card-value val-falla">{len(pozos_falla_com) if pozos_falla_com else 0}</p>
         </div>
+
         <div class="card-indicador">
-            <p class="card-label">⚪ SITIOS SIN TELEMETRIA</p>
-            <p class="card-value">{len(pozos_sin_telemetria) if pozos_sin_telemetria else 0}</p>
+            <p class="card-label">⚪ SIN TELEMETRÍA</p>
+            <p class="card-value val-sin">{len(pozos_sin_telemetria) if pozos_sin_telemetria else 0}</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
