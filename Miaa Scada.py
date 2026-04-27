@@ -646,14 +646,14 @@ st.markdown("""
            top: 65px; 
            left: 320px;
            right: 0;
-           display: flex;
-           justify-content: center;
-           align-items: center;
-           gap: 15px; /* <--- Aumenta esto para despegarlos (puedes probar 10px o 15px) */
+           display: grid;
+        /* CAMBIAMOS A 6 COLUMNAS IGUALES */
+           grid-template-columns: repeat(6, 1fr); 
+           gap: 8px; /* Espacio entre cada módulo */
+           padding: 0 10px;
            z-index: 1001;
-           background: transparent; /* Quita el fondo negro del contenedor para que se vea el hueco */
-           padding: 0 15px;
-         }
+           background: transparent;
+        }
 
         .card-indicador {
            flex: 1;
@@ -1278,11 +1278,11 @@ st.markdown(f"""
 
         <div class="card-indicador">
             <p class="card-label">💧 CAUDAL TOTAL</p>
-            <p class="card-value val-caudal">{caudal_total:.2f} <span style="font-size:0.7rem">l/s</span></p>
+            <p class="card-value val-caudal">{total_q:.2f} <span style="font-size:0.7rem">l/s</span></p>
         </div>
         <div class="card-indicador">
             <p class="card-label">📉 PRESIÓN PROM.</p>
-            <p class="card-value val-presion">{presion_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
+            <p class="card-value val-presion">{total_P:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
         </div>
         <div class="card-indicador">
             <p class="card-label">🟢 BOMBAS ENCENDIDAS</p>
