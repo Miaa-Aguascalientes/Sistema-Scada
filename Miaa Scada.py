@@ -597,48 +597,22 @@ if tag_a_graficar:
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
-        [data-testid="collapsedControl"], 
-        button[kind="headerNoPadding"], 
-        [data-testid="stSidebarCollapseButton"] {
+        /* 1. BLOQUEO DE INTERFAZ */
+        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
-
-        [data-testid="stSidebar"] {
-            min-width: 320px !important; 
-            max-width: 320px !important;
-            width: 320px !important;
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-
-        /* 2. LIMPIEZA DE INTERFAZ */
         header { visibility: hidden !important; height: 0px !important; }
-        #MainMenu { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] { display: none !important; }
-
-        /* 3. LOGO EN SIDEBAR */
-        .sidebar-logo { 
-            position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
-            z-index: 999999; display: flex; justify-content: center; align-items: center;
-            background-color: #0b1a29; border-bottom: 1px solid #1f4068;
-        }
-        .sidebar-logo img { width: 80%; height: auto; }
-
-        /* 4. CONTENEDOR PRINCIPAL - AJUSTE DE ALTURA */
         .stApp { background-color: #000000; color: white; }
         
+        /* 2. CONTENEDOR PRINCIPAL - PEGADO AL TECHO */
         .block-container {
             padding-top: 0rem !important;
             padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            margin-top: 40px !important; /* Espacio para el título fijo */
+            margin-top: 30px !important; 
             max-width: 100% !important;
         }
 
-        /* 5. TÍTULO SUPERIOR (SIN LÍNEA INFERIOR PARA PEGAR INDICADORES) */
+        /* 3. TÍTULO SUPERIOR (MÁS GRANDE Y SIN LÍNEA) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -646,62 +620,59 @@ st.markdown("""
             right: 0;
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.1rem;
+            font-size: 1.8rem; /* TÍTULO MÁS GRANDE */
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             background-color: #000000;
             text-align: center;
-            padding: 8px 0;
-            border-bottom: none !important; /* Quitamos la línea para que no estorbe */
+            padding: 10px 0;
+            border-bottom: none !important;
         }
 
-        /* 6. INDICADORES ULTRA COMPACTOS Y POSICIÓN ALTA */
+        /* 4. INDICADORES: POSICIÓN Y VISIBILIDAD CRÍTICA */
         [data-testid="stHorizontalBlock"] {
-            margin-top: -25px !important; /* SUCCIÓN HACIA EL TÍTULO */
+            margin-top: -20px !important; /* Los pega al título grande */
         }
 
         [data-testid="stMetric"] {
             background: rgba(11, 26, 41, 0.95);
             border: 1px solid #1f4068;
-            padding: 2px 10px !important;
+            padding: 0px 5px !important;
             border-radius: 2px;
             text-align: center;
         }
-
-        /* Texto de los indicadores (Labels) - BLANCO Y VISIBLE */
+        
+        /* FORZAR QUE EL TÍTULO DEL INDICADOR SE VEA */
         [data-testid="stMetricLabel"] p {
-            color: #FFFFFF !important;
-            font-size: 0.7rem !important;
-            font-weight: bold !important;
+            color: #FFFFFF !important; /* Blanco puro */
+            opacity: 1 !important;    /* Quita la transparencia de Streamlit */
+            font-size: 0.85rem !important; /* Un poco más grande para leerlo bien */
+            font-weight: 800 !important;
             margin-bottom: -12px !important;
             text-transform: uppercase;
         }
 
-        /* Valores numéricos (Cian Neón) */
+        /* Valores numéricos */
         [data-testid="stMetricValue"] div {
             color: #00d4ff !important;
             font-family: 'Courier New', monospace;
-            font-size: 1.2rem !important;
-            text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+            font-size: 1.3rem !important;
         }
 
-        /* 7. COLUMNAS DINÁMICAS (NO SE AMONTONAN) */
-        [data-testid="column"] {
-            flex: 1 1 0% !important;
-            min-width: 0px !important;
-            padding: 0 2px !important;
-        }
-
-        /* 8. MAPA (IFRAME) - PEGADO A LOS INDICADORES */
+        /* 5. ELIMINAR MÁRGENES DEL MAPA */
         iframe {
-            margin-top: 2px !important; /* Eliminamos el -110px anterior */
+            margin-top: 0px !important;
             border: 1px solid #1f4068 !important;
         }
 
+        /* AJUSTE SIDEBAR */
+        .sidebar-logo { 
+            position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
+            z-index: 999999; display: flex; justify-content: center; align-items: center;
+            background-color: #0b1a29; border-bottom: 1px solid #1f4068;
+        }
         [data-testid="stSidebarContent"] { padding-top: 110px !important; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
@@ -1260,34 +1231,21 @@ with st.sidebar:
                 
 # 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
 # 9.1. DASHBOARD PRINCIPAL
-st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
+st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# --- INDICADORES SUPERIORES (Métricas fijas, no expandibles) ---
-# Creamos 4 columnas para distribuir los estados de las bombas
+# Las métricas ahora se verán blancas y pegadas arriba
 c1, c2, c3, c4 = st.columns(4)
-
 with c1:
-    st.metric(label="🟢 BOMBAS ON", value=len(pozos_on))
-    # Si quieres ver la lista debajo de la métrica sin expander:
-    # for p in sorted(pozos_on): st.caption(f"🟢 {p}")
-
+    st.metric(label="BOMBAS EN ON", value=len(pozos_on))
 with c2:
-    st.metric(label="🔴 BOMBAS OFF", value=len(pozos_off))
-
+    st.metric(label="BOMBAS EN OFF", value=len(pozos_off))
 with c3:
-    # Mostramos falla de comunicación o 0 si está vacío
-    falla_val = len(pozos_falla_com) if pozos_falla_com else 0
-    st.metric(label="⚠️ FALLA COM.", value=falla_val)
-
+    st.metric(label="FALLA DE COM.", value=len(pozos_falla_com) if pozos_falla_com else 0)
 with c4:
-    # Mostramos sin telemetría o 0 si está vacío
-    sin_tel_val = len(pozos_sin_telemetria) if pozos_sin_telemetria else 0
-    st.metric(label="⚪ SIN TELEMETRÍA", value=sin_tel_val)
-
-st.write("") # Espacio para separar de la fila del mapa
+    st.metric(label="SIN TELEMETRÍA", value=len(pozos_sin_telemetria) if pozos_sin_telemetria else 0)
 
 # Aquí continúa tu código de col_mapa, col_capas...
-col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
+col_mapa, col_capas = st.columns([0.94, 0.06])
 
 with col_mapa:
     m = folium.Map(
