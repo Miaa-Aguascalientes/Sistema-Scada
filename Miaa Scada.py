@@ -932,6 +932,9 @@ if sector_seleccionado:
         with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+        folium_static(m, width=1300, height=600)
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.divider()
