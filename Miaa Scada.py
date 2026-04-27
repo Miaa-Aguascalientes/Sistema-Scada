@@ -669,11 +669,15 @@ st.markdown("""
 
         .card-label { color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin: 0; }
         .card-value { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; margin: 0; }
-        
+
+        .val-caudal { color: #00ffcc !important; text-shadow: 0 0 8px rgba(0, 255, 204, 0.4); }
+        .val-presion { color: #ffff00 !important; text-shadow: 0 0 8px rgba(255, 255, 0, 0.4); }
         .val-on { color: #00ff00; text-shadow: 0 0 8px rgba(0, 255, 0, 0.5); }
         .val-off { color: #ff0000; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5); }
         .val-falla { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
         .val-sin { color: #ffffff; }
+
+        
 
         /* ESTO SUBE EL MAPA A LA FUERZA */
         .mapa-principal-ajuste {
@@ -1271,7 +1275,15 @@ st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>',
 
 # Indicadores usando el sistema de Grid para que ocupen todo el ancho
 st.markdown(f"""
-    <div class="contenedor-indicadores">
+
+        <div class="card-indicador">
+            <p class="card-label">💧 CAUDAL TOTAL</p>
+            <p class="card-value val-caudal">{caudal_total:.2f} <span style="font-size:0.7rem">l/s</span></p>
+        </div>
+        <div class="card-indicador">
+            <p class="card-label">📉 PRESIÓN PROM.</p>
+            <p class="card-value val-presion">{presion_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
+        </div>
         <div class="card-indicador">
             <p class="card-label">🟢 BOMBAS ENCENDIDAS</p>
             <p class="card-value">{len(pozos_on)}</p>
