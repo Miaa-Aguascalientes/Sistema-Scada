@@ -710,6 +710,31 @@ st.markdown("""
            background-color: #0b1a29; 
            border-bottom: 1px solid #1f4068;
          }
+         
+        .status-tag { 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            margin-left: 5px; 
+            font-weight: bold; 
+        }
+        
+        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
+        .status-err { background-color: #b71c1c; color: #ef9a9a; }
+        
+        .section-header { 
+            padding: 10px; 
+            border-radius: 3px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            color: white; 
+        }
+
+        /* ANIMACIÓN DE PARPADEO */
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .blink_me { animation: blink 1.2s infinite; }
+
+         
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
