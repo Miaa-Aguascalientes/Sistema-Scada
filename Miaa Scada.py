@@ -857,10 +857,11 @@ if sector_seleccionado:
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
             
+            /* 1. ESTO ES LO QUE DETERMINA EL TECHO MÁXIMO */
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -80px !important;
+                margin-top: -120px !important; /* Aumentado de -80px a -120px para subir TODO */
             }}
 
             .contenedor-centrado {{
@@ -891,8 +892,9 @@ if sector_seleccionado:
             .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
+            /* 2. ESTO SUBE EL MAPA RESPECTO AL TÍTULO */
             .col-mapa-offset {{
-                margin-top: -70px !important; 
+                margin-top: -90px !important; /* Aumentado de -70px a -90px */
             }}
 
             hr {{
