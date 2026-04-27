@@ -861,7 +861,7 @@ if sector_seleccionado:
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -80px !important; /* Aumentamos el recorte superior */
+                margin-top: -100px !important; /* Aumentamos el recorte superior */
             }}
             
             .contenedor-centrado {{
@@ -879,46 +879,20 @@ if sector_seleccionado:
 
             /* ELIMINAR EL MARGEN DE LA COLUMNA DEL MAPA */
             .col-mapa-offset {{
-                margin-top: 10px !important; /* Cambiado de 40px a 0px */
+                margin-top: 0px !important; /* Cambiado de 40px a 0px */
             }}
 
             /* Ajuste para que el mapa ocupe más espacio visual hacia arriba */
             .stFolium {{
-                margin-top: -50px !important;
+                margin-top: -10px !important;
             }}
 
             hr {{
-                margin-top: -20px !important;
+                margin-top: 2px !important;
                 margin-bottom: 5px !important;
                 border: 0;
                 border-top: 1px solid #1f4068;
             }}
-            .card-indicador {{
-                margin-top: -30px !important;
-                background: rgba(16, 33, 54, 0.8); /* Fondo oscuro semitransparente */
-                padding: 10px;
-                border-radius: 8px;
-                border: 1px solid #1f4068;
-                text-align: center;
-                margin-bottom: 5px;
-            }}
-
-            .label-indicador {{
-               color: #ffffff; 
-               font-size: 0.8rem; 
-               margin: 0;
-               text-transform: uppercase;
-               letter-spacing: 0.5px;
-            }}
-
-            .value-indicador {{
-               color: #00ffcc; 
-               font-size: 1.1rem; 
-               font-weight: bold; 
-               margin: 0;
-            }}
-
-            
         </style>
         <div class="contenedor-centrado">
             <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
