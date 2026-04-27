@@ -1218,11 +1218,11 @@ with st.sidebar:
 # 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Lógica de variables blindada (Usa minúsculas como en tu respaldo)
+# Lógica de variables blindada
 c_total = total_q if 'total_q' in locals() else 0.0
 p_promedio = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
-# 1. Render de indicadores
+# 1. Render de indicadores (HUD)
 st.markdown(f"""
     <div class="contenedor-indicadores">
         <div class="card-indicador"><p class="card-label">💧 CAUDAL TOTAL</p><p class="card-value val-caudal">{c_total:.1f} <span style="font-size:0.7rem">l/s</span></p></div>
@@ -1234,17 +1234,16 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 2. Render del mapa dentro del contenedor de ajuste
+# 2. Render del mapa (SIN COLUMNAS)
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
 
-# Crear el mapa directamente aquí
-with col_mapa:
-    m = folium.Map(
-        location=st.session_state.centro_mapa, 
-        zoom_start=st.session_state.zoom_inicial, 
-        tiles="CartoDB dark_matter"
-    )
-    Fullscreen().add_to(m)
+# Crear el objeto mapa
+m = folium.Map(
+    location=st.session_state.centro_mapa, 
+    zoom_start=st.session_state.zoom_inicial, 
+    tiles="CartoDB dark_matter"
+)
+folium.Fullscreen().add_to(m)
 
 
 # 9.2. Añadir el resaltado del sector si existe
