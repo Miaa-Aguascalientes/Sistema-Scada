@@ -700,7 +700,7 @@ st.markdown("""
        .sidebar-logo { 
            position: fixed; 
            top: 20px; 
-           left: 50px; 
+           left: 40px; 
            width: 250px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
            height: 80px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
            z-index: 999999; 
