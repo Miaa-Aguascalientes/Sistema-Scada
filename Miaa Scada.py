@@ -1218,47 +1218,29 @@ with st.sidebar:
 # 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Lógica de variables blindada
+# Lógica de variables blindada (Usa minúsculas como en tu respaldo)
 c_total = total_q if 'total_q' in locals() else 0.0
 p_promedio = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
-# Render de los 6 indicadores
+# 1. Render de indicadores
 st.markdown(f"""
     <div class="contenedor-indicadores">
-        <div class="card-indicador">
-            <p class="card-label">💧 CAUDAL TOTAL</p>
-            <p class="card-value val-caudal">{c_total:.1f} <span style="font-size:0.7rem">l/s</span></p>
-        </div>
-        <div class="card-indicador">
-            <p class="card-label">📉 PRESION PROM.</p>
-            <p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg</span></p>
-        </div>
-        <div class="card-indicador">
-            <p class="card-label">🟢 EN ON</p>
-            <p class="card-value val-on">{len(pozos_on)}</p>
-        </div>
-        <div class="card-indicador">
-            <p class="card-label">🔴 EN OFF</p>
-            <p class="card-value val-off">{len(pozos_off)}</p>
-        </div>
-        <div class="card-indicador">
-            <p class="card-label">⚠️ FALLA COM.</p>
-            <p class="card-value val-falla">{len(pozos_falla_com)}</p>
-        </div>
-        <div class="card-indicador">
-            <p class="card-label">⚪ SIN TEL.</p>
-            <p class="card-value val-sin">{len(pozos_sin_telemetria)}</p>
-        </div>
+        <div class="card-indicador"><p class="card-label">💧 CAUDAL TOTAL</p><p class="card-value val-caudal">{c_total:.1f} <span style="font-size:0.7rem">l/s</span></p></div>
+        <div class="card-indicador"><p class="card-label">📉 PRESION PROM.</p><p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg</span></p></div>
+        <div class="card-indicador"><p class="card-label">🟢 EN ON</p><p class="card-value val-on">{len(pozos_on)}</p></div>
+        <div class="card-indicador"><p class="card-label">🔴 EN OFF</p><p class="card-value val-off">{len(pozos_off)}</p></div>
+        <div class="card-indicador"><p class="card-label">⚠️ FALLA COM.</p><p class="card-value val-falla">{len(pozos_falla_com)}</p></div>
+        <div class="card-indicador"><p class="card-label">⚪ SIN TEL.</p><p class="card-value val-sin">{len(pozos_sin_telemetria)}</p></div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- EL ERROR ESTABA AQUÍ: EL MAPA DEBE IR DENTRO DEL CONTENEDOR ---
+# 2. Render del mapa dentro del contenedor de ajuste
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
 
-# 1. Crear el objeto del mapa
+# Crear el mapa directamente aquí
 m = folium.Map(
-    location=st.session_state.centro_mapa, 
-    zoom_start=st.session_state.zoom_inicial, 
+    location=st.session_state.get('centro_mapa', [21.8853, -102.2916]), 
+    zoom_start=st.session_state.get('zoom_inicial', 12), 
     tiles="CartoDB dark_matter"
 )
 folium.Fullscreen().add_to(m)
