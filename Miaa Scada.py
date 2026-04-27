@@ -1276,12 +1276,12 @@ p_prom = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 # Render de indicadores
 st.markdown(f"""
     <div class="contenedor-indicadores">
-        <div class="card-indicador"><p style="color:#888; font-size:0.9rem; margin:0;">💧 CAUDAL TOTAL</p><p style="color:#00ffcc; font-size:2.1rem; font-weight:bold; margin:0;">{c_total:.1f} l/s</p></div>
-        <div class="card-indicador"><p style="color:#888; font-size:0.9rem; margin:0;">📉 PRESION PROM.</p><p style="color:#ffff00; font-size:2.1rem; font-weight:bold; margin:0;">{p_prom:.2f} kg</p></div>
-        <div class="card-indicador"><p style="color:#888; font-size:0.6rem; margin:0;">🟢 EN ON</p><p style="color:#00ff00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_on)}</p></div>
-        <div class="card-indicador"><p style="color:#888; font-size:0.6rem; margin:0;">🔴 EN OFF</p><p style="color:#ff0000; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_off)}</p></div>
-        <div class="card-indicador"><p style="color:#888; font-size:0.6rem; margin:0;">⚠️ FALLA COM.</p><p style="color:#ffaa00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_falla_com)}</p></div>
-        <div class="card-indicador"><p style="color:#888; font-size:0.6rem; margin:0;">⚪ SIN TEL.</p><p style="color:#ffffff; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_sin_telemetria)}</p></div>
+        <div class="card-indicador"><p style="color:#888; font-size:0.8rem; margin:0;">💧 Caudal total</p><p style="color:#00ffcc; font-size:1.1rem; font-weight:bold; margin:0;">{c_total:.1f} l/s</p></div>
+        <div class="card-indicador"><p style="color:#888; font-size:0.8rem; margin:0;">📉 Presión promedio</p><p style="color:#ffff00; font-size:1.1rem; font-weight:bold; margin:0;">{p_prom:.2f} kg</p></div>
+        <div class="card-indicador"><p style="color:#888; font-size:0.8rem; margin:0;">🟢 Sitios encendidos</p><p style="color:#00ff00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_on)}</p></div>
+        <div class="card-indicador"><p style="color:#888; font-size:0.8rem; margin:0;">🔴 Sitios apagados</p><p style="color:#ff0000; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_off)}</p></div>
+        <div class="card-indicador"><p style="color:#888; font-size:0.8rem; margin:0;">⚠️ Sitios con falla de comunicación</p><p style="color:#ffaa00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_falla_com)}</p></div>
+        <div class="card-indicador"><p style="color:#888; font-size:0.8rem; margin:0;">⚪ Sitios sin telemetria</p><p style="color:#ffffff; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_sin_telemetria)}</p></div>
     </div>
 """, unsafe_allow_html=True)
 
