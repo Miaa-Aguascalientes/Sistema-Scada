@@ -597,27 +597,23 @@ if tag_a_graficar:
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO DE INTERFAZ */
+        /* 1. CONFIGURACIÓN BASE */
         [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
         header { visibility: hidden !important; height: 0px !important; }
         .stApp { background-color: #000000; color: white; }
         
-        /* 2. CONTENEDOR PRINCIPAL - PEGADO AL TECHO */
         .block-container {
             padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
             margin-top: 30px !important; 
             max-width: 100% !important;
         }
 
-        /* 3. TÍTULO SUPERIOR (MÁS GRANDE) */
+        /* 2. TÍTULO PRINCIPAL */
         .titulo-superior {
             position: fixed;
-            top: 0px; 
-            left: 320px; 
-            right: 0;
+            top: 0px; left: 320px; right: 0;
             z-index: 1000;
             color: #00d4ff; 
             font-size: 1.8rem;
@@ -626,52 +622,46 @@ st.markdown("""
             letter-spacing: 3px;
             background-color: #000000;
             text-align: center;
-            padding: 10px 0;
-            border-bottom: none !important;
+            padding: 5px 0;
         }
 
-        /* 4. INDICADORES: POSICIÓN Y VISIBILIDAD AGRESIVA */
-        [data-testid="stHorizontalBlock"] {
-            margin-top: -30px !important; /* SUBE LOS INDICADORES MÁS */
+        /* 3. NUEVAS TARJETAS DE INDICADORES (HUD) */
+        .contenedor-indicadores {
+            display: flex;
+            justify-content: space-around;
+            margin-top: -15px; /* Los pega al título */
+            margin-bottom: 5px;
             z-index: 1001;
         }
 
-        [data-testid="stMetric"] {
-            background: rgba(11, 26, 41, 0.95);
+        .card-indicador {
+            background: rgba(11, 26, 41, 0.9);
             border: 1px solid #1f4068;
-            padding: 2px 5px !important;
-            border-radius: 2px;
+            border-radius: 4px;
+            padding: 4px 10px;
+            min-width: 160px;
             text-align: center;
-        }
-        
-        /* FUERZA BRUTA PARA EL TÍTULO DEL INDICADOR */
-        [data-testid="stMetricLabel"] div, 
-        [data-testid="stMetricLabel"] p, 
-        [data-testid="stMetricLabel"] span {
-            color: #FFFFFF !important;  /* Blanco puro */
-            opacity: 1 !important;     /* Cero transparencia */
-            font-size: 0.85rem !important; 
-            font-weight: 900 !important;
-            text-transform: uppercase !important;
-            visibility: visible !important;
-            display: block !important;
+            box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.1);
         }
 
-        /* Valores numéricos (Cian) */
-        [data-testid="stMetricValue"] div {
-            color: #00d4ff !important;
+        .card-label {
+            color: #ffffff;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .card-value {
+            color: #00d4ff;
             font-family: 'Courier New', monospace;
-            font-size: 1.4rem !important;
-            font-weight: bold !important;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: -5px 0;
         }
 
-        /* 5. ELIMINAR HUECOS DEL MAPA */
-        iframe {
-            margin-top: 0px !important;
-            border: 1px solid #1f4068 !important;
-        }
-
-        /* AJUSTE SIDEBAR */
+        /* SIDEBAR Y MAPA */
+        iframe { margin-top: 0px !important; border: 1px solid #1f4068 !important; }
         .sidebar-logo { 
             position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
             z-index: 999999; display: flex; justify-content: center; align-items: center;
