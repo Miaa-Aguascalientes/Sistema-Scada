@@ -1266,29 +1266,31 @@ with st.sidebar:
 # 9.1. DASHBOARD PRINCIPAL
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
 
-# --- INSERTAR INDICADORES AQUÍ ---
-col_ind1, col_ind2, col_ind3, col_ind4 = st.columns(4)
-    with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
-        for p in sorted(pozos_on): 
-            st.write(f"🟢 {p}")
-    
-    with st.expander(f"🔴 Bombas OFF ({len(pozos_off)})", expanded=False):
-        for p in sorted(pozos_off): 
-            st.write(f"🔴 {p}")
+# --- INDICADORES SUPERIORES (Métricas fijas, no expandibles) ---
+# Creamos 4 columnas para distribuir los estados de las bombas
+c1, c2, c3, c4 = st.columns(4)
 
-    if pozos_falla_com:
-        with st.expander(f"⚠️ Falla de Com. ({len(pozos_falla_com)})", expanded=False):
-            for p in sorted(pozos_falla_com):
-                st.write(f"🟠 {p}")
-    
-    if pozos_sin_telemetria:
-        with st.expander(f"⚪ Sin Telemetría ({len(pozos_sin_telemetria)})", expanded=False):
-            for p in sorted(pozos_sin_telemetria): 
-                st.write(f"⚪ {p}")
+with c1:
+    st.metric(label="🟢 BOMBAS ON", value=len(pozos_on))
+    # Si quieres ver la lista debajo de la métrica sin expander:
+    # for p in sorted(pozos_on): st.caption(f"🟢 {p}")
 
-st.write("") # Pequeño espacio para que no pegue con el mapa
+with c2:
+    st.metric(label="🔴 BOMBAS OFF", value=len(pozos_off))
 
-# Ahora sigue tu código original
+with c3:
+    # Mostramos falla de comunicación o 0 si está vacío
+    falla_val = len(pozos_falla_com) if pozos_falla_com else 0
+    st.metric(label="⚠️ FALLA COM.", value=falla_val)
+
+with c4:
+    # Mostramos sin telemetría o 0 si está vacío
+    sin_tel_val = len(pozos_sin_telemetria) if pozos_sin_telemetria else 0
+    st.metric(label="⚪ SIN TELEMETRÍA", value=sin_tel_val)
+
+st.write("") # Espacio para separar de la fila del mapa
+
+# Aquí continúa tu código de col_mapa, col_capas...
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
 with col_mapa:
