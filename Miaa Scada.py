@@ -1268,14 +1268,23 @@ st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes<
 
 # --- INSERTAR INDICADORES AQUÍ ---
 col_ind1, col_ind2, col_ind3, col_ind4 = st.columns(4)
-with col_ind1:
-    st.metric("POZOS ACTIVOS", f"{len(df_pozos)}") # O la variable que uses para contar
-with col_ind2:
-    st.metric("CAUDAL TOTAL", "1,245 L/s")
-with col_ind3:
-    st.metric("PRESIÓN MEDIA", "3.1 kg/cm²")
-with col_ind4:
-    st.metric("ESTADO", "OPERATIVO")
+    with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
+        for p in sorted(pozos_on): 
+            st.write(f"🟢 {p}")
+    
+    with st.expander(f"🔴 Bombas OFF ({len(pozos_off)})", expanded=False):
+        for p in sorted(pozos_off): 
+            st.write(f"🔴 {p}")
+
+    if pozos_falla_com:
+        with st.expander(f"⚠️ Falla de Com. ({len(pozos_falla_com)})", expanded=False):
+            for p in sorted(pozos_falla_com):
+                st.write(f"🟠 {p}")
+    
+    if pozos_sin_telemetria:
+        with st.expander(f"⚪ Sin Telemetría ({len(pozos_sin_telemetria)})", expanded=False):
+            for p in sorted(pozos_sin_telemetria): 
+                st.write(f"⚪ {p}")
 
 st.write("") # Pequeño espacio para que no pegue con el mapa
 
