@@ -594,84 +594,71 @@ if tag_a_graficar:
     
     st.stop()
     
-# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
+# 5. SECCION--------------------------------------------------------- 5. ESTILO CSS -----------------------
 st.markdown("""
     <style>
-        /* Bloqueo de elementos de Streamlit */
-        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] { display: none !important; }
+        /* Bloqueo de cabeceras de Streamlit */
+        [data-testid="collapsedControl"], button[kind="headerNoPadding"] { display: none !important; }
         header { visibility: hidden !important; height: 0px !important; }
-        .stApp { background-color: #000000; color: white; }
-        
-        .block-container {
-            padding-top: 0rem !important;
-            max-width: 100% !important;
-        }
+        .stApp { background-color: #000000; }
+        .block-container { padding: 0rem !important; max-width: 100% !important; }
 
-        /* BARRA DE TÍTULO FIJA */
+        /* TÍTULO FIJO */
         .titulo-superior {
             position: fixed;
-            top: 0px; 
-            left: 320px; /* Ajustado al ancho del sidebar */
-            right: 0;
+            top: 0px; left: 320px; right: 0;
             z-index: 1000;
             color: #00d4ff; 
             font-size: 1.3rem;
             font-weight: bold;
-            text-transform: uppercase;
             background-color: #000000;
             text-align: center;
             padding: 10px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* CONTENEDOR HUD DE 6 COLUMNAS */
+        /* CONTENEDOR DE 6 INDICADORES */
         .contenedor-indicadores {
             position: fixed;
-            top: 50px; 
+            top: 48px; /* Debajo del título */
             left: 320px;
             right: 0;
             display: grid;
-            grid-template-columns: repeat(6, 1fr); /* 6 columnas iguales */
+            grid-template-columns: repeat(6, 1fr); 
             gap: 8px;
             padding: 5px 15px;
             z-index: 1001;
             background: #000000;
+            border-bottom: 1px solid #1f4068;
         }
 
         .card-indicador {
-            border: 1px solid #1f4068; 
-            background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
-            padding: 6px 2px;
+            background: linear-gradient(180deg, rgba(11, 26, 41, 0.9) 0%, rgba(0, 0, 0, 1) 100%);
+            border: 1px solid #1f4068;
+            padding: 5px;
             text-align: center;
             border-radius: 4px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
         }
 
-        .card-label { color: #888888; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; margin: 0; }
-        .card-value { font-family: 'Courier New', monospace; font-size: 1.3rem; font-weight: bold; margin: 0; }
+        .card-label { color: #888888; font-size: 0.65rem; font-weight: bold; margin: 0; }
+        .card-value { font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; margin: 0; }
 
-        /* COLORES DE VALORES */
-        .val-caudal { color: #00ffcc; text-shadow: 0 0 8px rgba(0, 255, 204, 0.4); }
-        .val-presion { color: #ffff00; text-shadow: 0 0 8px rgba(255, 255, 0, 0.4); }
+        /* COLORES */
+        .val-caudal { color: #00ffcc; }
+        .val-presion { color: #ffff00; }
         .val-on { color: #00ff00; }
         .val-off { color: #ff0000; }
         .val-falla { color: #ffaa00; }
         .val-sin { color: #ffffff; }
 
-        /* SUCCIÓN DEL MAPA */
+        /* MAPA: Empujamos el mapa hacia abajo para que no lo tapen los indicadores */
         .mapa-principal-ajuste {
-            margin-top: 110px !important; /* Posiciona el mapa justo debajo de los 6 indicadores */
-            margin-left: 320px !important; /* Respeta el sidebar */
-        }
-        
-        .mapa-principal-ajuste iframe {
-            border: 1px solid #1f4068 !important;
-            height: 82vh !important;
+            margin-top: 105px !important; 
+            margin-left: 320px !important;
         }
 
         /* SIDEBAR */
-        [data-testid="stSidebar"] { min-width: 320px !important; max-width: 320px !important; background-color: #0b1a29 !important; border-right: 2px solid #1f4068; }
-        .sidebar-logo { width: 100%; height: 80px; display: flex; justify-content: center; align-items: center; background-color: #0b1a29; border-bottom: 1px solid #1f4068; }
+        [data-testid="stSidebar"] { min-width: 320px !important; max-width: 320px !important; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
@@ -1228,43 +1215,37 @@ with st.sidebar:
             for p in sorted(pozos_sin_telemetria): 
                 st.write(f"⚪ {p}")
                 
-# 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
-# 9.1. TÍTULO SUPERIOR
+# 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL --------------------------------------------------------------------------------------------------------------------------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# 9.2. PREPARACIÓN DE DATOS (Variables del archivo de respaldo)
-# Usamos total_q y total_p que ya calculas en tu lógica de lectura
+# Lógica de variables según tu respaldo
 c_total = total_q if 'total_q' in locals() else 0.0
+# Promedio de presión basado en bombas encendidas
 p_promedio = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
-# 9.3. RENDER DE LOS 6 INDICADORES (HUD)
+# Render de los 6 indicadores
 st.markdown(f"""
     <div class="contenedor-indicadores">
         <div class="card-indicador">
             <p class="card-label">💧 CAUDAL TOTAL</p>
             <p class="card-value val-caudal">{c_total:.1f} <span style="font-size:0.7rem">l/s</span></p>
         </div>
-        
         <div class="card-indicador">
             <p class="card-label">📉 PRESION PROM.</p>
-            <p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
+            <p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg</span></p>
         </div>
-
         <div class="card-indicador">
             <p class="card-label">🟢 EN ON</p>
             <p class="card-value val-on">{len(pozos_on)}</p>
         </div>
-
         <div class="card-indicador">
             <p class="card-label">🔴 EN OFF</p>
             <p class="card-value val-off">{len(pozos_off)}</p>
         </div>
-
         <div class="card-indicador">
             <p class="card-label">⚠️ FALLA COM.</p>
             <p class="card-value val-falla">{len(pozos_falla_com)}</p>
         </div>
-
         <div class="card-indicador">
             <p class="card-label">⚪ SIN TEL.</p>
             <p class="card-value val-sin">{len(pozos_sin_telemetria)}</p>
