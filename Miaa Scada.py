@@ -609,6 +609,17 @@ st.markdown("""
             max-width: 100% !important;
         }
 
+        .mapa-area iframe { 
+            margin-top: 55px !important; /* Ajusta este para subir el mapa al ras */
+            border: 1px solid #1f4068 !important;
+            height: 85vh !important;
+        }
+
+        /* Evitamos que las columnas de sectores se rompan */
+            .mapa-area [data-testid="column"] {
+            flex: 1 1 0% !important;
+        }
+
         /* TÍTULO PRINCIPAL */
         .titulo-superior {
             position: fixed;
