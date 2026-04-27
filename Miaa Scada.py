@@ -870,10 +870,11 @@ if sector_seleccionado:
             }}
             
             .titulo-sector {{
+                margin-top: 5px !important;
                 font-size: 1.8rem;
                 font-weight: 800;
                 color: #00d4ff;
-                margin: 50px;
+                margin: 10px;
                 text-transform: uppercase;
             }}
 
