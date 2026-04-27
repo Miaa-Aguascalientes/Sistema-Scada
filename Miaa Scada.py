@@ -879,12 +879,12 @@ if sector_seleccionado:
 
             /* ELIMINAR EL MARGEN DE LA COLUMNA DEL MAPA */
             .col-mapa-offset {{
-                margin-top: 0px !important; /* Cambiado de 40px a 0px */
+                margin-top: 10px !important; /* Cambiado de 40px a 0px */
             }}
 
             /* Ajuste para que el mapa ocupe más espacio visual hacia arriba */
             .stFolium {{
-                margin-top: -10px !important;
+                margin-top: -50px !important;
             }}
 
             hr {{
