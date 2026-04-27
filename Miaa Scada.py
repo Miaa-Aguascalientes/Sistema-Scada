@@ -894,7 +894,7 @@ if sector_seleccionado:
                 border-top: 1px solid #1f4068;
             }}
             .card-indicador {{
-                margin-top: -20px !important;
+                margin-top: -30px !important;
                 background: rgba(16, 33, 54, 0.8); /* Fondo oscuro semitransparente */
                 padding: 10px;
                 border-radius: 8px;
