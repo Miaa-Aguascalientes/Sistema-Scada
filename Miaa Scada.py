@@ -986,22 +986,9 @@ if sector_seleccionado:
         
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-            
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
+            Fullscreen().add_to(m_sec)
             
-            # --- VOLVER A PINTAR LOS PUNTOS ---
-            if dict_reg:
-                for k, info in dict_reg.items():
-                    # Aquí va tu lógica de círculos o iconos (ejemplo rápido):
-                    folium.CircleMarker(
-                        location=info['coord'],
-                        radius=5,
-                        color="#00ffcc",
-                        fill=True,
-                        popup=f"Punto: {info['nombre']}"
-                    ).add_to(m_sec)
-            
-            # Pintar el polígono del sector
             if datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
@@ -1011,9 +998,6 @@ if sector_seleccionado:
                     ).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
-
-            folium_static(m_sec, width=700, height=500)
-            st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
