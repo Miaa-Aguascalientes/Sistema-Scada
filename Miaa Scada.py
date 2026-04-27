@@ -1270,25 +1270,27 @@ with st.sidebar:
             for p in sorted(pozos_sin_telemetria): 
                 st.write(f"⚪ {p}")
                 
-# 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
+# 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Variables preparadas para el HUD
-caudal_total = total_q
-# Calculamos el promedio real usando tus datos de pozos encendidos
-presion_promedio = total_P / max(len(pozos_on), 1)
-# Indicadores usando el sistema de Grid para que ocupen todo el ancho
-# 9.1. INDICADORES EN EL ORDEN SOLICITADO
+# 1. VALIDACIÓN DE VARIABLES (Blindaje contra errores)
+# Usamos .get o validación simple para que no truene la app si la variable no existe
+c_total = total_q if 'total_q' in locals() else 0.0
+# Usamos total_p (minúscula) que es la que definiste antes
+p_suma = total_p if 'total_p' in locals() else 0.0 
+p_promedio = p_suma / max(len(pozos_on), 1)
+
+# 2. RENDERIZADO DEL HUD
 st.markdown(f"""
     <div class="contenedor-indicadores">
         <div class="card-indicador">
             <p class="card-label">💧 CAUDAL TOTAL</p>
-            <p class="card-value val-caudal">{caudal_total:.2f} <span style="font-size:0.7rem">l/s</span></p>
+            <p class="card-value val-caudal">{c_total:.2f} <span style="font-size:0.7rem">l/s</span></p>
         </div>
         
         <div class="card-indicador">
             <p class="card-label">📉 PRESIÓN PROM.</p>
-            <p class="card-value val-presion">{presion_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
+            <p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
         </div>
 
         <div class="card-indicador">
@@ -1303,12 +1305,12 @@ st.markdown(f"""
 
         <div class="card-indicador">
             <p class="card-label">⚠️ FALLA DE COM.</p>
-            <p class="card-value val-falla">{len(pozos_falla_com) if pozos_falla_com else 0}</p>
+            <p class="card-value val-falla">{len(pozos_falla_com) if 'pozos_falla_com' in locals() and pozos_falla_com else 0}</p>
         </div>
 
         <div class="card-indicador">
             <p class="card-label">⚪ SIN TELEMETRÍA</p>
-            <p class="card-value val-sin">{len(pozos_sin_telemetria) if pozos_sin_telemetria else 0}</p>
+            <p class="card-value val-sin">{len(pozos_sin_telemetria) if 'pozos_sin_telemetria' in locals() and pozos_sin_telemetria else 0}</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
