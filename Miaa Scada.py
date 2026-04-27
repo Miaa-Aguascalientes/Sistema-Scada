@@ -854,62 +854,43 @@ if sector_seleccionado:
             [data-testid="stSidebar"] {{display: none;}}
             header {{visibility: hidden;}}
             
-            /* 1. Subir Título e Indicadores */
+            /* Subir todo el contenido principal */
             .block-container {{
                 padding-top: 0px !important;
                 margin-top: -50px !important; 
             }}
 
-            /* 2. Eliminar espacios entre elementos de Streamlit */
-            [data-testid="stVerticalBlock"] {{
-                gap: 0rem !important;
+            /* ELIMINAR EL ESPACIO QUE GENERA STREAMLIT ENTRE FILAS */
+            [data-testid="stVerticalBlock"] > div {{
+                padding-bottom: 0px !important;
+                margin-bottom: 0px !important;
             }}
 
-            .contenedor-centrado {{
-                text-align: center;
-                margin-bottom: 0px;
-            }}
-            
             .titulo-sector {{
                 font-size: 1.8rem;
                 font-weight: 800;
                 color: #00d4ff;
+                text-align: center;
                 margin: 0px;
-                text-transform: uppercase;
             }}
 
-            /* 3. Estilizar el st.divider() como línea neón */
-            [data-testid="stVerticalBlockBorderWrapper"] hr {{
-                border: 0 !important;
-                height: 1px !important;
-                background: linear-gradient(to right, rgba(0,212,255,0), rgba(0,212,255,0.75), rgba(0,212,255,0)) !important;
-                margin-top: 5px !important;
-                margin-bottom: 0px !important;
+            /* LA LÍNEA: Forzamos que no tenga espacio abajo */
+            .linea-hud {{
+                border: 0;
+                height: 1px;
+                background: linear-gradient(to right, rgba(0,212,255,0), rgba(0,212,255,0.8), rgba(0,212,255,0));
+                margin: 5px 0px 0px 0px !important;
             }}
 
-            /* 4. SUBIR EL MAPA HACIA LA LÍNEA */
+            /* EL MAPA: Lo subimos agresivamente */
             .col-mapa-offset {{
+                margin-top: -120px !important; /* <--- AQUÍ CONTROLAS LA SUBIDA */
                 position: relative;
-                top: -105px !important; /* Ajuste para absorber el espacio muerto */
-                z-index: 10;
-                margin-bottom: -105px !important;
+                z-index: 1;
             }}
-
-            .micro-card {{
-                background: rgba(11, 26, 41, 0.95);
-                border: 1px solid #1f4068;
-                padding: 5px;
-                border-radius: 4px;
-            }}
-            
-            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
-            .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
-
         </style>
         
-        <div class="contenedor-centrado">
-            <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
-        </div>
+        <div class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</div>
         """, 
         unsafe_allow_html=True
     )
