@@ -899,6 +899,17 @@ if sector_seleccionado:
                 margin-bottom: 2px !important;
                 opacity: 0.3;
             }}
+            
+            .linea-separadora {{
+               border: 0;
+               height: 1px;
+               background-image: linear-gradient(to right, rgba(0, 212, 255, 0), rgba(0, 212, 255, 0.75), rgba(0, 212, 255, 0));
+               margin-top: 10px;
+               margin-bottom: 10px;
+        /* IMPORTANTE: Le damos el mismo desplazamiento que al mapa para que suba con él */
+               position: relative;
+               top: -90px !important; 
+             }
         </style>
         
         <div class="contenedor-centrado">
