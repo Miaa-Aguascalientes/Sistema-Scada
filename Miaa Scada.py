@@ -888,7 +888,7 @@ if sector_seleccionado:
             }}
 
             hr {{
-                margin-top: 20px !important;
+                margin-top: -20px !important;
                 margin-bottom: 5px !important;
                 border: 0;
                 border-top: 1px solid #1f4068;
