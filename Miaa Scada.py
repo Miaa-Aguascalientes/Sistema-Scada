@@ -922,8 +922,9 @@ if sector_seleccionado:
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
-    # 7.2. Métricas de cabecera
+# 7.2. Métricas de cabecera
     if datos_s:
+        # Contenedor de métricas (se queda en su lugar)
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -932,12 +933,20 @@ if sector_seleccionado:
         with c4: st.markdown(f'<div class="micro-card"><div class="micro-label">Consumo m³</div><div class="micro-value">{datos_s.get("Cons_m3", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c5: st.markdown(f'<div class="micro-card"><div class="micro-label">Dotación</div><div class="micro-value">{datos_s.get("Dotacion", 0):,.1f}</div></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True) # Cierre de metrics-row
+
+        # --- LÍNEA DIVISORIA HUD ---
+        # Usamos la misma clase col-mapa-offset para que la línea suba junto con el mapa
+        st.markdown("""
+            <div class="col-mapa-offset">
+                <hr style="border: 0; height: 1px; background-image: linear-gradient(to right, rgba(0,212,255,0), rgba(0,212,255,0.75), rgba(0,212,255,0)); margin-bottom: 10px;">
+            </div>
+        """, unsafe_allow_html=True)
         
+        # --- MAPA ---
         st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
         folium_static(m, width=1300, height=600)
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.divider()
 
         # 7.3. Selectores superiores
         dict_reg_all = cargar_puntos_de_control_desde_db() 
