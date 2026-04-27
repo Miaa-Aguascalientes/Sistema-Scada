@@ -594,9 +594,9 @@ if tag_a_graficar:
     
     st.stop()
     
-# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
+        /* Bloqueo de cabeceras estándar */
         [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
@@ -605,115 +605,78 @@ st.markdown("""
         
         .block-container {
             padding-top: 0rem !important;
-            margin-top: 15px !important; /* Subimos el inicio de la página al máximo */
             max-width: 100% !important;
         }
 
-        .mapa-area iframe { 
-            margin-top: 90px !important; /* Ajusta este para subir el mapa al ras */
-            border: 1px solid #1f4068 !important;
-            height: 85vh !important;
-        }
-
-        /* Evitamos que las columnas de sectores se rompan */
-            .mapa-area [data-testid="column"] {
-            flex: 1 1 0% !important;
-        }
-
-        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
+        /* TÍTULO SUPERIOR */
         .titulo-superior {
             position: fixed;
             top: 0px; 
-            left: calc(50% + 160px); 
-            transform: translateX(-50%);
+            left: 320px; /* Alineado al borde del sidebar */
+            right: 0;
             z-index: 1000;
             color: #00d4ff; 
             font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
-            width: 100%;
+            background-color: #000000;
             text-align: center;
             padding: 10px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* CONTENEDOR DE INDICADORES (HUD FIJO) */
+        /* CONTENEDOR DE INDICADORES */
         .contenedor-indicadores {
-           position: fixed;
-           top: 65px; 
-           left: 320px;
-           right: 0;
-           display: grid;
-        /* CAMBIAMOS A 6 COLUMNAS IGUALES */
-           grid-template-columns: repeat(6, 1fr); 
-           gap: 8px; /* Espacio entre cada módulo */
-           padding: 0 10px;
-           z-index: 1001;
-           background: transparent;
+            position: fixed;
+            top: 55px; /* Justo debajo del título */
+            left: 320px;
+            right: 0;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 10px;
+            padding: 0 15px;
+            z-index: 1001;
+            background: transparent;
         }
 
         .card-indicador {
-           flex: 1;
-         /* Cambia el borde a uno más brillante para que se note la separación */
-           border: 1px solid #1f4068; 
-           background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
-           padding: 8px 5px;
-           text-align: center;
-           border-radius: 4px; /* <--- Añade esto para redondear las esquinas y que no parezca tabla */
-           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); /* Sombra para dar volumen */
+            border: 1px solid #1f4068; 
+            background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
+            padding: 8px 5px;
+            text-align: center;
+            border-radius: 4px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
         }
-        .card-indicador:first-child { border-left: 1px solid #1f4068; }
 
-        .card-label { color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin: 0; }
-        .card-value { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; margin: 0; }
-
-        .val-caudal { color: #00ffcc !important; text-shadow: 0 0 8px rgba(0, 255, 204, 0.4); }
-        .val-presion { color: #ffff00 !important; text-shadow: 0 0 8px rgba(255, 255, 0, 0.4); }
-        .val-on { color: #00ff00; text-shadow: 0 0 8px rgba(0, 255, 0, 0.5); }
-        .val-off { color: #ff0000; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5); }
-        .val-falla { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
-        .val-sin { color: #ffffff; }
-
-        
-
-        /* ESTO SUBE EL MAPA A LA FUERZA */
+        /* AJUSTE DEL MAPA PARA PEGARLO A LOS INDICADORES */
         .mapa-principal-ajuste {
-            margin-top: -200px !important; /* Margen negativo agresivo para eliminar el hueco */
+            margin-top: -75px !important; /* VALOR CLAVE: Elimina el hueco negro */
             z-index: 1;
         }
-        /* Ajuste específico para el iframe de Folium */
+
         .mapa-principal-ajuste iframe {
             border: 1px solid #1f4068 !important;
-            border-top: none !important;
+            height: 82vh !important;
         }
 
-        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
-        [data-testid="stSidebarContent"] {
-            padding-top: 30px !important; 
-        }
-
+        /* SIDEBAR */
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
             border-right: 2px solid #1f4068; 
         }
 
-        /* Ajuste Sidebar */
-       .sidebar-logo { 
-           position: fixed; 
-           top: 20px; 
-           left: 40px; 
-           width: 250px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
-           height: 80px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
-           z-index: 999999; 
-           display: flex; 
-           justify-content: center; 
-           align-items: center;
-           background-color: #0b1a29; 
-           border-bottom: 1px solid #1f4068;
-         }
+        /* Logo fijo y espacio para el contenido */
+        .sidebar-logo { 
+            position: sticky; /* Cambiado a sticky para que no flote sobre el menú */
+            top: 0;
+            width: 100%;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0b1a29;
+            z-index: 10;
+        }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
