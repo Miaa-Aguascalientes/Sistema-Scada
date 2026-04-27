@@ -851,30 +851,37 @@ if sector_seleccionado:
     st.markdown(
         f"""
         <style>
-            [data-testid="stSidebar"] {{display: none;}}
-            header {{visibility: hidden;}}
-            
-            /* 1. Subir todo el tablero al borde superior de la pantalla */
+            /* 1. Mantenemos el contenedor base en su sitio original */
             .block-container {{
-                padding-top: 0px !important;
-                margin-top: -100px !important;
+                padding-top: 2rem !important; /* Valor estándar para no pegar el título al techo */
+                margin-top: 0px !important;
             }}
 
-            /* 2. ELIMINAR EL ESPACIO MUERTO ENTRE FILAS (GAP) */
+            /* 2. Quitamos el espacio automático entre elementos de Streamlit */
             [data-testid="stVerticalBlock"] {{
                 gap: 0rem !important;
             }}
 
             .contenedor-centrado {{
                 text-align: center;
-                margin-bottom: -10px !important; /* Margen negativo para acercar indicadores */
+                margin-bottom: 0px;
             }}
             
-            /* 3. FORZAR SUBIDA DEL MAPA USANDO TRANSFORM */
+            .titulo-sector {{
+                font-size: 1.8rem;
+                font-weight: 800;
+                color: #00d4ff;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+            }}
+
+            /* 3. ESTO SUBE ÚNICAMENTE EL MAPA */
+            /* Ajusta el -100px para que el mapa ocupe exactamente el espacio muerto */
             .col-mapa-offset {{
-                /* El transform suele saltarse las restricciones de margin que Streamlit impone */
-                transform: translateY(-110px); 
-                margin-bottom: -110px; /* Compensamos abajo para que no quede un hueco al final */
+                position: relative;
+                top: -100px !important; 
+                z-index: 10;
+                margin-bottom: -100px !important; /* Compensación para no dejar hueco abajo */
             }}
 
             .micro-card {{
@@ -884,7 +891,6 @@ if sector_seleccionado:
                 border-radius: 4px;
             }}
             
-            /* Reducimos el espacio de las líneas horizontales */
             hr {{
                 margin-top: 2px !important;
                 margin-bottom: 2px !important;
