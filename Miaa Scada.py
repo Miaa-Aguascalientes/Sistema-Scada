@@ -911,7 +911,7 @@ if sector_seleccionado:
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
+}}
 
 .value-indicador {{
     color: #00ffcc; 
