@@ -597,88 +597,125 @@ if tag_a_graficar:
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO DE INTERFAZ */
-        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
+        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
+        [data-testid="collapsedControl"], 
+        button[kind="headerNoPadding"], 
+        [data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
+
+        [data-testid="stSidebar"] {
+            min-width: 320px !important; 
+            max-width: 320px !important;
+            width: 320px !important;
+        }
+
+        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
+        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
             display: none !important;
         }
         header { visibility: hidden !important; height: 0px !important; }
+        #MainMenu { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
+
+        /* 3. LOGO EN LO MÁS ALTO */
+        .sidebar-logo { 
+            position: fixed;
+            top: 0px;
+            left: 0px;
+            width: 320px;
+            height: 100px;
+            z-index: 999999;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            background-color: #0b1a29; 
+            border-bottom: 1px solid #1f4068;
+        }
+        .sidebar-logo img { width: 80%; height: auto; }
+
+        /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
         .stApp { background-color: #000000; color: white; }
         
-        /* 2. CONTENEDOR PRINCIPAL - PEGADO AL TECHO */
         .block-container {
-            padding-top: 0rem !important;
+            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
             padding-bottom: 0rem !important;
-            margin-top: 30px !important; /* El cuerpo de la página sube más */
-            max-width: 100% !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            margin-top: 100px !important;    /* Sube todo el contenido para cubrir el hueco del header */
         }
 
-        /* 3. TÍTULO SUPERIOR (FIJO) */
+        /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
+        iframe {
+            margin-top: -110px !important; /* Margen negativo para succionar el mapa hacia arriba */
+        }
+
+        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
-            left: 320px; 
-            right: 0;
+            left: calc(50% + 160px); 
+            transform: translateX(-50%);
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.1rem;
+            font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
-            background-color: #000000;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
+            width: 100%;
             text-align: center;
-            padding: 5px 0;
-            border-bottom: none !important;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f4068;
         }
 
-        /* 4. INDICADORES: POSICIÓN Y VISIBILIDAD */
-        [data-testid="stHorizontalBlock"] {
-            margin-top: -25px !important; /* SUCCIÓN AGRESIVA HACIA ARRIBA */
+        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
+        [data-testid="stSidebarContent"] {
+            padding-top: 110px !important; 
         }
 
-        [data-testid="stMetric"] {
-            background: rgba(11, 26, 41, 0.95);
-            border: 1px solid #1f4068;
-            padding: 0px 5px !important;
-            border-radius: 2px;
-            text-align: center;
+        [data-testid="stSidebar"] { 
+            background-color: #0b1a29 !important; 
+            border-right: 2px solid #1f4068; 
+        }
+
+                /* --- COMPONENTES DEL DASHBOARD --- */
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 auto !important;
         }
         
-        /* Títulos de indicadores (Labels) - FORZAR VISIBILIDAD */
-        [data-testid="stMetricLabel"] p {
-            color: #FFFFFF !important; /* Blanco puro para que se vea */
-            font-size: 0.75rem !important; 
-            font-weight: bold !important;
-            margin-bottom: -10px !important;
-            text-shadow: 1px 1px 2px #000;
+        .resumen-card { 
+            background: #050505; 
+            border: 1px solid #1f4068; 
+            border-radius: 5px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+        }
+        
+        .status-tag { 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            margin-left: 5px; 
+            font-weight: bold; 
+        }
+        
+        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
+        .status-err { background-color: #b71c1c; color: #ef9a9a; }
+        
+        .section-header { 
+            padding: 10px; 
+            border-radius: 3px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            color: white; 
         }
 
-        /* Valores numéricos */
-        [data-testid="stMetricValue"] div {
-            color: #00d4ff !important;
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem !important;
-        }
-
-        /* 5. COLUMNAS */
-        [data-testid="column"] {
-            flex: 1 1 0% !important;
-            min-width: 0px !important;
-            padding: 0 1px !important; 
-        }
-
-        /* MAPA */
-        iframe {
-            margin-top: 0px !important;
-            border: 1px solid #1f4068 !important;
-        }
-
-        /* SIDEBAR Y LOGO */
-        .sidebar-logo { 
-            position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
-            z-index: 999999; display: flex; justify-content: center; align-items: center;
-            background-color: #0b1a29; border-bottom: 1px solid #1f4068;
-        }
-        [data-testid="stSidebarContent"] { padding-top: 110px !important; }
+        /* ANIMACIÓN DE PARPADEO */
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
