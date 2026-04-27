@@ -1238,12 +1238,15 @@ st.markdown(f"""
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
 
 # Crear el mapa directamente aquí
-m = folium.Map(
-    location=st.session_state.get('centro_mapa', [21.8853, -102.2916]), 
-    zoom_start=st.session_state.get('zoom_inicial', 12), 
-    tiles="CartoDB dark_matter"
-)
-folium.Fullscreen().add_to(m)
+with col_mapa:
+    m = folium.Map(
+        location=st.session_state.centro_mapa, 
+        zoom_start=st.session_state.zoom_inicial, 
+        tiles="CartoDB dark_matter"
+    )
+    Fullscreen().add_to(m)
+
+
 # 9.2. Añadir el resaltado del sector si existe
 if datos_sector_resaltado:
         folium.GeoJson(
