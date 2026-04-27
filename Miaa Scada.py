@@ -688,7 +688,7 @@ st.markdown("""
 
         /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
         [data-testid="stSidebarContent"] {
-            padding-top: 10px !important; 
+            padding-top: 30px !important; 
         }
 
         [data-testid="stSidebar"] { 
