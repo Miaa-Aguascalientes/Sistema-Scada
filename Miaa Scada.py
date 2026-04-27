@@ -1201,15 +1201,15 @@ with st.sidebar:
 # 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Lógica de variables blindada
+# Variables (usando nombres de tu archivo de respaldo)
 c_total = total_q if 'total_q' in locals() else 0.0
 p_promedio = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
-# 1. Render de indicadores (HUD)
+# Render de los 6 indicadores
 st.markdown(f"""
     <div class="contenedor-indicadores">
-        <div class="card-indicador"><p class="card-label">💧 CAUDAL TOTAL</p><p class="card-value val-caudal">{c_total:.1f} <span style="font-size:0.7rem">l/s</span></p></div>
-        <div class="card-indicador"><p class="card-label">📉 PRESION PROM.</p><p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg</span></p></div>
+        <div class="card-indicador"><p class="card-label">💧 CAUDAL TOTAL</p><p class="card-value val-caudal">{c_total:.1f}</p></div>
+        <div class="card-indicador"><p class="card-label">📉 PRESION PROM.</p><p class="card-value val-presion">{p_promedio:.2f}</p></div>
         <div class="card-indicador"><p class="card-label">🟢 EN ON</p><p class="card-value val-on">{len(pozos_on)}</p></div>
         <div class="card-indicador"><p class="card-label">🔴 EN OFF</p><p class="card-value val-off">{len(pozos_off)}</p></div>
         <div class="card-indicador"><p class="card-label">⚠️ FALLA COM.</p><p class="card-value val-falla">{len(pozos_falla_com)}</p></div>
@@ -1217,10 +1217,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 2. Render del mapa (SIN COLUMNAS)
+# --- MAPA SIN COLUMNAS ---
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
 
-# Crear el objeto mapa
+# 1. Crear mapa base
 m = folium.Map(
     location=st.session_state.centro_mapa, 
     zoom_start=st.session_state.zoom_inicial, 
