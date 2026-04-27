@@ -620,19 +620,24 @@ st.markdown("""
             flex: 1 1 0% !important;
         }
 
-        /* TÍTULO PRINCIPAL */
+        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
-            top: 0px; left: 320px; right: 0;
+            top: 0px; 
+            left: calc(50% + 160px); 
+            transform: translateX(-50%);
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.8rem;
-            font-weight: 800;
+            font-size: 1.5rem;
+            font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 4px;
-            background-color: #000000;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
+            width: 100%;
             text-align: center;
-            padding: 5px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f4068;
         }
 
         /* CONTENEDOR DE INDICADORES (HUD FIJO) */
@@ -675,6 +680,16 @@ st.markdown("""
         .mapa-principal-ajuste iframe {
             border: 1px solid #1f4068 !important;
             border-top: none !important;
+        }
+
+        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
+        [data-testid="stSidebarContent"] {
+            padding-top: 110px !important; 
+        }
+
+        [data-testid="stSidebar"] { 
+            background-color: #0b1a29 !important; 
+            border-right: 2px solid #1f4068; 
         }
 
         /* Ajuste Sidebar */
