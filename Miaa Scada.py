@@ -594,89 +594,69 @@ if tag_a_graficar:
     
     st.stop()
     
+# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS -------------------------------------------    
 st.markdown("""
     <style>
-        /* Bloqueo de cabeceras estándar */
-        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
-            display: none !important;
-        }
+        /* Bloqueo de basura de Streamlit */
+        [data-testid="collapsedControl"], button[kind="headerNoPadding"] { display: none !important; }
         header { visibility: hidden !important; height: 0px !important; }
-        .stApp { background-color: #000000; color: white; }
-        
-        .block-container {
-            padding-top: 0rem !important;
-            max-width: 100% !important;
-        }
+        .stApp { background-color: #000000; }
+        .block-container { padding: 0rem !important; max-width: 100% !important; }
 
-        /* TÍTULO SUPERIOR */
+        /* TÍTULO PRINCIPAL */
         .titulo-superior {
             position: fixed;
-            top: 0px; 
-            left: 320px; /* Alineado al borde del sidebar */
-            right: 0;
+            top: 0px; left: 320px; right: 0;
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-transform: uppercase;
+            font-size: 1.3rem;
+            font-weight: 800;
             background-color: #000000;
             text-align: center;
             padding: 10px 0;
             border-bottom: 1px solid #1f4068;
+            letter-spacing: 2px;
         }
 
-        /* CONTENEDOR DE INDICADORES */
+        /* CONTENEDOR DE 6 INDICADORES */
         .contenedor-indicadores {
             position: fixed;
-            top: 55px; /* Justo debajo del título */
-            left: 320px;
-            right: 0;
+            top: 50px; left: 320px; right: 0;
             display: grid;
             grid-template-columns: repeat(6, 1fr); 
-            gap: 10px;
-            padding: 0 15px;
+            gap: 5px;
+            padding: 5px 10px;
             z-index: 1001;
-            background: transparent;
+            background: #000000;
         }
 
         .card-indicador {
             border: 1px solid #1f4068; 
-            background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
-            padding: 8px 5px;
+            background: linear-gradient(180deg, rgba(11, 26, 41, 0.9) 0%, rgba(0, 0, 0, 1) 100%);
+            padding: 5px 2px;
             text-align: center;
             border-radius: 4px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
         }
 
-        /* AJUSTE DEL MAPA PARA PEGARLO A LOS INDICADORES */
+        .card-label { color: #888888; font-size: 0.6rem; font-weight: bold; margin: 0; text-transform: uppercase; }
+        .card-value { font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; margin: 0; }
+
+        /* COLORES */
+        .val-caudal { color: #00ffcc; }
+        .val-presion { color: #ffff00; }
+        .val-on { color: #00ff00; }
+        .val-off { color: #ff0000; }
+        .val-falla { color: #ffaa00; }
+        .val-sin { color: #ffffff; }
+
+        /* EL MAPA - AJUSTE DE SUCCIÓN REALISTA */
         .mapa-principal-ajuste {
-            margin-top: -75px !important; /* VALOR CLAVE: Elimina el hueco negro */
-            z-index: 1;
+            margin-top: 115px !important; /* Bajamos el inicio del mapa para que no tape los indicadores */
+            margin-left: 320px !important; /* Empujamos el mapa a la derecha del sidebar */
         }
-
-        .mapa-principal-ajuste iframe {
-            border: 1px solid #1f4068 !important;
-            height: 82vh !important;
-        }
-
-        /* SIDEBAR */
-        [data-testid="stSidebar"] { 
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-
-        /* Logo fijo y espacio para el contenido */
-        .sidebar-logo { 
-            position: sticky; /* Cambiado a sticky para que no flote sobre el menú */
-            top: 0;
-            width: 100%;
-            height: 80px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #0b1a29;
-            z-index: 10;
-        }
+        
+        /* SIDEBAR FIX */
+        [data-testid="stSidebar"] { min-width: 320px !important; max-width: 320px !important; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
