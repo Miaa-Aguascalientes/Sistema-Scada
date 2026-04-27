@@ -924,7 +924,6 @@ if sector_seleccionado:
 
 # 7.2. Métricas de cabecera
     if datos_s:
-        # 1. Las métricas se quedan en su lugar normal
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -935,16 +934,12 @@ if sector_seleccionado:
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # 2. CONTENEDOR DEL MAPA CON LA LÍNEA ADENTRO
-        # Esto garantiza que la línea y el mapa se muevan como una sola pieza
+        # Usamos tu st.divider() que sí funciona para la estructura
+        st.divider() 
+        
+        # El mapa con su clase de desplazamiento
         st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-        
-        # Línea divisoria dibujada con CSS (sin st.divider)
-        st.markdown('<div class="linea-separadora-hud"></div>', unsafe_allow_html=True)
-        
-        # Render del mapa
         folium_static(m, width=1300, height=600)
-        
         st.markdown('</div>', unsafe_allow_html=True)
 
         # 7.3. Selectores superiores
