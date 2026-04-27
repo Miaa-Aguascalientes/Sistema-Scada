@@ -597,11 +597,13 @@ if tag_a_graficar:
 # 5. SECCION--------------------------------------------------------- 5. ESTILO CSS -----------------------
 st.markdown("""
     <style>
+        /* Eliminar basura de Streamlit */
         [data-testid="collapsedControl"], button[kind="headerNoPadding"] { display: none !important; }
         header { visibility: hidden !important; height: 0px !important; }
         .stApp { background-color: #000000; }
         .block-container { padding: 0rem !important; max-width: 100% !important; }
 
+        /* TÍTULO SUPERIOR */
         .titulo-superior {
             position: fixed;
             top: 0px; left: 320px; right: 0;
@@ -615,13 +617,14 @@ st.markdown("""
             border-bottom: 1px solid #1f4068;
         }
 
+        /* HUD DE 6 INDICADORES */
         .contenedor-indicadores {
             position: fixed;
             top: 48px; left: 320px; right: 0;
             display: grid;
             grid-template-columns: repeat(6, 1fr); 
-            gap: 8px;
-            padding: 5px 15px;
+            gap: 5px;
+            padding: 5px 10px;
             z-index: 1001;
             background: #000000;
             border-bottom: 1px solid #1f4068;
@@ -635,12 +638,17 @@ st.markdown("""
             border-radius: 4px;
         }
 
+        .card-label { color: #888888; font-size: 0.6rem; font-weight: bold; margin: 0; }
+        .card-value { font-family: 'Courier New', monospace; font-size: 1.1rem; font-weight: bold; margin: 0; }
+
+        /* EL MAPA: Ajuste de posición */
         .mapa-principal-ajuste {
-            margin-top: 110px !important; 
+            margin-top: 105px !important; 
             margin-left: 320px !important;
+            width: calc(100% - 320px) !important;
         }
-        
-        /* Forzar el ancho del sidebar para que coincida con el CSS */
+
+        /* Forzar Sidebar */
         [data-testid="stSidebar"] { min-width: 320px !important; max-width: 320px !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -1201,32 +1209,32 @@ with st.sidebar:
 # 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Variables (usando nombres de tu archivo de respaldo)
+# Lógica de variables del respaldo
 c_total = total_q if 'total_q' in locals() else 0.0
-p_promedio = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
+p_prom = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
-# Render de los 6 indicadores
+# 1. Mostrar los 6 indicadores (HUD)
 st.markdown(f"""
     <div class="contenedor-indicadores">
-        <div class="card-indicador"><p class="card-label">💧 CAUDAL TOTAL</p><p class="card-value val-caudal">{c_total:.1f}</p></div>
-        <div class="card-indicador"><p class="card-label">📉 PRESION PROM.</p><p class="card-value val-presion">{p_promedio:.2f}</p></div>
-        <div class="card-indicador"><p class="card-label">🟢 EN ON</p><p class="card-value val-on">{len(pozos_on)}</p></div>
-        <div class="card-indicador"><p class="card-label">🔴 EN OFF</p><p class="card-value val-off">{len(pozos_off)}</p></div>
-        <div class="card-indicador"><p class="card-label">⚠️ FALLA COM.</p><p class="card-value val-falla">{len(pozos_falla_com)}</p></div>
-        <div class="card-indicador"><p class="card-label">⚪ SIN TEL.</p><p class="card-value val-sin">{len(pozos_sin_telemetria)}</p></div>
+        <div class="card-indicador"><p class="card-label">💧 CAUDAL TOTAL</p><p class="card-value" style="color:#00ffcc;">{c_total:.1f} l/s</p></div>
+        <div class="card-indicador"><p class="card-label">📉 PRESION PROM.</p><p class="card-value" style="color:#ffff00;">{p_prom:.2f} kg</p></div>
+        <div class="card-indicador"><p class="card-label">🟢 EN ON</p><p class="card-value" style="color:#00ff00;">{len(pozos_on)}</p></div>
+        <div class="card-indicador"><p class="card-label">🔴 EN OFF</p><p class="card-value" style="color:#ff0000;">{len(pozos_off)}</p></div>
+        <div class="card-indicador"><p class="card-label">⚠️ FALLA COM.</p><p class="card-value" style="color:#ffaa00;">{len(pozos_falla_com)}</p></div>
+        <div class="card-indicador"><p class="card-label">⚪ SIN TEL.</p><p class="card-value" style="color:#ffffff;">{len(pozos_sin_telemetria)}</p></div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- MAPA SIN COLUMNAS ---
+# 2. Renderizar el mapa (DENTRO DEL DIV DE AJUSTE)
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
 
-# 1. Crear mapa base
-m = folium.Map(
+# Crear objeto mapa
+m_principal = folium.Map(
     location=st.session_state.centro_mapa, 
     zoom_start=st.session_state.zoom_inicial, 
     tiles="CartoDB dark_matter"
 )
-folium.Fullscreen().add_to(m)
+folium.Fullscreen().add_to(m_principal)
 
 
 # 9.2. Añadir el resaltado del sector si existe
