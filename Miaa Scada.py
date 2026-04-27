@@ -606,11 +606,11 @@ st.markdown("""
         
         .block-container {
             padding-top: 0rem !important;
-            margin-top: 30px !important; 
+            margin-top: 25px !important; 
             max-width: 100% !important;
         }
 
-        /* 2. TÍTULO PRINCIPAL */
+        /* 2. TÍTULO PRINCIPAL (FIJO ARRIBA) */
         .titulo-superior {
             position: fixed;
             top: 0px; left: 320px; right: 0;
@@ -625,12 +625,14 @@ st.markdown("""
             padding: 5px 0;
         }
 
-        /* 3. NUEVAS TARJETAS DE INDICADORES (HUD) */
+        /* 3. BARRA DE INDICADORES HUD - OCUPA TODO EL ANCHO */
         .contenedor-indicadores {
-            display: flex;
-            justify-content: space-around;
-            margin-top: -15px; /* Los pega al título */
-            margin-bottom: 5px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columnas iguales */
+            gap: 10px;
+            margin-top: -5px; /* Pegado al título */
+            margin-bottom: 10px;
+            width: 100%;
             z-index: 1001;
         }
 
@@ -638,30 +640,32 @@ st.markdown("""
             background: rgba(11, 26, 41, 0.9);
             border: 1px solid #1f4068;
             border-radius: 4px;
-            padding: 4px 10px;
-            min-width: 160px;
+            padding: 6px 15px;
             text-align: center;
-            box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.1);
+            box-shadow: inset 0 0 15px rgba(0, 212, 255, 0.1);
         }
 
         .card-label {
-            color: #ffffff;
-            font-size: 0.7rem;
-            font-weight: bold;
+            color: #ffffff !important;
+            font-size: 0.8rem !important;
+            font-weight: bold !important;
             text-transform: uppercase;
-            margin: 0;
+            margin: 0 !important;
+            opacity: 1 !important;
         }
 
         .card-value {
-            color: #00d4ff;
+            color: #00d4ff !important;
             font-family: 'Courier New', monospace;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: -5px 0;
+            font-size: 1.7rem !important;
+            font-weight: bold !important;
+            margin: 2px 0 !important;
+            text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
         }
 
-        /* SIDEBAR Y MAPA */
+        /* 4. MAPA */
         iframe { margin-top: 0px !important; border: 1px solid #1f4068 !important; }
+        
         .sidebar-logo { 
             position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
             z-index: 999999; display: flex; justify-content: center; align-items: center;
@@ -1225,19 +1229,29 @@ with st.sidebar:
                 st.write(f"⚪ {p}")
                 
 # 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
-# 9.1. DASHBOARD PRINCIPAL
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Las métricas ahora se verán blancas y pegadas arriba
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    st.metric(label="BOMBAS EN ON", value=len(pozos_on))
-with c2:
-    st.metric(label="BOMBAS EN OFF", value=len(pozos_off))
-with c3:
-    st.metric(label="FALLA DE COM.", value=len(pozos_falla_com) if pozos_falla_com else 0)
-with c4:
-    st.metric(label="SIN TELEMETRÍA", value=len(pozos_sin_telemetria) if pozos_sin_telemetria else 0)
+# Indicadores usando el sistema de Grid para que ocupen todo el ancho
+st.markdown(f"""
+    <div class="contenedor-indicadores">
+        <div class="card-indicador">
+            <p class="card-label">🟢 BOMBAS ON</p>
+            <p class="card-value">{len(pozos_on)}</p>
+        </div>
+        <div class="card-indicador">
+            <p class="card-label">🔴 BOMBAS OFF</p>
+            <p class="card-value">{len(pozos_off)}</p>
+        </div>
+        <div class="card-indicador">
+            <p class="card-label">⚠️ FALLA COM.</p>
+            <p class="card-value">{len(pozos_falla_com) if pozos_falla_com else 0}</p>
+        </div>
+        <div class="card-indicador">
+            <p class="card-label">⚪ SIN TEL.</p>
+            <p class="card-value">{len(pozos_sin_telemetria) if pozos_sin_telemetria else 0}</p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 # Aquí continúa tu código de col_mapa, col_capas...
 col_mapa, col_capas = st.columns([0.94, 0.06])
