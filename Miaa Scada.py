@@ -635,7 +635,7 @@ st.markdown("""
             padding: 5px 0;
         }
 
-        /* CONTENEDOR DE INDICADORES */
+        /* CONTENEDOR DE INDICADORES (HUD FIJO) */
         .contenedor-indicadores {
             position: fixed;
             top: 45px; 
@@ -645,6 +645,7 @@ st.markdown("""
             z-index: 1001;
             background: #000000;
             padding-bottom: 5px;
+            height: 60px; /* Altura fija para controlar el mapa */
         }
 
         .card-indicador {
@@ -665,11 +666,15 @@ st.markdown("""
         .val-falla { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
         .val-sin { color: #ffffff; }
 
-        /* EL MAPA: AQUÍ ESTÁ EL TRUCO PARA SUBIRLO */
-        iframe { 
-            margin-top: 60px !important; /* Ajusta este número (menos es más arriba) */
+        /* ESTO SUBE EL MAPA A LA FUERZA */
+        .mapa-principal-ajuste {
+            margin-top: -65px !important; /* Margen negativo agresivo para eliminar el hueco */
+            z-index: 1;
+        }
+        /* Ajuste específico para el iframe de Folium */
+        .mapa-principal-ajuste iframe {
             border: 1px solid #1f4068 !important;
-            height: 85vh !important; /* Forzamos altura para que no baile */
+            border-top: none !important;
         }
 
         /* Ajuste Sidebar */
