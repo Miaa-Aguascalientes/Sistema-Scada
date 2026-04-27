@@ -610,7 +610,7 @@ st.markdown("""
         }
 
         .mapa-area iframe { 
-            margin-top: 85px !important; /* Ajusta este para subir el mapa al ras */
+            margin-top: 55px !important; /* Ajusta este para subir el mapa al ras */
             border: 1px solid #1f4068 !important;
             height: 85vh !important;
         }
@@ -668,7 +668,7 @@ st.markdown("""
 
         /* ESTO SUBE EL MAPA A LA FUERZA */
         .mapa-principal-ajuste {
-            margin-top: -65px !important; /* Margen negativo agresivo para eliminar el hueco */
+            margin-top: -85px !important; /* Margen negativo agresivo para eliminar el hueco */
             z-index: 1;
         }
         /* Ajuste específico para el iframe de Folium */
