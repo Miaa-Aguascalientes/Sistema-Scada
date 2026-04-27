@@ -1193,8 +1193,8 @@ with st.sidebar:
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
     
-    # 8.4. ESTADO DE LAS CONEXIONES
-    with st.expander("🔌 Estado de las Conexiones", expanded=False):
+    # 8.3. ESTADO DE LAS CONEXIONES
+    with st.expander("🔌 Estado de las Conexiones", expanded=True):
         status_mysql_scada = "OK" if get_mysql_scada_engine() else "ERROR"
         status_mysql_tele = "OK" if get_mysql_telemetria_engine() else "ERROR"
         status_postgres = "OK" if get_postgres_conn() else "ERROR"
@@ -1213,7 +1213,7 @@ with st.sidebar:
         render_status_line("BD-Diccionarios:", status_mysql_tele)
         render_status_line("BD-PostgreSQL:", status_postgres)
     
-    # 8.5. Buscador de Pozos
+    # 8.4. Buscador de Pozos
     lista_pozos_nombres = sorted(list(mapa_pozos_dict.keys()))
     pozo_buscado = st.selectbox(
         "🔍 Localizar Sitio",
@@ -1221,7 +1221,7 @@ with st.sidebar:
         format_func=lambda x: "Seleccionar Sitio..." if x == "" else f" {x}"
     )
 
-    # 8.6. Buscador de Sectores
+    # 8.5. Buscador de Sectores
     lista_sectores = sorted([s['sector'] for s in sectores])
     sector_buscado = st.selectbox(
         "🏘️ Localizar Sector",
@@ -1230,7 +1230,7 @@ with st.sidebar:
         key="busqueda_sectores"
     )
 
-    # 8.7. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
+    # 8.6. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
     datos_sector_resaltado = None
     if pozo_buscado:
         st.session_state.centro_mapa = mapa_pozos_dict[pozo_buscado]['coord']
@@ -1250,20 +1250,20 @@ with st.sidebar:
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
         
-    # 8.8. BOTON ACTUALIZAR ---
+    # 8.7. BOTON ACTUALIZAR ---
     if st.button("♻️ Actualizar Datos", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
         st.rerun()
         
-    # 8.9. CONTROL DE CAPAS ---
+    # 8.8. CONTROL DE CAPAS ---
     with st.expander("🗺️ Control de Capas", expanded=False):
         ver_sectores = st.checkbox("Mostrar Sectores", value=True)
         ver_pozos = st.checkbox("Mostrar Pozos", value=True)
         ver_tanques = st.checkbox("Mostrar Tanques", value=False)
         ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=False)
     
-    # 8.10, LISTADO DE ESTADOS ---
+    # 8.9, LISTADO DE ESTADOS ---
     with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
         for p in sorted(pozos_on): 
             st.write(f"🟢 {p}")
