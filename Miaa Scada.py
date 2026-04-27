@@ -608,11 +608,11 @@ st.markdown("""
         .block-container {
             padding-top: 0rem !important;
             padding-bottom: 0rem !important;
-            margin-top: 35px !important; /* Espacio mínimo para el título */
+            margin-top: 30px !important; /* El cuerpo de la página sube más */
             max-width: 100% !important;
         }
 
-        /* 3. TÍTULO SUPERIOR (SIN LÍNEA) */
+        /* 3. TÍTULO SUPERIOR (FIJO) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -626,48 +626,53 @@ st.markdown("""
             letter-spacing: 2px;
             background-color: #000000;
             text-align: center;
-            padding: 8px 0;
+            padding: 5px 0;
             border-bottom: none !important;
         }
 
-        /* 4. INDICADORES ULTRA COMPACTOS Y HACIA ARRIBA */
+        /* 4. INDICADORES: POSICIÓN Y VISIBILIDAD */
         [data-testid="stHorizontalBlock"] {
-            margin-top: -15px !important; /* Succiona los indicadores hacia el título */
+            margin-top: -25px !important; /* SUCCIÓN AGRESIVA HACIA ARRIBA */
         }
 
         [data-testid="stMetric"] {
-            background: rgba(11, 26, 41, 0.9);
+            background: rgba(11, 26, 41, 0.95);
             border: 1px solid #1f4068;
-            padding: 2px 8px !important;
+            padding: 0px 5px !important;
             border-radius: 2px;
             text-align: center;
         }
         
+        /* Títulos de indicadores (Labels) - FORZAR VISIBILIDAD */
         [data-testid="stMetricLabel"] p {
-            color: #ffffff !important;
-            font-size: 0.6rem !important;
-            margin-bottom: -8px !important;
+            color: #FFFFFF !important; /* Blanco puro para que se vea */
+            font-size: 0.75rem !important; 
+            font-weight: bold !important;
+            margin-bottom: -10px !important;
+            text-shadow: 1px 1px 2px #000;
         }
+
+        /* Valores numéricos */
         [data-testid="stMetricValue"] div {
             color: #00d4ff !important;
             font-family: 'Courier New', monospace;
-            font-size: 1.1rem !important;
+            font-size: 1.2rem !important;
         }
 
-        /* 5. ELIMINAR ESPACIOS ENTRE COLUMNAS */
+        /* 5. COLUMNAS */
         [data-testid="column"] {
             flex: 1 1 0% !important;
             min-width: 0px !important;
             padding: 0 1px !important; 
         }
 
-        /* MAPA PEGADO */
+        /* MAPA */
         iframe {
-            margin-top: 2px !important;
+            margin-top: 0px !important;
             border: 1px solid #1f4068 !important;
         }
 
-        /* LOGO Y SIDEBAR */
+        /* SIDEBAR Y LOGO */
         .sidebar-logo { 
             position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
             z-index: 999999; display: flex; justify-content: center; align-items: center;
