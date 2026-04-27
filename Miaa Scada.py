@@ -597,58 +597,22 @@ if tag_a_graficar:
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
-        [data-testid="collapsedControl"], 
-        button[kind="headerNoPadding"], 
-        [data-testid="stSidebarCollapseButton"] {
-            display: none !important;
-        }
-
-        [data-testid="stSidebar"] {
-            min-width: 320px !important; 
-            max-width: 320px !important;
-            width: 320px !important;
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-
-        /* 2. LIMPIEZA DE INTERFAZ */
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
+        /* 1. BLOQUEO DE INTERFAZ */
+        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
         header { visibility: hidden !important; height: 0px !important; }
-        #MainMenu { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
-
-        /* 3. LOGO EN SIDEBAR */
-        .sidebar-logo { 
-            position: fixed;
-            top: 0px;
-            left: 0px;
-            width: 320px;
-            height: 100px;
-            z-index: 999999;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            background-color: #0b1a29; 
-            border-bottom: 1px solid #1f4068;
-        }
-        .sidebar-logo img { width: 80%; height: auto; }
-
-        /* 4. CONTENEDOR PRINCIPAL */
         .stApp { background-color: #000000; color: white; }
         
+        /* 2. CONTENEDOR PRINCIPAL - PEGADO AL TECHO */
         .block-container {
             padding-top: 0rem !important;
             padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            margin-top: 60px !important; /* Espacio para el título fijo */
+            margin-top: 45px !important; /* Espacio mínimo para el título */
             max-width: 100% !important;
         }
 
-        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
+        /* 3. TÍTULO SUPERIOR (SIN LÍNEA INFERIOR) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -656,56 +620,56 @@ st.markdown("""
             right: 0;
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
             background-color: #000000;
             text-align: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #1f4068;
+            padding: 5px 0;
+            border-bottom: none !important; /* ELIMINA LA LÍNEA */
         }
 
-        /* 6. CORRECCIÓN DE COLUMNAS PARA INDICADORES (Layout Horizontal) */
-        [data-testid="column"] {
-            flex: 1 1 0% !important;
-            min-width: 0px !important;
-        }
-
-        /* ESTILO HUD PARA MÉTRICAS */
+        /* 4. INDICADORES COMPACTOS */
         [data-testid="stMetric"] {
             background: rgba(11, 26, 41, 0.8);
             border: 1px solid #1f4068;
-            padding: 10px !important;
-            border-radius: 5px;
+            padding: 2px 5px !important; /* Mucho más apretado */
+            border-radius: 3px;
             text-align: center;
         }
+        
+        /* Ajuste de tamaño de texto en métricas */
         [data-testid="stMetricLabel"] p {
             color: #ffffff !important;
-            font-size: 0.8rem !important;
-            text-transform: uppercase;
+            font-size: 0.65rem !important; /* Texto pequeño */
+            margin-bottom: -5px !important;
         }
         [data-testid="stMetricValue"] div {
             color: #00d4ff !important;
             font-family: 'Courier New', monospace;
-            text-shadow: 0 0 5px #00d4ff;
+            font-size: 1.1rem !important; /* Valor numérico compacto */
         }
 
-        /* 7. AJUSTE DEL MAPA (SIN MÁRGENES NEGATIVOS) */
+        /* 5. COLUMNAS Y MAPA */
+        [data-testid="column"] {
+            flex: 1 1 0% !important;
+            min-width: 0px !important;
+            padding: 0 2px !important; /* Menos espacio entre indicadores */
+        }
+
         iframe {
-            margin-top: 10px !important;
+            margin-top: 5px !important; /* Mapa pegado a los indicadores */
             border: 1px solid #1f4068 !important;
         }
 
-        /* SIDEBAR CONTENT */
-        [data-testid="stSidebarContent"] {
-            padding-top: 110px !important; 
+        /* LOGO Y SIDEBAR */
+        .sidebar-logo { 
+            position: fixed; top: 0px; left: 0px; width: 320px; height: 100px;
+            z-index: 999999; display: flex; justify-content: center; align-items: center;
+            background-color: #0b1a29; border-bottom: 1px solid #1f4068;
         }
-
-        /* ANIMACIÓN DE PARPADEO */
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        .blink_me { animation: blink 1.2s infinite; }
+        [data-testid="stSidebarContent"] { padding-top: 110px !important; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
