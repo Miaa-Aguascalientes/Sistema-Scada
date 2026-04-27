@@ -638,7 +638,7 @@ st.markdown("""
         /* CONTENEDOR DE INDICADORES (HUD FIJO) */
         .contenedor-indicadores {
             position: fixed;
-            top: 45px; 
+            top: 55px; 
             left: 320px;
             right: 0;
             display: flex;
