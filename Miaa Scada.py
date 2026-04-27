@@ -845,52 +845,65 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7. SECCION DETALLE DE SECTOR -------------------------------------------------------------------------------------------------------------------------
+# 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS: Ajuste de posición y personalización de la línea
+    # 7.1. Estilos CSS: Ajuste de posición del mapa y UI
     st.markdown(
         f"""
         <style>
             [data-testid="stSidebar"] {{display: none;}}
             header {{visibility: hidden;}}
+            .stAppDeployButton {{display:none;}}
+            #MainMenu {{visibility: hidden;}}
+            footer {{visibility: hidden;}}
             
-            /* Subir todo el contenido principal */
             .block-container {{
                 padding-top: 0px !important;
-                margin-top: -50px !important; 
-            }}
-
-            /* ELIMINAR EL ESPACIO QUE GENERA STREAMLIT ENTRE FILAS */
-            [data-testid="stVerticalBlock"] > div {{
                 padding-bottom: 0px !important;
-                margin-bottom: 0px !important;
+                margin-top: -80px !important;
             }}
 
+            .contenedor-centrado {{
+                text-align: center;
+                margin-bottom: 0px;
+            }}
+            
             .titulo-sector {{
                 font-size: 1.8rem;
                 font-weight: 800;
                 color: #00d4ff;
-                text-align: center;
                 margin: 0px;
+                text-transform: uppercase;
             }}
 
-            /* LA LÍNEA: Forzamos que no tenga espacio abajo */
-            .linea-hud {{
-                border: 0;
-                height: 1px;
-                background: linear-gradient(to right, rgba(0,212,255,0), rgba(0,212,255,0.8), rgba(0,212,255,0));
-                margin: 5px 0px 0px 0px !important;
+            .metrics-row {{
+                margin-top: 0px !important;
+                margin-bottom: 0px !important;
             }}
 
-            /* EL MAPA: Lo subimos agresivamente */
+            .micro-card {{
+                background: rgba(11, 26, 41, 0.95);
+                border: 1px solid #1f4068;
+                border-radius: 4px;
+                padding: 5px;
+                text-align: center;
+            }}
+            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
+            .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
+            
             .col-mapa-offset {{
-                margin-top: -120px !important; /* <--- AQUÍ CONTROLAS LA SUBIDA */
-                position: relative;
-                z-index: 1;
+                margin-top: 40px !important; 
+            }}
+
+            hr {{
+                margin-top: 5px !important;
+                margin-bottom: 5px !important;
             }}
         </style>
         
-        <div class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</div>
+        <div class="contenedor-centrado">
+            <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
+        </div>
         """, 
         unsafe_allow_html=True
     )
@@ -900,7 +913,6 @@ if sector_seleccionado:
 
     # 7.2. Métricas de cabecera
     if datos_s:
-        # Fila de Indicadores
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -911,13 +923,7 @@ if sector_seleccionado:
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Línea divisoria (estilizada por el CSS de arriba)
-        st.divider() 
-        
-        # Mapa desplazado hacia arriba
-        st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-        folium_static(m, width=1300, height=600)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.divider()
 
         # 7.3. Selectores superiores
         dict_reg_all = cargar_puntos_de_control_desde_db() 
