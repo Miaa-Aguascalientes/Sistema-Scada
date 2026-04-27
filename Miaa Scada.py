@@ -634,43 +634,65 @@ st.markdown("""
         }
         .sidebar-logo img { width: 80%; height: auto; }
 
-        /* 4. CONTENEDOR PRINCIPAL - ELIMINAR EL HUECO ENTRE TÍTULO Y MAPA */
+        /* 4. CONTENEDOR PRINCIPAL - AJUSTADO PARA INDICADORES */
         .stApp { background-color: #000000; color: white; }
         
         .block-container {
-            padding-top: 0rem !important;    /* Elimina el espacio muerto arriba */
+            padding-top: 0rem !important;
             padding-bottom: 0rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-            margin-top: 100px !important;    /* Sube todo el contenido para cubrir el hueco del header */
+            margin-top: 80px !important; /* Espacio para el título y métricas fijas */
         }
 
-        /* QUITAMOS CUALQUIER MARGEN EXTRA DEL COMPONENTE DEL MAPA */
-        iframe {
-            margin-top: -110px !important; /* Margen negativo para succionar el mapa hacia arriba */
-        }
-
-        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
+        /* 5. TÍTULO SUPERIOR Y BARRA DE MÉTRICAS (HUD) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
-            left: calc(50% + 160px); 
-            transform: translateX(-50%);
+            left: 320px; /* Alineado después del sidebar */
+            right: 0;
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
-            width: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
             text-align: center;
-            padding: 10px 0;
+            padding: 5px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
+        /* ESTILO PARA LOS ST.METRIC SUPERIORES */
+        [data-testid="stMetric"] {
+            background: rgba(11, 26, 41, 0.7);
+            border: 1px solid #1f4068;
+            padding: 5px 10px !important;
+            border-radius: 5px;
+            box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.1);
+        }
+
+        [data-testid="stMetricLabel"] p {
+            color: #ffffff !important;
+            font-size: 0.7rem !important;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        [data-testid="stMetricValue"] div {
+            color: #00d4ff !important;
+            font-size: 1.4rem !important;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* AJUSTE DEL MAPA PARA QUE NO SE TRASLAPE CON LOS INDICADORES */
+        iframe {
+            margin-top: 10px !important;
+            border: 1px solid #1f4068 !important;
+        }
+
+        /* 6. SIDEBAR - CONTENIDO */
         [data-testid="stSidebarContent"] {
             padding-top: 110px !important; 
         }
@@ -680,45 +702,11 @@ st.markdown("""
             border-right: 2px solid #1f4068; 
         }
 
-                /* --- COMPONENTES DEL DASHBOARD --- */
-        [data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 auto !important;
-        }
-        
-        .resumen-card { 
-            background: #050505; 
-            border: 1px solid #1f4068; 
-            border-radius: 5px; 
-            padding: 15px; 
-            margin-bottom: 15px; 
-        }
-        
-        .status-tag { 
-            font-size: 10px; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            margin-left: 5px; 
-            font-weight: bold; 
-        }
-        
-        .status-ok { background-color: #1b5e20; color: #a5d6a7; }
-        .status-err { background-color: #b71c1c; color: #ef9a9a; }
-        
-        .section-header { 
-            padding: 10px; 
-            border-radius: 3px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            color: white; 
-        }
-
         /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
     </style>
 """, unsafe_allow_html=True)
-
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
 
 # 6.1. Carga de datos base
