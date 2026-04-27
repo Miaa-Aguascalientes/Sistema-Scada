@@ -845,9 +845,9 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------------
+# 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS: Ajuste de posición del mapa y UI
+    # 7.1. Estilos CSS: Ajuste agresivo para subir el mapa al ras de los indicadores
     st.markdown(
         f"""
         <style>
@@ -857,12 +857,13 @@ if sector_seleccionado:
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
             
+            /* Ajuste del contenedor principal para eliminar espacio superior */
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -80px !important;
+                margin-top: -100px !important; /* Aumentamos el recorte superior */
             }}
-
+            
             .contenedor-centrado {{
                 text-align: center;
                 margin-bottom: 0px;
@@ -876,36 +877,27 @@ if sector_seleccionado:
                 text-transform: uppercase;
             }}
 
-            .metrics-row {{
-                margin-top: 0px !important;
-                margin-bottom: 0px !important;
+            /* ELIMINAR EL MARGEN DE LA COLUMNA DEL MAPA */
+            .col-mapa-offset {{
+                margin-top: 0px !important; /* Cambiado de 40px a 0px */
             }}
 
-            .micro-card {{
-                background: rgba(11, 26, 41, 0.95);
-                border: 1px solid #1f4068;
-                border-radius: 4px;
-                padding: 5px;
-                text-align: center;
-            }}
-            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
-            .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
-            
-            .col-mapa-offset {{
-                margin-top: 40px !important; 
+            /* Ajuste para que el mapa ocupe más espacio visual hacia arriba */
+            .stFolium {{
+                margin-top: -10px !important;
             }}
 
             hr {{
-                margin-top: 5px !important;
+                margin-top: 2px !important;
                 margin-bottom: 5px !important;
+                border: 0;
+                border-top: 1px solid #1f4068;
             }}
         </style>
-        
         <div class="contenedor-centrado">
             <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
         </div>
-        """, 
-        unsafe_allow_html=True
+        """, unsafe_allow_html=True
     )
     
     sec_id = str(sector_seleccionado).split('.')[0].strip()
