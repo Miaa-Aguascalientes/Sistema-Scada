@@ -860,7 +860,7 @@ if sector_seleccionado:
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -80px !important;
+                margin-top: -120px !important;
             }}
 
             .contenedor-centrado {{
