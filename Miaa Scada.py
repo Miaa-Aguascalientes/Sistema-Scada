@@ -851,13 +851,17 @@ if sector_seleccionado:
     st.markdown(
         f"""
         <style>
-            /* 1. Mantenemos el contenedor base en su sitio original */
+            [data-testid="stSidebar"] {{display: none;}}
+            header {{visibility: hidden;}}
+            
+            /* 1. ESTO SUBE EL TÍTULO Y LOS INDICADORES */
+            /* Ajustamos el margin-top negativo para eliminar el espacio del header oculto */
             .block-container {{
-                padding-top: 2rem !important; /* Valor estándar para no pegar el título al techo */
-                margin-top: 0px !important;
+                padding-top: 0px !important;
+                margin-top: -60px !important; /* Prueba con -80px si quieres que suba aún más */
             }}
 
-            /* 2. Quitamos el espacio automático entre elementos de Streamlit */
+            /* 2. ELIMINAR EL ESPACIO ENTRE FILAS */
             [data-testid="stVerticalBlock"] {{
                 gap: 0rem !important;
             }}
@@ -871,17 +875,16 @@ if sector_seleccionado:
                 font-size: 1.8rem;
                 font-weight: 800;
                 color: #00d4ff;
-                margin-bottom: 5px;
+                margin: 0px;
                 text-transform: uppercase;
             }}
 
-            /* 3. ESTO SUBE ÚNICAMENTE EL MAPA */
-            /* Ajusta el -100px para que el mapa ocupe exactamente el espacio muerto */
+            /* 3. MANTENEMOS EL MAPA SUBIENDO RESPECTO A LOS INDICADORES */
             .col-mapa-offset {{
                 position: relative;
-                top: -100px !important; 
+                top: -90px !important; /* Sube el mapa para ocupar el espacio muerto */
                 z-index: 10;
-                margin-bottom: -100px !important; /* Compensación para no dejar hueco abajo */
+                margin-bottom: -90px !important;
             }}
 
             .micro-card {{
