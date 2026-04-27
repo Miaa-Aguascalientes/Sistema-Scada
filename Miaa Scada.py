@@ -860,7 +860,7 @@ if sector_seleccionado:
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -120px !important;
+                margin-top: -80px !important;
             }}
 
             .contenedor-centrado {{
@@ -892,7 +892,7 @@ if sector_seleccionado:
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
             .col-mapa-offset {{
-                margin-top: 40px !important; 
+                margin-top: 10px !important; 
             }}
 
             hr {{
