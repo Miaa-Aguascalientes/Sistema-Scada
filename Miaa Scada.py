@@ -892,7 +892,7 @@ if sector_seleccionado:
             .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
             
             .col-mapa-offset {{
-                margin-top: 10px !important; 
+                margin-top: 100px !important; 
             }}
 
             hr {{
