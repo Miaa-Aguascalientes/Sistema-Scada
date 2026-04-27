@@ -1215,12 +1215,11 @@ with st.sidebar:
             for p in sorted(pozos_sin_telemetria): 
                 st.write(f"⚪ {p}")
                 
-# 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL --------------------------------------------------------------------------------------------------------------------------------
+# 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Lógica de variables según tu respaldo
+# Lógica de variables blindada
 c_total = total_q if 'total_q' in locals() else 0.0
-# Promedio de presión basado en bombas encendidas
 p_promedio = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
 # Render de los 6 indicadores
@@ -1253,17 +1252,16 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
+# --- EL ERROR ESTABA AQUÍ: EL MAPA DEBE IR DENTRO DEL CONTENEDOR ---
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
 
-with col_mapa:
-    m = folium.Map(
-        location=st.session_state.centro_mapa, 
-        zoom_start=st.session_state.zoom_inicial, 
-        tiles="CartoDB dark_matter"
-    )
-    Fullscreen().add_to(m)
-
+# 1. Crear el objeto del mapa
+m = folium.Map(
+    location=st.session_state.centro_mapa, 
+    zoom_start=st.session_state.zoom_inicial, 
+    tiles="CartoDB dark_matter"
+)
+folium.Fullscreen().add_to(m)
 # 9.2. Añadir el resaltado del sector si existe
     if datos_sector_resaltado:
         folium.GeoJson(
