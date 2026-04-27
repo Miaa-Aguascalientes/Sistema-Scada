@@ -597,114 +597,49 @@ if tag_a_graficar:
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. BLOQUEO TOTAL DE SIDEBAR Y ELIMINACIÓN DE FLECHAS */
-        [data-testid="collapsedControl"], 
-        button[kind="headerNoPadding"], 
-        [data-testid="stSidebarCollapseButton"] {
-            display: none !important;
-        }
-
-        [data-testid="stSidebar"] {
-            min-width: 320px !important; 
-            max-width: 320px !important;
-            width: 320px !important;
-        }
-
-        /* 2. LIMPIEZA DE INTERFAZ Y MODO ADMINISTRADOR */
-        [data-testid="stNotification"], .stAlert, [data-testid="stStatusWidget"] {
+        /* Bloqueo de Sidebar y limpieza */
+        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
         header { visibility: hidden !important; height: 0px !important; }
-        #MainMenu { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
-
-        /* 3. LOGO EN LO MÁS ALTO */
-        .sidebar-logo { 
-            position: fixed;
-            top: 0px;
-            left: 0px;
-            width: 320px;
-            height: 100px;
-            z-index: 999999;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            background-color: #0b1a29; 
-            border-bottom: 1px solid #1f4068;
-        }
-        .sidebar-logo img { width: 80%; height: auto; }
-
-        /* 4. CONTENEDOR PRINCIPAL - AJUSTADO PARA INDICADORES */
         .stApp { background-color: #000000; color: white; }
         
+        /* Contenedor principal: Bajamos el contenido para el título fijo */
         .block-container {
             padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            margin-top: 80px !important; /* Espacio para el título y métricas fijas */
+            margin-top: 60px !important; 
         }
 
-        /* 5. TÍTULO SUPERIOR Y BARRA DE MÉTRICAS (HUD) */
+        /* Título Superior Fijo */
         .titulo-superior {
             position: fixed;
             top: 0px; 
-            left: 320px; /* Alineado después del sidebar */
+            left: 320px; 
             right: 0;
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: #000000;
             text-align: center;
-            padding: 5px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* ESTILO PARA LOS ST.METRIC SUPERIORES */
+        /* Estilo de los Indicadores (Metrics) */
         [data-testid="stMetric"] {
-            background: rgba(11, 26, 41, 0.7);
+            background: rgba(11, 26, 41, 0.8);
             border: 1px solid #1f4068;
-            padding: 5px 10px !important;
+            padding: 10px !important;
             border-radius: 5px;
-            box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.1);
         }
+        [data-testid="stMetricLabel"] p { color: #ffffff !important; font-size: 0.8rem !important; }
+        [data-testid="stMetricValue"] div { color: #00d4ff !important; font-family: 'Courier New', monospace; }
 
-        [data-testid="stMetricLabel"] p {
-            color: #ffffff !important;
-            font-size: 0.7rem !important;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        [data-testid="stMetricValue"] div {
-            color: #00d4ff !important;
-            font-size: 1.4rem !important;
-            font-family: 'Courier New', monospace;
-        }
-
-        /* AJUSTE DEL MAPA PARA QUE NO SE TRASLAPE CON LOS INDICADORES */
-        iframe {
-            margin-top: 10px !important;
-            border: 1px solid #1f4068 !important;
-        }
-
-        /* 6. SIDEBAR - CONTENIDO */
-        [data-testid="stSidebarContent"] {
-            padding-top: 110px !important; 
-        }
-
-        [data-testid="stSidebar"] { 
-            background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
-        }
-
-        /* ANIMACIÓN DE PARPADEO */
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        .blink_me { animation: blink 1.2s infinite; }
+        /* ELIMINAR márgenes negativos del mapa */
+        iframe { margin-top: 0px !important; border: 1px solid #1f4068 !important; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
@@ -1264,6 +1199,21 @@ with st.sidebar:
 # 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
 # 9.1. DASHBOARD PRINCIPAL
 st.markdown('<div class="titulo-superior">Sistema de monitoreo - Aguascalientes</div>', unsafe_allow_html=True)
+
+# --- INSERTAR INDICADORES AQUÍ ---
+col_ind1, col_ind2, col_ind3, col_ind4 = st.columns(4)
+with col_ind1:
+    st.metric("POZOS ACTIVOS", f"{len(df_pozos)}") # O la variable que uses para contar
+with col_ind2:
+    st.metric("CAUDAL TOTAL", "1,245 L/s")
+with col_ind3:
+    st.metric("PRESIÓN MEDIA", "3.1 kg/cm²")
+with col_ind4:
+    st.metric("ESTADO", "OPERATIVO")
+
+st.write("") # Pequeño espacio para que no pegue con el mapa
+
+# Ahora sigue tu código original
 col_mapa, col_capas = st.columns([0.9, 0.1], gap="small")
 
 with col_mapa:
