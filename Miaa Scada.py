@@ -608,11 +608,11 @@ st.markdown("""
         .block-container {
             padding-top: 0rem !important;
             padding-bottom: 0rem !important;
-            margin-top: 45px !important; /* Espacio mínimo para el título */
+            margin-top: 35px !important; /* Espacio mínimo para el título */
             max-width: 100% !important;
         }
 
-        /* 3. TÍTULO SUPERIOR (SIN LÍNEA INFERIOR) */
+        /* 3. TÍTULO SUPERIOR (SIN LÍNEA) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -626,40 +626,44 @@ st.markdown("""
             letter-spacing: 2px;
             background-color: #000000;
             text-align: center;
-            padding: 5px 0;
-            border-bottom: none !important; /* ELIMINA LA LÍNEA */
+            padding: 8px 0;
+            border-bottom: none !important;
         }
 
-        /* 4. INDICADORES COMPACTOS */
+        /* 4. INDICADORES ULTRA COMPACTOS Y HACIA ARRIBA */
+        [data-testid="stHorizontalBlock"] {
+            margin-top: -15px !important; /* Succiona los indicadores hacia el título */
+        }
+
         [data-testid="stMetric"] {
-            background: rgba(11, 26, 41, 0.8);
+            background: rgba(11, 26, 41, 0.9);
             border: 1px solid #1f4068;
-            padding: 2px 5px !important; /* Mucho más apretado */
-            border-radius: 3px;
+            padding: 2px 8px !important;
+            border-radius: 2px;
             text-align: center;
         }
         
-        /* Ajuste de tamaño de texto en métricas */
         [data-testid="stMetricLabel"] p {
             color: #ffffff !important;
-            font-size: 0.65rem !important; /* Texto pequeño */
-            margin-bottom: -5px !important;
+            font-size: 0.6rem !important;
+            margin-bottom: -8px !important;
         }
         [data-testid="stMetricValue"] div {
             color: #00d4ff !important;
             font-family: 'Courier New', monospace;
-            font-size: 1.1rem !important; /* Valor numérico compacto */
+            font-size: 1.1rem !important;
         }
 
-        /* 5. COLUMNAS Y MAPA */
+        /* 5. ELIMINAR ESPACIOS ENTRE COLUMNAS */
         [data-testid="column"] {
             flex: 1 1 0% !important;
             min-width: 0px !important;
-            padding: 0 2px !important; /* Menos espacio entre indicadores */
+            padding: 0 1px !important; 
         }
 
+        /* MAPA PEGADO */
         iframe {
-            margin-top: 5px !important; /* Mapa pegado a los indicadores */
+            margin-top: 2px !important;
             border: 1px solid #1f4068 !important;
         }
 
