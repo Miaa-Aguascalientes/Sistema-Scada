@@ -918,6 +918,11 @@ if sector_seleccionado:
                margin: 0;
             }}
 
+            /* O de forma más específica si usas el key */
+            .element-container:has(#f_sector_full) {{
+            margin-top: -30px !important;
+            }}
+
             
         </style>
         <div class="contenedor-centrado">
