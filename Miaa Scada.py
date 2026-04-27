@@ -697,8 +697,19 @@ st.markdown("""
         }
 
         /* Ajuste Sidebar */
-        .sidebar-logo { position: fixed; top: 0px; left: 0px; width: 320px; height: 100px; z-index: 999999; background-color: #0b1a29; border-bottom: 1px solid #1f4068; }
-        [data-testid="stSidebarContent"] { padding-top: 110px !important; }
+       .sidebar-logo { 
+           position: fixed; 
+           top: 0px; 
+           left: 0px; 
+           width: 200px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
+           height: 60px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
+           z-index: 999999; 
+           display: flex; 
+           justify-content: center; 
+           align-items: center;
+           background-color: #0b1a29; 
+           border-bottom: 1px solid #1f4068;
+         }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
