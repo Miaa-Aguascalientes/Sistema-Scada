@@ -1272,8 +1272,9 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="mapa-area">', unsafe_allow_html=True)
-col_mapa, col_capas = st.columns([0.94, 0.06])
+st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
+folium_static(m, width=1250, height=800)
+st.markdown('</div>', unsafe_allow_html=True)
 
 with col_mapa:
     m = folium.Map(
