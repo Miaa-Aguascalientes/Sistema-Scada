@@ -861,7 +861,7 @@ if sector_seleccionado:
             .block-container {{
                 padding-top: 0px !important;
                 padding-bottom: 0px !important;
-                margin-top: -300px !important; /* Aumentamos el recorte superior */
+                margin-top: -80px !important; /* Aumentamos el recorte superior */
             }}
             
             .contenedor-centrado {{
