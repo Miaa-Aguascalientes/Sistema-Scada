@@ -924,6 +924,14 @@ if sector_seleccionado:
             margin-top: -30px !important;
             }}
 
+            .col-mapa-offset {{
+            margin-top: 0px !important; /* No movemos el contenedor, solo el contenido */
+            }}
+
+            .stFolium {{
+            margin-top: -65px !important; /* Ajusta este valor para subir el mapa */
+            }}
+
             
         </style>
         <div class="contenedor-centrado">
@@ -975,9 +983,11 @@ if sector_seleccionado:
 
 # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.1, 0.9])
-        
+
         with col_izq:
+            # Este div encapsula el mapa y le permite al CSS (.stFolium) subirlo
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+            
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
@@ -986,10 +996,21 @@ if sector_seleccionado:
                     geo_data = json.loads(datos_s['geo'])
                     folium_geo = folium.GeoJson(
                         geo_data, 
-                        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
+                        style_function=lambda x: {
+                            'fillColor': '#00d4ff', 
+                            'color': '#ffffff', 
+                            'weight': 2, 
+                            'fillOpacity': 0.15
+                        }
                     ).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
-                except: pass
+                except: 
+                    pass
+
+            # Renderizado del mapa
+            folium_static(m_sec, width=700, height=500)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
