@@ -594,69 +594,122 @@ if tag_a_graficar:
     
     st.stop()
     
-# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS -------------------------------------------    
+# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* Bloqueo de basura de Streamlit */
-        [data-testid="collapsedControl"], button[kind="headerNoPadding"] { display: none !important; }
+        [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
         header { visibility: hidden !important; height: 0px !important; }
-        .stApp { background-color: #000000; }
-        .block-container { padding: 0rem !important; max-width: 100% !important; }
+        .stApp { background-color: #000000; color: white; }
+        
+        .block-container {
+            padding-top: 0rem !important;
+            margin-top: 15px !important; /* Subimos el inicio de la página al máximo */
+            max-width: 100% !important;
+        }
 
-        /* TÍTULO PRINCIPAL */
+        .mapa-area iframe { 
+            margin-top: 90px !important; /* Ajusta este para subir el mapa al ras */
+            border: 1px solid #1f4068 !important;
+            height: 85vh !important;
+        }
+
+        /* Evitamos que las columnas de sectores se rompan */
+            .mapa-area [data-testid="column"] {
+            flex: 1 1 0% !important;
+        }
+
+        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
-            top: 0px; left: 320px; right: 0;
+            top: 0px; 
+            left: calc(50% + 160px); 
+            transform: translateX(-50%);
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.3rem;
-            font-weight: 800;
-            background-color: #000000;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
+            width: 100%;
             text-align: center;
             padding: 10px 0;
             border-bottom: 1px solid #1f4068;
-            letter-spacing: 2px;
         }
 
-        /* CONTENEDOR DE 6 INDICADORES */
+        /* CONTENEDOR DE INDICADORES (HUD FIJO) */
         .contenedor-indicadores {
-            position: fixed;
-            top: 50px; left: 320px; right: 0;
-            display: grid;
-            grid-template-columns: repeat(6, 1fr); 
-            gap: 5px;
-            padding: 5px 10px;
-            z-index: 1001;
-            background: #000000;
-        }
+           position: fixed;
+           top: 65px; 
+           left: 320px;
+           right: 0;
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           gap: 15px; /* <--- Aumenta esto para despegarlos (puedes probar 10px o 15px) */
+           z-index: 1001;
+           background: transparent; /* Quita el fondo negro del contenedor para que se vea el hueco */
+           padding: 0 15px;
+         }
 
         .card-indicador {
-            border: 1px solid #1f4068; 
-            background: linear-gradient(180deg, rgba(11, 26, 41, 0.9) 0%, rgba(0, 0, 0, 1) 100%);
-            padding: 5px 2px;
-            text-align: center;
-            border-radius: 4px;
+           flex: 1;
+         /* Cambia el borde a uno más brillante para que se note la separación */
+           border: 1px solid #1f4068; 
+           background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
+           padding: 8px 5px;
+           text-align: center;
+           border-radius: 4px; /* <--- Añade esto para redondear las esquinas y que no parezca tabla */
+           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); /* Sombra para dar volumen */
         }
+        .card-indicador:first-child { border-left: 1px solid #1f4068; }
 
-        .card-label { color: #888888; font-size: 0.6rem; font-weight: bold; margin: 0; text-transform: uppercase; }
-        .card-value { font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; margin: 0; }
-
-        /* COLORES */
-        .val-caudal { color: #00ffcc; }
-        .val-presion { color: #ffff00; }
-        .val-on { color: #00ff00; }
-        .val-off { color: #ff0000; }
-        .val-falla { color: #ffaa00; }
+        .card-label { color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin: 0; }
+        .card-value { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; margin: 0; }
+        
+        .val-on { color: #00ff00; text-shadow: 0 0 8px rgba(0, 255, 0, 0.5); }
+        .val-off { color: #ff0000; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5); }
+        .val-falla { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
         .val-sin { color: #ffffff; }
 
-        /* EL MAPA - AJUSTE DE SUCCIÓN REALISTA */
+        /* ESTO SUBE EL MAPA A LA FUERZA */
         .mapa-principal-ajuste {
-            margin-top: 115px !important; /* Bajamos el inicio del mapa para que no tape los indicadores */
-            margin-left: 320px !important; /* Empujamos el mapa a la derecha del sidebar */
+            margin-top: -200px !important; /* Margen negativo agresivo para eliminar el hueco */
+            z-index: 1;
         }
-        
-        /* SIDEBAR FIX */
-        [data-testid="stSidebar"] { min-width: 320px !important; max-width: 320px !important; }
+        /* Ajuste específico para el iframe de Folium */
+        .mapa-principal-ajuste iframe {
+            border: 1px solid #1f4068 !important;
+            border-top: none !important;
+        }
+
+        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
+        [data-testid="stSidebarContent"] {
+            padding-top: 30px !important; 
+        }
+
+        [data-testid="stSidebar"] { 
+            background-color: #0b1a29 !important; 
+            border-right: 2px solid #1f4068; 
+        }
+
+        /* Ajuste Sidebar */
+       .sidebar-logo { 
+           position: fixed; 
+           top: 20px; 
+           left: 40px; 
+           width: 250px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
+           height: 80px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
+           z-index: 999999; 
+           display: flex; 
+           justify-content: center; 
+           align-items: center;
+           background-color: #0b1a29; 
+           border-bottom: 1px solid #1f4068;
+         }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
@@ -1213,47 +1266,27 @@ with st.sidebar:
             for p in sorted(pozos_sin_telemetria): 
                 st.write(f"⚪ {p}")
                 
-# 9. SECCION--------------------------------------------------------- 9. MAPA PRINCIPAL -----------------
+# 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
 st.markdown('<div class="titulo-superior">SISTEMA SCADA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# 1. VALIDACIÓN DE VARIABLES (Blindaje contra errores)
-# Usamos .get o validación simple para que no truene la app si la variable no existe
-c_total = total_q if 'total_q' in locals() else 0.0
-# Usamos total_p (minúscula) que es la que definiste antes
-p_suma = total_p if 'total_p' in locals() else 0.0 
-p_promedio = p_suma / max(len(pozos_on), 1)
-
-# 2. RENDERIZADO DEL HUD
+# Indicadores usando el sistema de Grid para que ocupen todo el ancho
 st.markdown(f"""
     <div class="contenedor-indicadores">
         <div class="card-indicador">
-            <p class="card-label">💧 CAUDAL TOTAL</p>
-            <p class="card-value val-caudal">{c_total:.2f} <span style="font-size:0.7rem">l/s</span></p>
-        </div>
-        
-        <div class="card-indicador">
-            <p class="card-label">📉 PRESIÓN PROM.</p>
-            <p class="card-value val-presion">{p_promedio:.2f} <span style="font-size:0.7rem">kg/cm²</span></p>
-        </div>
-
-        <div class="card-indicador">
             <p class="card-label">🟢 BOMBAS ENCENDIDAS</p>
-            <p class="card-value val-on">{len(pozos_on)}</p>
+            <p class="card-value">{len(pozos_on)}</p>
         </div>
-
         <div class="card-indicador">
             <p class="card-label">🔴 BOMBAS APAGADAS</p>
-            <p class="card-value val-off">{len(pozos_off)}</p>
+            <p class="card-value">{len(pozos_off)}</p>
         </div>
-
         <div class="card-indicador">
-            <p class="card-label">⚠️ FALLA DE COM.</p>
-            <p class="card-value val-falla">{len(pozos_falla_com) if 'pozos_falla_com' in locals() and pozos_falla_com else 0}</p>
+            <p class="card-label">⚠️ SITIOS CON FALLA DE COMUNICACION</p>
+            <p class="card-value">{len(pozos_falla_com) if pozos_falla_com else 0}</p>
         </div>
-
         <div class="card-indicador">
-            <p class="card-label">⚪ SIN TELEMETRÍA</p>
-            <p class="card-value val-sin">{len(pozos_sin_telemetria) if 'pozos_sin_telemetria' in locals() and pozos_sin_telemetria else 0}</p>
+            <p class="card-label">⚪ SITIOS SIN TELEMETRIA</p>
+            <p class="card-value">{len(pozos_sin_telemetria) if pozos_sin_telemetria else 0}</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
