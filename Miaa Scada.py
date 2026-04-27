@@ -610,7 +610,7 @@ st.markdown("""
         }
 
         .mapa-area iframe { 
-            margin-top: 65px !important; /* Ajusta este para subir el mapa al ras */
+            margin-top: 85px !important; /* Ajusta este para subir el mapa al ras */
             border: 1px solid #1f4068 !important;
             height: 85vh !important;
         }
