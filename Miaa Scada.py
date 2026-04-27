@@ -919,9 +919,9 @@ if sector_seleccionado:
             }}
 
             /* O de forma más específica si usas el key */
-            margin-top: 100px !important;
-            .element-container:has(#f_sector_full) {{
             
+            .element-container:has(#f_sector_full) {{
+            margin-top: -100px !important;
             }}
 
             
