@@ -964,7 +964,7 @@ if sector_seleccionado:
         opciones_equipo = list(reg_nombres.keys())
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            st.markdown('<div style="margin-top: 80px;">', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top: -10px;">', unsafe_allow_html=True)
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
             if not opciones_equipo:
@@ -977,7 +977,7 @@ if sector_seleccionado:
         col_izq, col_der = st.columns([1.1, 0.9])
         
         with col_izq:
-            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+            st.markdown('<div class="col-mapa-offset"><div style="margin-top: -30px;">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
