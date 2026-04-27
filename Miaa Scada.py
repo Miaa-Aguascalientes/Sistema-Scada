@@ -642,24 +642,28 @@ st.markdown("""
 
         /* CONTENEDOR DE INDICADORES (HUD FIJO) */
         .contenedor-indicadores {
-            position: fixed;
-            top: 55px; 
-            left: 320px;
-            right: 0;
-            display: flex;
-            z-index: 1001;
-            background: #000000;
-            padding-bottom: 5px;
-            height: 60px; /* Altura fija para controlar el mapa */
-        }
+           position: fixed;
+           top: 45px; 
+           left: 320px;
+           right: 0;
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           gap: 15px; /* <--- Aumenta esto para despegarlos (puedes probar 10px o 15px) */
+           z-index: 1001;
+           background: transparent; /* Quita el fondo negro del contenedor para que se vea el hueco */
+           padding: 0 15px;
+         }
 
         .card-indicador {
-            flex: 1;
-            border: 1px solid #1f4068;
-            background: linear-gradient(180deg, rgba(11, 26, 41, 0.9) 0%, rgba(0, 0, 0, 1) 100%);
-            padding: 5px;
-            text-align: center;
-            border-left: none;
+           flex: 1;
+         /* Cambia el borde a uno más brillante para que se note la separación */
+           border: 1px solid #1f4068; 
+           background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
+           padding: 8px 5px;
+           text-align: center;
+           border-radius: 4px; /* <--- Añade esto para redondear las esquinas y que no parezca tabla */
+           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); /* Sombra para dar volumen */
         }
         .card-indicador:first-child { border-left: 1px solid #1f4068; }
 
