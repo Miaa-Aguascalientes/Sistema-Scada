@@ -845,23 +845,22 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------------------------------------------------------------------------------------------------------
+# 7. SECCION DETALLE DE SECTOR -------------------------------------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS: Ajuste de posición del mapa y UI
+    # 7.1. Estilos CSS: Ajuste de posición y personalización de la línea
     st.markdown(
         f"""
         <style>
             [data-testid="stSidebar"] {{display: none;}}
             header {{visibility: hidden;}}
             
-            /* 1. ESTO SUBE EL TÍTULO Y LOS INDICADORES */
-            /* Ajustamos el margin-top negativo para eliminar el espacio del header oculto */
+            /* 1. Subir Título e Indicadores */
             .block-container {{
                 padding-top: 0px !important;
-                margin-top: -40px !important; /* Prueba con -70px si quieres que suba aún más */
+                margin-top: -50px !important; 
             }}
 
-            /* 2. ELIMINAR EL ESPACIO ENTRE FILAS */
+            /* 2. Eliminar espacios entre elementos de Streamlit */
             [data-testid="stVerticalBlock"] {{
                 gap: 0rem !important;
             }}
@@ -879,12 +878,21 @@ if sector_seleccionado:
                 text-transform: uppercase;
             }}
 
-            /* 3. MANTENEMOS EL MAPA SUBIENDO RESPECTO A LOS INDICADORES */
+            /* 3. Estilizar el st.divider() como línea neón */
+            [data-testid="stVerticalBlockBorderWrapper"] hr {{
+                border: 0 !important;
+                height: 1px !important;
+                background: linear-gradient(to right, rgba(0,212,255,0), rgba(0,212,255,0.75), rgba(0,212,255,0)) !important;
+                margin-top: 5px !important;
+                margin-bottom: 0px !important;
+            }}
+
+            /* 4. SUBIR EL MAPA HACIA LA LÍNEA */
             .col-mapa-offset {{
                 position: relative;
-                top: -90px !important; /* Sube el mapa para ocupar el espacio muerto */
+                top: -105px !important; /* Ajuste para absorber el espacio muerto */
                 z-index: 10;
-                margin-bottom: -90px !important;
+                margin-bottom: -105px !important;
             }}
 
             .micro-card {{
@@ -894,22 +902,9 @@ if sector_seleccionado:
                 border-radius: 4px;
             }}
             
-            hr {{
-                margin-top: 2px !important;
-                margin-bottom: 2px !important;
-                opacity: 0.3;
-            }}
-            
-            .linea-separadora {{
-               border: 0;
-               height: 1px;
-               background-image: linear-gradient(to right, rgba(0, 212, 255, 0), rgba(0, 212, 255, 0.75), rgba(0, 212, 255, 0));
-               margin-top: 10px;
-               margin-bottom: 10px;
-        /* IMPORTANTE: Le damos el mismo desplazamiento que al mapa para que suba con él */
-               position: relative;
-               top: -90px !important; 
-             }}
+            .micro-label {{ color: #888; font-size: 10px; text-transform: uppercase; }}
+            .micro-value {{ color: #ffffff; font-size: 16px; font-weight: bold; }}
+
         </style>
         
         <div class="contenedor-centrado">
@@ -922,8 +917,9 @@ if sector_seleccionado:
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
-# 7.2. Métricas de cabecera
+    # 7.2. Métricas de cabecera
     if datos_s:
+        # Fila de Indicadores
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         with c1: st.markdown(f'<div class="micro-card"><div class="micro-label">Población</div><div class="micro-value">{datos_s.get("Poblacion", 0):,.0f}</div></div>', unsafe_allow_html=True)
@@ -934,10 +930,10 @@ if sector_seleccionado:
         with c6: st.markdown(f'<div class="micro-card"><div class="micro-label">Balance</div><div class="micro-value">{datos_s.get("Balance_Estimado", 0):,.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Usamos tu st.divider() que sí funciona para la estructura
+        # Línea divisoria (estilizada por el CSS de arriba)
         st.divider() 
         
-        # El mapa con su clase de desplazamiento
+        # Mapa desplazado hacia arriba
         st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
         folium_static(m, width=1300, height=600)
         st.markdown('</div>', unsafe_allow_html=True)
