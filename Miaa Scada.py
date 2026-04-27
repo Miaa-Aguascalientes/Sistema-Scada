@@ -1254,7 +1254,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="mapa-principal-ajuste">', unsafe_allow_html=True)
-folium_static(m, width=1250, height=800)
 st.markdown('</div>', unsafe_allow_html=True)
 
 with col_mapa:
