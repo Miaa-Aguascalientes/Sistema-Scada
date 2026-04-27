@@ -597,7 +597,6 @@ if tag_a_graficar:
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* CONFIGURACIÓN DE PÁGINA */
         [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
@@ -606,7 +605,7 @@ st.markdown("""
         
         .block-container {
             padding-top: 0rem !important;
-            margin-top: 20px !important;
+            margin-top: 15px !important; /* Subimos el inicio de la página al máximo */
             max-width: 100% !important;
         }
 
@@ -622,65 +621,49 @@ st.markdown("""
             letter-spacing: 4px;
             background-color: #000000;
             text-align: center;
-            padding-top: 5px;
-            margin: 0;
+            padding: 5px 0;
         }
 
-        /* CONTENEDOR DE INDICADORES TÉCNICOS */
+        /* CONTENEDOR DE INDICADORES */
         .contenedor-indicadores {
             position: fixed;
-            top: 45px; /* Justo bajo el título */
+            top: 45px; 
             left: 320px;
             right: 0;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0; /* Sin espacio para que los bordes se unan */
             z-index: 1001;
             background: #000000;
-            padding-bottom: 10px;
+            padding-bottom: 5px;
         }
 
         .card-indicador {
             flex: 1;
             border: 1px solid #1f4068;
             background: linear-gradient(180deg, rgba(11, 26, 41, 0.9) 0%, rgba(0, 0, 0, 1) 100%);
-            padding: 5px 15px;
+            padding: 5px;
             text-align: center;
-            border-left: none; /* Evita doble borde entre tarjetas */
+            border-left: none;
         }
-
         .card-indicador:first-child { border-left: 1px solid #1f4068; }
 
-        .card-label {
-            color: #888888; /* Gris técnico para que el número resalte */
-            font-size: 0.75rem !important;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 2px !important;
-            letter-spacing: 1px;
-        }
+        .card-label { color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin: 0; }
+        .card-value { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; margin: 0; }
+        
+        .val-on { color: #00ff00; text-shadow: 0 0 8px rgba(0, 255, 0, 0.5); }
+        .val-off { color: #ff0000; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5); }
+        .val-falla { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
+        .val-sin { color: #ffffff; }
 
-        .card-value {
-            color: #ffffff; /* Blanco para máxima legibilidad */
-            font-family: 'Courier New', monospace;
-            font-size: 1.6rem !important;
-            font-weight: bold;
-            margin: 0 !important;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-        }
-
-        /* COLORES DE ESTADO EN LOS VALORES */
-        .val-on { color: #00ff00 !important; text-shadow: 0 0 8px rgba(0, 255, 0, 0.5); }
-        .val-off { color: #ff0000 !important; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5); }
-        .val-falla { color: #ffaa00 !important; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
-        .val-sin { color: #ffffff !important; }
-
-        /* MAPA */
+        /* EL MAPA: AQUÍ ESTÁ EL TRUCO PARA SUBIRLO */
         iframe { 
-            margin-top: 75px !important; 
-            border: 1px solid #1f4068 !important; 
+            margin-top: 60px !important; /* Ajusta este número (menos es más arriba) */
+            border: 1px solid #1f4068 !important;
+            height: 85vh !important; /* Forzamos altura para que no baile */
         }
+
+        /* Ajuste Sidebar */
+        .sidebar-logo { position: fixed; top: 0px; left: 0px; width: 320px; height: 100px; z-index: 999999; background-color: #0b1a29; border-bottom: 1px solid #1f4068; }
+        [data-testid="stSidebarContent"] { padding-top: 110px !important; }
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
