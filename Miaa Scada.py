@@ -612,7 +612,7 @@ st.markdown("""
             max-width: 100% !important;
         }
 
-        /* 3. TÍTULO SUPERIOR (MÁS GRANDE Y SIN LÍNEA) */
+        /* 3. TÍTULO SUPERIOR (MÁS GRANDE) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -620,7 +620,7 @@ st.markdown("""
             right: 0;
             z-index: 1000;
             color: #00d4ff; 
-            font-size: 1.8rem; /* TÍTULO MÁS GRANDE */
+            font-size: 1.8rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 3px;
@@ -630,37 +630,42 @@ st.markdown("""
             border-bottom: none !important;
         }
 
-        /* 4. INDICADORES: POSICIÓN Y VISIBILIDAD CRÍTICA */
+        /* 4. INDICADORES: POSICIÓN Y VISIBILIDAD AGRESIVA */
         [data-testid="stHorizontalBlock"] {
-            margin-top: -20px !important; /* Los pega al título grande */
+            margin-top: -30px !important; /* SUBE LOS INDICADORES MÁS */
+            z-index: 1001;
         }
 
         [data-testid="stMetric"] {
             background: rgba(11, 26, 41, 0.95);
             border: 1px solid #1f4068;
-            padding: 0px 5px !important;
+            padding: 2px 5px !important;
             border-radius: 2px;
             text-align: center;
         }
         
-        /* FORZAR QUE EL TÍTULO DEL INDICADOR SE VEA */
-        [data-testid="stMetricLabel"] p {
-            color: #FFFFFF !important; /* Blanco puro */
-            opacity: 1 !important;    /* Quita la transparencia de Streamlit */
-            font-size: 0.85rem !important; /* Un poco más grande para leerlo bien */
-            font-weight: 800 !important;
-            margin-bottom: -12px !important;
-            text-transform: uppercase;
+        /* FUERZA BRUTA PARA EL TÍTULO DEL INDICADOR */
+        [data-testid="stMetricLabel"] div, 
+        [data-testid="stMetricLabel"] p, 
+        [data-testid="stMetricLabel"] span {
+            color: #FFFFFF !important;  /* Blanco puro */
+            opacity: 1 !important;     /* Cero transparencia */
+            font-size: 0.85rem !important; 
+            font-weight: 900 !important;
+            text-transform: uppercase !important;
+            visibility: visible !important;
+            display: block !important;
         }
 
-        /* Valores numéricos */
+        /* Valores numéricos (Cian) */
         [data-testid="stMetricValue"] div {
             color: #00d4ff !important;
             font-family: 'Courier New', monospace;
-            font-size: 1.3rem !important;
+            font-size: 1.4rem !important;
+            font-weight: bold !important;
         }
 
-        /* 5. ELIMINAR MÁRGENES DEL MAPA */
+        /* 5. ELIMINAR HUECOS DEL MAPA */
         iframe {
             margin-top: 0px !important;
             border: 1px solid #1f4068 !important;
