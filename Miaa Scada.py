@@ -964,7 +964,7 @@ if sector_seleccionado:
         opciones_equipo = list(reg_nombres.keys())
         c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
         with c_sel1:
-            st.markdown('<div style="margin-top: -10px;">', unsafe_allow_html=True)
+           
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
             if not opciones_equipo:
