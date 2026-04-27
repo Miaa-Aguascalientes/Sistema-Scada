@@ -847,7 +847,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
 
 # 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS: Ajuste ultra-agresivo
+    # 7.1. Estilos CSS: Alineación de precisión para el HUD
     st.markdown(
         f"""
         <style>
@@ -864,15 +864,14 @@ if sector_seleccionado:
                 margin-top: -70px !important;
             }}
             
-            /* Eliminar espacio superior de las columnas de Streamlit */
+            /* Reset de márgenes en columnas para control total */
             [data-testid="column"] {{
                 padding-top: 0px !important;
-                margin-top: 0px !important;
             }}
 
             .contenedor-centrado {{
                 text-align: center;
-                margin-bottom: 5px;
+                margin-bottom: 10px;
             }}
             
             .titulo-sector {{
@@ -881,32 +880,21 @@ if sector_seleccionado:
                 color: #00d4ff;
                 margin: 0px;
                 text-transform: uppercase;
+                letter-spacing: 2px;
             }}
 
-            /* Ajuste del mapa para que suba al ras */
-            .col-mapa-offset {{
-                margin-top: -35px !important; 
-            }}
-
-            .stFolium {{
-                margin-top: -45px !important;
-                border: 1px solid #1f4068;
-                border-radius: 8px;
-            }}
-
-            /* Cards de indicadores */
+            /* Card de métricas superior */
             .card-indicador {{
-                background: rgba(16, 33, 54, 0.8);
+                background: rgba(16, 33, 54, 0.9);
                 padding: 10px;
-                border-radius: 8px;
-                border: 1px solid #1f4068;
+                border-radius: 4px;
+                border: 1px solid #00d4ff;
                 text-align: center;
-                margin-bottom: 0px;
             }}
 
             .label-indicador {{
                color: #ffffff; 
-               font-size: 0.75rem; 
+               font-size: 0.7rem; 
                margin: 0;
                text-transform: uppercase;
             }}
@@ -916,19 +904,34 @@ if sector_seleccionado:
                font-size: 1.1rem; 
                font-weight: bold; 
                margin: 0;
+               text-shadow: 0 0 5px #00ffcc;
             }}
 
-            /* Reducción de espacio en Selectbox */
-            div[data-testid="stSelectbox"] {{
-                margin-top: 5px !important;
-            }}
-            
-            /* Separador personalizado */
+            /* Separador estilo HUD */
             .custom-hr {{
                 border-top: 1px solid #1f4068;
-                margin-top: 5px;
-                margin-bottom: 10px;
+                margin-top: 10px;
+                margin-bottom: 15px;
+                box-shadow: 0 0 10px #1f4068;
             }}
+
+            /* ALINEACIÓN DE SELECTORES Y MAPA */
+            /* Quitamos el margen superior de los selectores para que sirvan de base */
+            div[data-testid="stSelectbox"] {{
+                margin-top: 0px !important;
+            }}
+
+            /* Ajustamos el mapa para que su borde superior sea IGUAL al del texto de los selectores */
+            .col-mapa-alineada {{
+                margin-top: 25px !important; /* Ajuste para compensar el label del selectbox */
+            }}
+
+            .stFolium {{
+                border: 1px solid #00d4ff;
+                border-radius: 5px;
+                box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+            }}
+
         </style>
         
         <div class="contenedor-centrado">
@@ -940,10 +943,9 @@ if sector_seleccionado:
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
-    # 7.2. Métricas de cabecera
     if datos_s:
+        # 7.2. Métricas
         c1, c2, c3, c4, c5, c6 = st.columns(6)
-        
         with c1: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Población</p><p class="value-indicador">{datos_s.get("Poblacion", 0):,.0f}</p></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="card-indicador"><p class="label-indicador">U. Totales</p><p class="value-indicador">{datos_s.get("U_Tot", 0):,.0f}</p></div>', unsafe_allow_html=True)
         with c3: st.markdown(f'<div class="card-indicador"><p class="label-indicador">U. Domésticos</p><p class="value-indicador">{datos_s.get("U_Domesticos", 0):,.0f}</p></div>', unsafe_allow_html=True)
@@ -951,34 +953,26 @@ if sector_seleccionado:
         with c5: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Dotación</p><p class="value-indicador">{datos_s.get("Dotacion", 0):,.1f}</p></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Balance</p><p class="value-indicador">{datos_s.get("Balance_Estimado", 0):,.1f}%</p></div>', unsafe_allow_html=True)
         
-        # Separador manual para evitar el margen de st.divider()
         st.markdown('<div class="custom-hr"></div>', unsafe_allow_html=True)
 
-        # 7.3. Selectores superiores
-        dict_reg_all = cargar_puntos_de_control_desde_db() 
-        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
-        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-        opciones_equipo = list(reg_nombres.keys())
-        
-        # Ajustamos el ancho para que los selectores no ocupen tanto espacio vertical
-        c_vacia, c_sel1, c_sel2 = st.columns([1.1, 0.45, 0.45])
-        with c_sel1:
-            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
-        with c_sel2:
-            if not opciones_equipo:
-                sel_r = None
-                st.selectbox("Equipo punto de control:", ["Sin equipos"], key="sel_reg_full", disabled=True)
-            else:
-                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
-
-        # 7.4. Layout: Mapa e Histórico
+        # 7.3. Fila de Control y Mapa
+        # Creamos una estructura donde los selectores y el mapa se manejan en el mismo nivel
         col_izq, col_der = st.columns([1.1, 0.9])
         
         with col_izq:
-            # El div col-mapa-offset ayuda a empujar el contenido de esta columna específica hacia arriba
-            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+            # Sub-columnas para los selectores dentro de la columna izquierda
+            c_sel1, c_sel2 = st.columns(2)
+            with c_sel1:
+                opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes"], index=2, key="f_sector_full")
+            with c_sel2:
+                dict_reg_all = cargar_puntos_de_control_desde_db() 
+                dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+                opciones_equipo = list(dict_reg.keys())
+                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo if opciones_equipo else ["Sin equipos"], key="sel_reg_full")
+
+            # CONTENEDOR DEL MAPA: Alineado con el inicio de los selectores
+            st.markdown('<div class="col-mapa-alineada">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
-            Fullscreen().add_to(m_sec)
             
             if datos_s.get('geo'):
                 try:
@@ -988,8 +982,11 @@ if sector_seleccionado:
                         style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
                     ).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
-                except: 
-                    pass
+                except: pass
+            
+            from streamlit_folium import st_folium
+            st_folium(m_sec, width="100%", height=400, key="mapa_detalle")
+            st.markdown('</div>', unsafe_allow_html=True)
             
 
 
