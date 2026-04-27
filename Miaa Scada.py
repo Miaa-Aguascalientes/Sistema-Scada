@@ -977,7 +977,7 @@ if sector_seleccionado:
         col_izq, col_der = st.columns([1.1, 0.9])
         
         with col_izq:
-            st.markdown('<div class="col-mapa-offset"><div style="margin-top: 30px;">', unsafe_allow_html=True)
+            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=14, tiles="CartoDB dark_matter")
             Fullscreen().add_to(m_sec)
             
