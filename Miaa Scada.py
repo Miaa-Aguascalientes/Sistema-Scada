@@ -920,7 +920,7 @@ if sector_seleccionado:
 
             /* O de forma más específica si usas el key */
             .element-container:has(#f_sector_full) {{
-            margin-top: 10px !important;
+            margin-top: 100px !important;
             }}
 
             
