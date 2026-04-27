@@ -1245,14 +1245,14 @@ m = folium.Map(
 )
 folium.Fullscreen().add_to(m)
 # 9.2. Añadir el resaltado del sector si existe
-    if datos_sector_resaltado:
+if datos_sector_resaltado:
         folium.GeoJson(
             json.loads(datos_sector_resaltado['geo']),
             style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 3, 'fillOpacity': 0.4}
         ).add_to(m)
 
     # 9.3. FUNCIÓN PARA HORARIO 00:00
-    def formato_hora(decimal):
+def formato_hora(decimal):
         try:
             if decimal == "N/A" or decimal is None: return "00:00"
             horas = int(float(decimal))
@@ -1262,7 +1262,7 @@ folium.Fullscreen().add_to(m)
             return "00:00"
 
     # 9.4. FUNCIÓN PARA ICONO PARPADEANTE PEQUEÑO (8px)
-    def get_blink_icon(color):
+def get_blink_icon(color):
         return f"""
         <div style="
             width: 8px; height: 8px; 
