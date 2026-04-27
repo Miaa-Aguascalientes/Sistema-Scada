@@ -991,9 +991,7 @@ if sector_seleccionado:
                 except: 
                     pass
             
-            # Renderizado del mapa
-            st_data = st_folium(m_sec, width=None, height=450, key="mapa_detalle")
-            st.markdown('</div>', unsafe_allow_html=True)
+
 
 # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
