@@ -920,8 +920,8 @@ if sector_seleccionado:
 
             /* O de forma más específica si usas el key */
             
-            .element-container:has(#f_sector_full) {{
-            margin-top: -100px !important;
+            div[data-testid="stSelectbox"]:has(div[data-is-selectbox="true"]) {{
+            margin-top: -30px !important;
             }}
 
             
