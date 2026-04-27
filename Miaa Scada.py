@@ -1192,15 +1192,6 @@ with st.sidebar:
     if 'centro_mapa' not in st.session_state:
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
-
-    # 8.3. RESUMEN GLOBAL
-    st.markdown(f"""
-        <div class="resumen-card">
-            <h4 style="color:#00d4ff; margin-top:0;">RESUMEN GLOBAL</h4>
-            <p>Caudal Total: <b style="color:#00FF00;">{total_q:.2f} l/s</b></p>
-            <p>Presión Prom: <b style="color:#FFFF00;">{total_p/max(len(pozos_on),1):.2f} Kg/cm²</b></p>
-        </div>
-    """, unsafe_allow_html=True)
     
     # 8.4. ESTADO DE LAS CONEXIONES
     with st.expander("🔌 Estado de las Conexiones", expanded=False):
