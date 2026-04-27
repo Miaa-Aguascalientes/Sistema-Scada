@@ -873,7 +873,7 @@ if sector_seleccionado:
                 font-size: 1.8rem;
                 font-weight: 800;
                 color: #00d4ff;
-                margin: 0px;
+                margin: 5px;
                 text-transform: uppercase;
             }}
 
