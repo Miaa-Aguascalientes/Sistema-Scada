@@ -894,6 +894,35 @@ if sector_seleccionado:
                 border: 0;
                 border-top: 1px solid #1f4068;
             }}
+            /* Dentro del bloque <style> */
+
+.card-indicador {{
+    background: rgba(16, 33, 54, 0.8); /* Fondo oscuro semitransparente */
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #1f4068;
+    text-align: center;
+    margin-bottom: 5px;
+}}
+
+.label-indicador {{
+    color: #ffffff; 
+    font-size: 0.8rem; 
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.value-indicador {{
+    color: #00ffcc; 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    margin: 0;
+}}
+
+
+
+            
         </style>
         <div class="contenedor-centrado">
             <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
