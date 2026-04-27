@@ -909,7 +909,7 @@ if sector_seleccionado:
         /* IMPORTANTE: Le damos el mismo desplazamiento que al mapa para que suba con él */
                position: relative;
                top: -90px !important; 
-             }
+             }}
         </style>
         
         <div class="contenedor-centrado">
