@@ -597,13 +597,11 @@ if tag_a_graficar:
 # 5. SECCION--------------------------------------------------------- 5. ESTILO CSS -----------------------
 st.markdown("""
     <style>
-        /* Bloqueo de cabeceras de Streamlit */
         [data-testid="collapsedControl"], button[kind="headerNoPadding"] { display: none !important; }
         header { visibility: hidden !important; height: 0px !important; }
         .stApp { background-color: #000000; }
         .block-container { padding: 0rem !important; max-width: 100% !important; }
 
-        /* TÍTULO FIJO */
         .titulo-superior {
             position: fixed;
             top: 0px; left: 320px; right: 0;
@@ -617,12 +615,9 @@ st.markdown("""
             border-bottom: 1px solid #1f4068;
         }
 
-        /* CONTENEDOR DE 6 INDICADORES */
         .contenedor-indicadores {
             position: fixed;
-            top: 48px; /* Debajo del título */
-            left: 320px;
-            right: 0;
+            top: 48px; left: 320px; right: 0;
             display: grid;
             grid-template-columns: repeat(6, 1fr); 
             gap: 8px;
@@ -640,24 +635,12 @@ st.markdown("""
             border-radius: 4px;
         }
 
-        .card-label { color: #888888; font-size: 0.65rem; font-weight: bold; margin: 0; }
-        .card-value { font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; margin: 0; }
-
-        /* COLORES */
-        .val-caudal { color: #00ffcc; }
-        .val-presion { color: #ffff00; }
-        .val-on { color: #00ff00; }
-        .val-off { color: #ff0000; }
-        .val-falla { color: #ffaa00; }
-        .val-sin { color: #ffffff; }
-
-        /* MAPA: Empujamos el mapa hacia abajo para que no lo tapen los indicadores */
         .mapa-principal-ajuste {
-            margin-top: 105px !important; 
+            margin-top: 110px !important; 
             margin-left: 320px !important;
         }
-
-        /* SIDEBAR */
+        
+        /* Forzar el ancho del sidebar para que coincida con el CSS */
         [data-testid="stSidebar"] { min-width: 320px !important; max-width: 320px !important; }
     </style>
 """, unsafe_allow_html=True)
