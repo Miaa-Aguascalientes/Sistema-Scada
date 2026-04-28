@@ -1000,18 +1000,6 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-            # 3. Añadir capa Satélite Híbrido (Google con etiquetas de calles)
-            folium.TileLayer(
-                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google',
-                name='Vista Satélite',
-                overlay=False,
-                control=True
-            ).add_to(m_sec)
-
-            # 4. Añadir el botón de Control de Capas (INDISPENSABLE para que aparezcan)
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-
             # 5. Añadir Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
            
