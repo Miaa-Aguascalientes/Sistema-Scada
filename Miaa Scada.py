@@ -877,12 +877,12 @@ if sector_seleccionado:
 
             /* ELIMINAR EL MARGEN DE LA COLUMNA DEL MAPA */
             .col-mapa-offset {{
-                margin-top: -100px !important; /* Ajusta este valor (más negativo = más arriba) */
+                margin-top: -35px !important; /* Ajusta este valor (más negativo = más arriba) */
             }}
 
             /* Ajuste para que el mapa ocupe más espacio visual hacia arriba */
             .stFolium {{
-                margin-top: -500px !important;
+                margin-top: 0px !important;
             }}
 
             hr {{
