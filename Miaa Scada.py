@@ -1104,78 +1104,100 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-# 7.8. Sección de Gráficos Históricos puntos de control
-        with col_der:
-            hoy = datetime.now().date()
-            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
-            elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
-            else:
-                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
-                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
+# 7.8. Sección de Gráficos Históricos y Selectores (Columna Derecha)
+with col_der:
+    # --- A. SELECTORES (Sub-columnas internas para alinear con el tope del mapa) ---
+    c_sub_sel1, c_sub_sel2 = st.columns(2)
+    
+    with c_sub_sel1:
+        opcion_fecha = st.selectbox(
+            "Rango de fechas:", 
+            ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], 
+            index=2, key="f_sector_full"
+        )
+    
+    with c_sub_sel2:
+        if not opciones_equipo:
+            sel_r = None
+            st.selectbox("Equipo punto de control:", ["Sin equipos"], key="sel_reg_full", disabled=True)
+        else:
+            sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
-            # --- OBTENCIÓN DE DATOS REGISTRADOR (Punto de Control) ---
-            # Verificamos que sel_r sea válido y exista en nuestro diccionario filtrado
-            if sel_r and sel_r in reg_nombres:
-                r_info = dict_reg[reg_nombres[sel_r]]
-                t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
-                tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
+    # --- B. LÓGICA DE FECHAS ---
+    hoy = datetime.now().date()
+    if opcion_fecha == "Hoy": 
+        f_ini_h, f_fin_h = hoy, hoy
+    elif opcion_fecha == "Esta Semana": 
+        f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+    elif opcion_fecha == "Últimos 14 días": 
+        f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+    elif opcion_fecha == "Este Mes": 
+        f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+    else:
+        # date_input solo aparece si eligen "Personalizado"
+        rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
+        f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
-                if tags_grafico:
-                    try:
-                        engine_h = get_mysql_scada_engine()
-                        tags_in = "', '".join(tags_grafico)
-                        q_hist = f"""
-                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
-                            FROM vfitagnumhistory h 
-                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                            WHERE r.NAME IN ('{tags_in}') 
-                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
-                            ORDER BY h.FECHA ASC
-                        """
-                        df_h = pd.read_sql(q_hist, engine_h)
-                        
-                        if not df_h.empty:
-                            st.markdown(f"<h3 style='color:#00d4ff; font-size:16px; margin-bottom:0;'>Gráfico de Control: {sel_r}</h3>", unsafe_allow_html=True)
-                            fig = go.Figure()
-                            
-                            # Línea de Caudal
-                            if t_q and not df_h[df_h['TAG'] == t_q].empty:
-                                df_q = df_h[df_h['TAG'] == t_q]
-                                fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", 
-                                                       line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
-                            
-                            # Línea de Presión P1
-                            if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
-                                df_p1 = df_h[df_h['TAG'] == t_p1]
-                                fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="Presión P1", 
-                                                       yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
-                            
-                            # Línea de Presión P2
-                            if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
-                                df_p2 = df_h[df_h['TAG'] == t_p2]
-                                fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="Presión P2", 
-                                                       yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
+    # --- C. OBTENCIÓN DE DATOS Y GRÁFICOS ---
+    if sel_r and sel_r in reg_nombres:
+        r_info = dict_reg[reg_nombres[sel_r]]
+        t_q, t_p1, t_p2 = r_info.get('tag_q'), r_info.get('tag_p1'), r_info.get('tag_p2')
+        tags_grafico = [t for t in [t_q, t_p1, t_p2] if t]
 
-                            fig.update_layout(
-                                paper_bgcolor='black', plot_bgcolor='black', height=300,
-                                margin=dict(l=50, r=50, t=30, b=10),
-                                hovermode="x unified",
-                                hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
-                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
-                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
-                                yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
-                                yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
-                        else:
-                            st.warning(f"No hay datos históricos para {sel_r} en el periodo seleccionado.")
+        if tags_grafico:
+            try:
+                engine_h = get_mysql_scada_engine()
+                tags_in = "', '".join(tags_grafico)
+                q_hist = f"""
+                    SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                    FROM vfitagnumhistory h 
+                    JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                    WHERE r.NAME IN ('{tags_in}') 
+                    AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                    ORDER BY h.FECHA ASC
+                """
+                df_h = pd.read_sql(q_hist, engine_h)
+                
+                if not df_h.empty:
+                    st.markdown(f"<h3 style='color:#00d4ff; font-size:16px; margin-top:10px; margin-bottom:0;'>Gráfico de Control: {sel_r}</h3>", unsafe_allow_html=True)
+                    
+                    fig = go.Figure()
+                    
+                    # Línea de Caudal
+                    if t_q and not df_h[df_h['TAG'] == t_q].empty:
+                        df_q = df_h[df_h['TAG'] == t_q]
+                        fig.add_trace(go.Scatter(x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (lps)", 
+                                               line=dict(color='#00d4ff', width=2), hovertemplate='%{y:.2f} L/s'))
+                    
+                    # Línea de Presión P1
+                    if t_p1 and not df_h[df_h['TAG'] == t_p1].empty:
+                        df_p1 = df_h[df_h['TAG'] == t_p1]
+                        fig.add_trace(go.Scatter(x=df_p1['FECHA'], y=df_p1['VALUE'], name="Presión P1", 
+                                               yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'))
+                    
+                    # Línea de Presión P2
+                    if t_p2 and not df_h[df_h['TAG'] == t_p2].empty:
+                        df_p2 = df_h[df_h['TAG'] == t_p2]
+                        fig.add_trace(go.Scatter(x=df_p2['FECHA'], y=df_p2['VALUE'], name="Presión P2", 
+                                               yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'))
 
-                    except Exception as e: 
-                        st.error(f"Error en Histórico de Control: {e}")
-            else:
-                st.info("Seleccione un equipo del sector actual para ver el gráfico histórico.")
+                    fig.update_layout(
+                        paper_bgcolor='black', plot_bgcolor='black', height=300,
+                        margin=dict(l=50, r=50, t=30, b=10),
+                        hovermode="x unified",
+                        hoverlabel=dict(bgcolor="rgba(30, 30, 30, 0.8)", font_size=12, font_color="white"),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=10)),
+                        xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)', color="white"),
+                        yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.1)'),
+                        yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning(f"No hay datos históricos para {sel_r}.")
+            except Exception as e: 
+                st.error(f"Error en SCADA: {e}")
+    else:
+        st.info("Seleccione un equipo para visualizar tendencias.")
 
             # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS
             if dict_pc_sec:
