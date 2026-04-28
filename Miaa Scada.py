@@ -1168,10 +1168,13 @@ with col_der:
                                 yaxis2=dict(title="kg", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                             )
                             st.plotly_chart(fig, use_container_width=True)
-                    except Exception as e:
-                        st.error(f"Error SCADA: {e}")
-    else:
-        st.info("Seleccione un equipo para visualizar tendencias.")
+                        else:
+                            st.warning(f"No hay datos históricos para {sel_r} en el periodo seleccionado.")
+
+                    except Exception as e: 
+                        st.error(f"Error en Histórico de Control: {e}")
+            else:
+                st.info("Seleccione un equipo del sector actual para ver el gráfico histórico.")
 
             # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS
             if dict_pc_sec:
