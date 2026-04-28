@@ -877,7 +877,7 @@ if sector_seleccionado:
 
             /* ELIMINAR EL MARGEN DE LA COLUMNA DEL MAPA */
             .col-mapa-offset {{
-                margin-top: 0px !important; /* Cambiado de 40px a 0px */
+                margin-top: -15px !important; /* Ajusta este valor (más negativo = más arriba) */
             }}
 
             /* Ajuste para que el mapa ocupe más espacio visual hacia arriba */
@@ -918,7 +918,7 @@ if sector_seleccionado:
               }}
               
               /* Agrega esto dentro de tu bloque <style> en el st.markdown inicial */
-              [data-testid="column"]:nth-child(2) {{
+              [data-testid="column"]:nth-child(1) {{
               margin-top: 0px !important;
               }}
 
@@ -960,7 +960,7 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.3. Selectores superiores
+        # 7.3. Selectores superiores de fecha y punto de control
         dict_reg_all = cargar_puntos_de_control_desde_db() 
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
@@ -975,7 +975,7 @@ if sector_seleccionado:
             else:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
-# 7.4. Layout: Mapa e Histórico
+        # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.0, 1.0])
         
         with col_izq:
