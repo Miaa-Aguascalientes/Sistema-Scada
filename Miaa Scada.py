@@ -918,14 +918,14 @@ if sector_seleccionado:
               }}
               
               /* Agrega esto dentro de tu bloque <style> en el st.markdown inicial */
-              [data-testid="column"]:nth-child(1) {{
-              margin-top: 0px !important;
+             [data-testid="column"] > div {{
+             padding-top: 0px !important;
               }}
               
               /* Eliminar espacio interno de folium */
-             .stFolium {{
-             margin-top: 0px !important;
-             padding-top: 0px !important;
+             .stFolium, div.stFrame {{
+              margin-top: 0px !important;
+              padding-top: 0px !important;
 
              /* Reducir el padding de los gráficos de Plotly para aprovechar el ancho */
             .js-plotly-plot {{
@@ -1101,7 +1101,7 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-            folium_static(m_sec, width=None, height=600)
+            folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.8. Sección de Gráficos Históricos puntos de control
