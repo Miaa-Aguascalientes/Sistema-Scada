@@ -997,10 +997,7 @@ if sector_seleccionado:
                     ).add_to(m_sec)
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
-                    # 2. Renderizar el mapa
-            folium_static(m_sec, width=None, height=650)
-             # 3. Cerrar el div
-            st.markdown('</div>', unsafe_allow_html=True)
+           
 
 # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
