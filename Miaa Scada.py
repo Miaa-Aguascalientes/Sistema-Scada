@@ -995,7 +995,9 @@ if sector_seleccionado:
             folium.TileLayer(
                 tiles="CartoDB dark_matter",
                 name="Vista Nocturna",
-                attr="CartoDB"
+                attr="CartoDB",
+                overlay=False,
+                control=True
             ).add_to(m_sec)
 
             # 3. Añadir capa Satélite Híbrido (Google con etiquetas de calles)
