@@ -965,7 +965,7 @@ if sector_seleccionado:
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
         opciones_equipo = list(reg_nombres.keys())
-        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 0.40, 0.40])
+        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 0.50, 0.50])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
