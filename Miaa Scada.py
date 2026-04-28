@@ -885,6 +885,11 @@ if sector_seleccionado:
                 margin-top: -10px !important;
             }}
 
+             /* Dentro del bloque st.markdown de la Sección 7 */
+            .stFolium iframe {{
+            height: 400px !important;
+            }}            
+
             hr {{
                 margin-top: 2px !important;
                 margin-bottom: 5px !important;
