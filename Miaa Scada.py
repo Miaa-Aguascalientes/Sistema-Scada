@@ -990,14 +990,6 @@ if sector_seleccionado:
                 attr='Google', name='Google Satélite', overlay=False
             ).add_to(m_sec)
 
-# Añadir otras opciones si lo deseas (Esri Satélite)
-            folium.TileLayer(
-                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attr='Esri',
-                name='Satélite (Esri)',
-                overlay=False,
-                control=True
-            ).add_to(m_sec)
 
             Fullscreen().add_to(m_sec)
             folium.LayerControl().add_to(m_sec)
