@@ -980,7 +980,7 @@ if sector_seleccionado:
 # 7.4. DEFINICION DEL MAPA DE SECTORES
         col_izq, col_der = st.columns([1.0, 1.0])
         
-with col_izq:
+        with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             
             # 1. Configuración del Mapa Base
