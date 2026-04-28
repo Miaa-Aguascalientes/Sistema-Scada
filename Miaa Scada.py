@@ -1049,9 +1049,7 @@ if sector_seleccionado:
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             Fullscreen(position='topleft').add_to(m_sec)
 
-            # 6. Renderizado Final
-            folium_static(m_sec, height=400)
-            st.markdown('</div>', unsafe_allow_html=True)
+
            
             
             if datos_s.get('geo'):
