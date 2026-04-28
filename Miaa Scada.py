@@ -1221,7 +1221,7 @@ if sector_seleccionado:
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
 
- st.stop()
+st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
