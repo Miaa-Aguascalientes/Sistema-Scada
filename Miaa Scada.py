@@ -966,14 +966,11 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-# 7.5. CARGA DATOS SCADA (FILTRADOS)
+# Carga de datos SCADA para marcadores
             tags_para_scada = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
                     if r.get(k): tags_para_scada.append(r.get(k))
-            
-            mapa_pc_all = cargar_puntos_criticos_desde_db()
-            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
             for pc in dict_pc_sec.values():
                 if pc.get('tag_p1'): tags_para_scada.append(pc.get('tag_p1'))
 
