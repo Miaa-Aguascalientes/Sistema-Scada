@@ -973,7 +973,7 @@ if sector_seleccionado:
                 sel_r = None
                 st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
             else:
-                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full") 
+                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
 # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.0, 1.0])
@@ -1005,7 +1005,6 @@ if sector_seleccionado:
                 if pc.get('tag_p1'): tags_para_scada.append(pc.get('tag_p1'))
 
             scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
- 
 
 # 7.6. Marcadores de puntos de control
             for r in dict_reg.values():
@@ -1098,8 +1097,6 @@ if sector_seleccionado:
 
             folium_static(m_sec, width=None, height=600)
             st.markdown('</div>', unsafe_allow_html=True)
-
-      
 
 # 7.8. Sección de Gráficos Históricos puntos de control
         with col_der:
