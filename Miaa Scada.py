@@ -980,19 +980,38 @@ if sector_seleccionado:
 # 7.4. DEFINICION DEL MAPA DE SECTORES
         col_izq, col_der = st.columns([1.0, 1.0])
         
-        with col_izq:
+         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=5, tiles="CartoDB dark_matter")
             
-# Añadir capa de Satélite (Google)
+            # 1. Crear el mapa base con una altura reducida (ajusta el 400 a tu gusto)
+            m_sec = folium.Map(
+                location=[21.8820, -102.2800], 
+                zoom_start=14, 
+                tiles=None, # Dejamos tiles en None para controlar el orden
+                height=400 
+            )
+
+            # 2. Añadir capa Oscura (CartoDB Dark) - Tu default
             folium.TileLayer(
-                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google', name='Google Satélite', overlay=False
+                tiles="CartoDB dark_matter",
+                name="Vista Nocturna",
+                attr="CartoDB"
             ).add_to(m_sec)
 
+            # 3. Añadir capa Satélite Híbrido (Google con etiquetas de calles)
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Vista Satélite',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
 
-            Fullscreen().add_to(m_sec)
-            folium.LayerControl().add_to(m_sec)
+            # 4. Añadir el botón de Control de Capas (INDISPENSABLE para que aparezcan)
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+
+            # 5. Añadir Fullscreen
+            Fullscreen(position='topleft').add_to(m_sec)
            
             
             if datos_s.get('geo'):
