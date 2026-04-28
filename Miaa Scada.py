@@ -1104,7 +1104,7 @@ if sector_seleccionado:
             folium_static(m_sec, width=None, height=650)
             st.markdown('</div>', unsafe_allow_html=True)
 
-with col_der:
+        with col_der:
             # --- SELECTORES (Al ser lo primero en col_der, definen la altura máxima) ---
             c_sel1, c_sel2 = st.columns(2)
             with c_sel1:
@@ -1221,7 +1221,7 @@ with col_der:
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
 
-    st.stop()
+ st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
