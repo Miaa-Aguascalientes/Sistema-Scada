@@ -960,20 +960,7 @@ if sector_seleccionado:
         
         st.divider()
 
-        # 7.3. Selectores superiores
-        dict_reg_all = cargar_puntos_de_control_desde_db() 
-        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
-        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
-        opciones_equipo = list(reg_nombres.keys())
-        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 0.50, 0.50])
-        with c_sel1:
-            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
-        with c_sel2:
-            if not opciones_equipo:
-                sel_r = None
-                st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
-            else:
-                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
+
 
 # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.0, 1.0])
@@ -1097,6 +1084,21 @@ if sector_seleccionado:
 
             folium_static(m_sec, width=None, height=600)
             st.markdown('</div>', unsafe_allow_html=True)
+
+        # 7.3. Selectores superiores
+        dict_reg_all = cargar_puntos_de_control_desde_db() 
+        dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+        reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
+        opciones_equipo = list(reg_nombres.keys())
+        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 0.50, 0.50])
+        with c_sel1:
+            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+        with c_sel2:
+            if not opciones_equipo:
+                sel_r = None
+                st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
+            else:
+                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")        
 
 # 7.8. Sección de Gráficos Históricos puntos de control
         with col_der:
