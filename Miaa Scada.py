@@ -734,11 +734,9 @@ st.markdown("""
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
 
-         
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
-
 # 6.1. Carga de datos base
 sectores = cargar_sectores_poligonos()
 mapa_pozos_dict = cargar_mapa_pozos_desde_db()
@@ -794,7 +792,6 @@ for id_p, info in mapa_pozos_dict.items():
 
     tag_l1 = info['voltajes_l'][0]
     _, fecha_str = data_scada.get(tag_l1, (0, "N/A"))
-    
     es_falla_com = False
     if fecha_str != "N/A":
         try:
@@ -919,6 +916,16 @@ if sector_seleccionado:
                 font-weight: bold; 
                 margin: 0;
               }}
+              
+              /* Agrega esto dentro de tu bloque <style> en el st.markdown inicial */
+              [data-testid="column"]:nth-child(2) {{
+              margin-top: 0px !important;
+              }}
+
+             /* Reducir el padding de los gráficos de Plotly para aprovechar el ancho */
+            .js-plotly-plot {{
+            margin-bottom: 10px !important;
+            }}
 
 
 
@@ -971,7 +978,7 @@ if sector_seleccionado:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
 # 7.4. Layout: Mapa e Histórico
-        col_izq, col_der = st.columns([1.1, 0.9])
+        col_izq, col_der = st.columns([1.0, 1.0])
         
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
@@ -1090,7 +1097,7 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-            folium_static(m_sec, width=None, height=650)
+            folium_static(m_sec, width=None, height=600)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.8. Sección de Gráficos Históricos puntos de control
