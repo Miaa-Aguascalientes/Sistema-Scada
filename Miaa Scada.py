@@ -958,7 +958,7 @@ if sector_seleccionado:
         
         st.markdown('</div>', unsafe_allow_html=True)
         
-        st.divider()
+        
 
         # 7.3. Selectores superiores
         dict_reg_all = cargar_puntos_de_control_desde_db() 
