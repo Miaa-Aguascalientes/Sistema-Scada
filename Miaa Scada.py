@@ -887,7 +887,7 @@ if sector_seleccionado:
 
              /* Dentro del bloque st.markdown de la Sección 7 */
             .stFolium iframe {{
-            height: 400px !important;
+            height: 100px !important;
             }}            
 
             hr {{
