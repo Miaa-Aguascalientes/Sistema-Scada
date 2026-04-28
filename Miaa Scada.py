@@ -987,10 +987,7 @@ if sector_seleccionado:
 # Añadir capa de Satélite (Google)
             folium.TileLayer(
                 tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google',
-                name='Satélite (Google)',
-                overlay=False,
-                control=True
+                attr='Google', name='Google Satélite', overlay=False
             ).add_to(m_sec)
 
 # Añadir otras opciones si lo deseas (Esri Satélite)
@@ -1002,7 +999,9 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
+            Fullscreen().add_to(m_sec)
             folium.LayerControl().add_to(m_sec)
+           
             
             if datos_s.get('geo'):
                 try:
