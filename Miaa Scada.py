@@ -15,6 +15,8 @@ import time
 import urllib.parse
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
+from folium.plugins import MousePosition, LocateControl
+
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -975,13 +977,32 @@ if sector_seleccionado:
             else:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
-# 7.4. Layout: Mapa e Histórico
+# 7.4. DEFINICION DEL MAPA DE SECTORES
         col_izq, col_der = st.columns([1.0, 1.0])
         
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=5, tiles="CartoDB dark_matter")
-            Fullscreen().add_to(m_sec)
+            
+# Añadir capa de Satélite (Google)
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Satélite (Google)',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+# Añadir otras opciones si lo deseas (Esri Satélite)
+            folium.TileLayer(
+                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attr='Esri',
+                name='Satélite (Esri)',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+            folium.LayerControl().add_to(m_sec)
             
             if datos_s.get('geo'):
                 try:
