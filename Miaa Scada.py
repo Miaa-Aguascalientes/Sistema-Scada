@@ -1095,7 +1095,7 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-            folium_static(m_sec, width=None, height=330)
+            folium_static(m_sec, width=None, height=315)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.8. Sección de Gráficos Históricos puntos de control
