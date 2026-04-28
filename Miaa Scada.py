@@ -980,18 +980,18 @@ if sector_seleccionado:
 # 7.4. DEFINICION DEL MAPA DE SECTORES
         col_izq, col_der = st.columns([1.0, 1.0])
         
-        with col_izq:
+with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             
-            # 1. Crear el mapa base con una altura reducida (ajusta el 400 a tu gusto)
+            # 1. Configuración del Mapa Base
             m_sec = folium.Map(
                 location=[21.8820, -102.2800], 
                 zoom_start=14, 
-                tiles=None, # Dejamos tiles en None para controlar el orden
+                tiles=None,
                 height=400 
             )
 
-            # 2. Añadir capa Oscura (CartoDB Dark) - Tu default
+            # 2. Capas de Fondo (Selectors)
             folium.TileLayer(
                 tiles="CartoDB dark_matter",
                 name="Vista Nocturna",
@@ -1000,8 +1000,58 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-            # 5. Añadir Fullscreen
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Vista Satélite',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+            # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
+            if datos_s and datos_s.get('geo'):
+                try:
+                    geo_data = json.loads(datos_s['geo'])
+                    folium_geo = folium.GeoJson(
+                        geo_data, 
+                        style_function=lambda x: {
+                            'fillColor': '#00d4ff', 
+                            'color': '#ffffff', 
+                            'weight': 2, 
+                            'fillOpacity': 0.15
+                        },
+                        name="Límites del Sector"
+                    ).add_to(m_sec)
+                    
+                    # Ajustar la vista automáticamente al sector
+                    m_sec.fit_bounds(folium_geo.get_bounds())
+                except Exception as e:
+                    pass
+
+            # 4. DIBUJAR PUNTOS DE CONTROL / REGISTRADORES
+            # Usamos el diccionario filtrado por sector que definiste en la 7.3
+            if dict_reg:
+                for reg_id, info in dict_reg.items():
+                    if info.get('latitud') and info.get('longitud'):
+                        # Marcador para puntos de control / pozos
+                        folium.CircleMarker(
+                            location=[info['latitud'], info['longitud']],
+                            radius=6,
+                            color='#00ffcc',
+                            fill=True,
+                            fill_color='#00ffcc',
+                            fill_opacity=0.8,
+                            popup=f"Punto: {info.get('nombre', reg_id)}",
+                            name="Puntos de Control"
+                        ).add_to(m_sec)
+
+            # 5. Controles Adicionales
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             Fullscreen(position='topleft').add_to(m_sec)
+
+            # 6. Renderizado Final
+            folium_static(m_sec, height=400)
+            st.markdown('</div>', unsafe_allow_html=True)
            
             
             if datos_s.get('geo'):
