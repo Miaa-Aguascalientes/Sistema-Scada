@@ -1014,7 +1014,8 @@ if sector_seleccionado:
                 overlay=False,
                 control=True
             ).add_to(m_sec)
-
+            
+from jinja2 import Template
 # --- EL MOTOR DINÁMICO DE STREET VIEW ---
             # Este código se ejecuta en el navegador cada vez que haces clic
             click_macro = """
@@ -1042,7 +1043,7 @@ if sector_seleccionado:
             {{this._parent.get_name()}}.on('click', onMapClick);
             {% endmacro %}
             """
-            from jinja2 import Template
+           
             m_sec.get_root().header.add_child(folium.Element(Template(click_macro).render(this=m_sec)))
 
 
