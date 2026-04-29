@@ -1015,16 +1015,17 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-# --- LA SOLUCIÓN SIN JAVASCRIPT EXTERNO ---
-            # ClickForMarker es un componente nativo que Folium maneja internamente.
-            # Al no ser un script "suelto", el sandbox suele permitirlo.
-            m_sec.add_child(folium.ClickForMarker(popup="""
-                <div style="width:150px; text-align:center;">
-                    <b>Punto Marcado</b><br><hr>
-                    <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=LAT,LON" 
+# --- LA URL CORRECTA PARA STREET VIEW ---
+            # Cambiamos la estructura a /maps/@{lat},{lon},3a,75y... que es la que fuerza el panorama
+            sv_url_template = "https://www.google.com/maps/@LAT,LON,3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
+            
+            m_sec.add_child(folium.ClickForMarker(popup=f"""
+                <div style="width:160px; text-align:center; font-family: sans-serif;">
+                    <b style="color:#00d4ff;">Street View</b><br><hr>
+                    <a href="{sv_url_template}" 
                        target="_blank" 
-                       style="color:#00d4ff; font-weight:bold; text-decoration:none;">
-                       VER STREET VIEW
+                       style="background-color: #00d4ff; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px;">
+                       ENTRAR AQUÍ
                     </a>
                 </div>
             """))
