@@ -1015,27 +1015,22 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-            m_sec.add_child(folium.LatLngPopup())
-# --- LÓGICA DE STREET VIEW EN CUALQUIER PUNTO ---
-            # Reemplazamos LatLngPopup por un script que genera el link de Google Maps
-            custom_js = """
+            click_template = """
             var popup = L.popup();
             function onMapClick(e) {
-                var lat = e.latlng.lat.toFixed(4);
-                var lng = e.latlng.lng.toFixed(4);
+                var lat = e.latlng.lat.toFixed(6);
+                var lng = e.latlng.lng.toFixed(6);
                 var url = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + lat + "," + lng;
-                var content = '<div style="font-family: Arial; font-size: 12px;">' +
-                              '<b>Lat:</b> ' + lat + '<br><b>Lon:</b> ' + lng + '<br><hr>' +
-                              '<a href="' + url + '" target="_blank" style="color: #0078ff; font-weight: bold; text-decoration: none;">' +
-                              '📍 Ver Street View</a></div>';
-                popup
-                    .setLatLng(e.latlng)
-                    .setContent(content)
-                    .openOn(this);
+                var content = `<div style="font-family: Arial; font-size: 12px; min-width: 150px;">
+                                <b>Lat:</b> ${lat}<br><b>Lon:</b> ${lng}<br><hr>
+                                <a href="${url}" target="_blank" style="color: #0078ff; font-weight: bold; text-decoration: none;">
+                                    📍 Ver en Street View
+                                </a></div>`;
+                popup.setLatLng(e.latlng).setContent(content).openOn(this);
             }
             this.on('click', onMapClick);
             """
-            m_sec.get_root().script.add_child(folium.Element(custom_js))
+            m_sec.get_root().script.add_child(folium.Element(click_template))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
