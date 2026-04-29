@@ -16,6 +16,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
+from jinja2 import Template
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -1015,7 +1016,7 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
             
-from jinja2 import Template
+
 # --- EL MOTOR DINÁMICO DE STREET VIEW ---
             # Este código se ejecuta en el navegador cada vez que haces clic
             click_macro = """
