@@ -1048,7 +1048,7 @@ if sector_seleccionado:
                 st.write(f"📍 **Punto en mapa:** `{c_lat:.5f}, {c_lng:.5f}`")
                 st.link_button("🚹 Ver Street View de este punto", sv_url_click, type="primary")
 
-            st.markdown('</div>', unsafe_allow_html=True)
+            
 
                 
 
