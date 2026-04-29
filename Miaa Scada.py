@@ -1181,6 +1181,7 @@ if sector_seleccionado:
 
             from streamlit_folium import folium_static
             salida = st_folium(m_sec, width="100%", height=315, key="mapa_miaa_interactivo")
+            folium_static(m_sec, width=None, height=315)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.8. Sección de Gráficos Históricos puntos de control
