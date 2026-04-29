@@ -1050,10 +1050,6 @@ if sector_seleccionado:
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with col_der:
-            # Aquí continúa tu código para la columna derecha (Históricos/Gráficas)
-            st.write("Contenido de la columna derecha")
-
                 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
