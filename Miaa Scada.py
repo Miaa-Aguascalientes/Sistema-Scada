@@ -1015,20 +1015,35 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-# --- LA URL CORRECTA PARA STREET VIEW ---
-            # Cambiamos la estructura a /maps/@{lat},{lon},3a,75y... que es la que fuerza el panorama
-            sv_url_template = "https://www.google.com/maps/@LAT,LON,3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
-            
-            m_sec.add_child(folium.ClickForMarker(popup=f"""
-                <div style="width:160px; text-align:center; font-family: sans-serif;">
-                    <b style="color:#00d4ff;">Street View</b><br><hr>
-                    <a href="{sv_url_template}" 
-                       target="_blank" 
-                       style="background-color: #00d4ff; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px;">
-                       ENTRAR AQUÍ
-                    </a>
-                </div>
-            """))
+# --- EL MOTOR DINÁMICO DE STREET VIEW ---
+            # Este código se ejecuta en el navegador cada vez que haces clic
+            click_macro = """
+            {% macro script(this, kwargs) %}
+            var popup = L.popup();
+            function onMapClick(e) {
+                var lat = e.latlng.lat.toFixed(6);
+                var lng = e.latlng.lng.toFixed(6);
+                
+                // URL que fuerza la entrada a Street View (3a) en las coordenadas del clic
+                var url = `https://www.google.com/maps/@${lat},${lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192`;
+                
+                var content = `
+                    <div style="text-align:center; font-family:sans-serif; min-width:140px;">
+                        <b style="color:#00d4ff;">UBICACIÓN SELECCIONADA</b><br>
+                        <small>${lat}, ${lng}</small><br><hr>
+                        <a href="${url}" target="_blank" 
+                           style="background:#00d4ff; color:white; padding:5px 10px; border-radius:4px; text-decoration:none; font-weight:bold; display:block;">
+                           ENTRAR A STREET VIEW
+                        </a>
+                    </div>`;
+                
+                popup.setLatLng(e.latlng).setContent(content).openOn(this);
+            }
+            {{this._parent.get_name()}}.on('click', onMapClick);
+            {% endmacro %}
+            """
+            from jinja2 import Template
+            m_sec.get_root().header.add_child(folium.Element(Template(click_macro).render(this=m_sec)))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
