@@ -1730,6 +1730,6 @@ if sectores_data:
                 continue
                 MousePosition().add_to(m_sec)
            
-    folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-    Fullscreen(position='topleft').add_to(m_sec)            
+    folium.LayerControl(position='topright', collapsed=False).add_to(m)
+    Fullscreen(position='topleft').add_to(m)            
     folium_static(m, width=None, height=750)
