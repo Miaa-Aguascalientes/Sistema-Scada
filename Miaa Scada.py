@@ -1028,10 +1028,10 @@ if sector_seleccionado:
                     
                     # Ajustar la vista automáticamente al sector
                     m_sec.fit_bounds(folium_geo.get_bounds())
-                except Exception as e:
+                except Exception:
                     pass
 
-# 7.5. CARGA DATOS SCADA (FILTRADOS)
+            # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
@@ -1044,7 +1044,7 @@ if sector_seleccionado:
 
             scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
 
-# 7.6. Marcadores de puntos de control
+            # 7.6. Marcadores de puntos de control
             for r in dict_reg.values():
                 def get_rv(tk):
                     v, f = scada_res_reg.get(r.get(tk), (0.0, "N/A"))
@@ -1064,8 +1064,11 @@ if sector_seleccionado:
                     </div>
                 </div>
                 """
-                folium.Marker(location=r['coord'], icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
-                              popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+                folium.Marker(
+                    location=r['coord'], 
+                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
+                    popup=folium.Popup(html_popup_reg, max_width=300)
+                ).add_to(m_sec)
 
             # 7.6.1. Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
@@ -1129,17 +1132,25 @@ if sector_seleccionado:
                     </div>
                     """
                     if info.get('blink'):
-                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                        folium.Marker(
+                            location=info['coord'], 
+                            icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), 
+                            popup=folium.Popup(html_popup_sec, max_width=400)
+                        ).add_to(m_sec)
                     else:
-                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
+                        folium.CircleMarker(
+                            location=info['coord'], 
+                            radius=6, color=info['color_final'], 
+                            fill=True, fill_opacity=1, 
+                            popup=folium.Popup(html_popup_sec, max_width=400)
+                        ).add_to(m_sec)
 
-            # --- INSERCIÓN DEL MARCADOR DINÁMICO (Antes de renderizar) ---
-if st.session_state.get("ultimo_clic_sv"):
+            # --- 7.7.1. INSERCIÓN DEL MARCADOR DINÁMICO (Antes de renderizar) ---
+            if st.session_state.get("ultimo_clic_sv"):
                 try:
                     c_lat = st.session_state.ultimo_clic_sv["lat"]
                     c_lng = st.session_state.ultimo_clic_sv["lng"]
-            
-                    # Usamos Search API para mayor compatibilidad con coordenadas exactas
+                    
                     sv_url = f"https://www.google.com/maps/search/?api=1&query={c_lat},{c_lng}"
             
                     html_popup_sv = f"""
@@ -1152,7 +1163,6 @@ if st.session_state.get("ultimo_clic_sv"):
                         </a>
                     </div>
                     """
-                    
                     folium.Marker(
                         location=[c_lat, c_lng],
                         popup=folium.Popup(html_popup_sv, max_width=200),
@@ -1160,7 +1170,7 @@ if st.session_state.get("ultimo_clic_sv"):
                         tooltip="Click para ver Street View"
                     ).add_to(m_sec)
                 except Exception:
-                    pass # Evita que un clic mal formado rompa el renderizado
+                    pass 
 
             # --- 7.8. CONTROLES Y RENDERIZADO FINAL ---
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
