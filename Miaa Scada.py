@@ -1048,7 +1048,7 @@ if sector_seleccionado:
                         .setLatLng(e.latlng)
                         .setContent(content)
                         .openOn(map_instance);
-                });
+                }};
             }}
             // Ejecutar después de que Leaflet cargue
             setTimeout(injectStreetView, 500);
