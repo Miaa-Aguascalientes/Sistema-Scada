@@ -1015,37 +1015,28 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-# --- SOLUCIÓN DEFINITIVA: POPUP PERSONALIZADO ---
-            # Eliminamos folium.LatLngPopup() y usamos este JS inyectado directamente
-            click_js = """
+# 3. SOLUCIÓN COMPATIBLE: Elemento de clic nativo con Popup formateado
+            # Usamos LatLngPopup pero lo personalizamos mediante un macro de Leaflet
+            click_macro = """
+            {% macro script(this, kwargs) %}
             var popup = L.popup();
             function onMapClick(e) {
                 var lat = e.latlng.lat.toFixed(6);
                 var lng = e.latlng.lng.toFixed(6);
                 var url = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + lat + "," + lng;
-                
-                var content = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; size: 12px; color: #333; min-width: 160px;">
-                        <span style="font-weight: bold; color: #00d4ff;">COORDENADAS</span><br>
-                        <b>Lat:</b> ${lat}<br>
-                        <b>Lon:</b> ${lng}
-                        <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;">
-                        <a href="${url}" target="_blank" 
-                           style="display: block; background: #00d4ff; color: white; text-align: center; 
-                                  padding: 5px; border-radius: 4px; text-decoration: none; font-weight: bold;">
-                           🌐 ABRIR STREET VIEW
-                        </a>
-                    </div>
-                `;
-                
-                popup
-                    .setLatLng(e.latlng)
-                    .setContent(content)
-                    .openOn(this);
+                var content = `<div style="text-align:center; font-family:sans-serif; min-width:120px;">
+                                <b>Ubicar en Street View</b><br>
+                                <a href="${url}" target="_blank" style="color:#00d4ff; font-weight:bold; text-decoration:none;">
+                                   [ ABRIR AQUÍ ]
+                                </a>
+                               </div>`;
+                popup.setLatLng(e.latlng).setContent(content).openOn(this);
             }
-            this.on('click', onMapClick);
+            {{this._parent.get_name()}}.on('click', onMapClick);
+            {% endmacro %}
             """
-            m_sec.get_root().script.add_child(folium.Element(click_js))
+            from jinja2 import Template
+            m_sec.get_root().header.add_child(folium.Element(Template(click_macro).render(this=m_sec)))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
