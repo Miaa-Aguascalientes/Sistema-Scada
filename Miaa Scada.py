@@ -15,6 +15,7 @@ import time
 import urllib.parse
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
+from folium.plugins import MousePosition, LocateControl
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -980,18 +981,51 @@ if sector_seleccionado:
         
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-            m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=5, tiles="CartoDB dark_matter")
-            Fullscreen().add_to(m_sec)
             
-            if datos_s.get('geo'):
+            # 1. Configuración del Mapa Base
+            m_sec = folium.Map(
+                location=[21.8820, -102.2800], 
+                zoom_start=14, 
+                tiles=None,
+                height=400 
+            )
+
+            # 2. Capas de Fondo (Selectors)
+            folium.TileLayer(
+                tiles="CartoDB dark_matter",
+                name="Vista Nocturna",
+                attr="CartoDB",
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Vista Satélite',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+            # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
+            if datos_s and datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
                     folium_geo = folium.GeoJson(
                         geo_data, 
-                        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15}
+                        style_function=lambda x: {
+                            'fillColor': '#00d4ff', 
+                            'color': '#ffffff', 
+                            'weight': 2, 
+                            'fillOpacity': 0.15
+                        },
+                        name="Límites del Sector"
                     ).add_to(m_sec)
+                    
+                    # Ajustar la vista automáticamente al sector
                     m_sec.fit_bounds(folium_geo.get_bounds())
-                except: pass
+                except Exception as e:
+                    pass
 
 # 7.5. CARGA DATOS SCADA (FILTRADOS)
             tags_para_scada = []
@@ -1095,6 +1129,9 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+            Fullscreen(position='topleft').add_to(m_sec)
+            
             folium_static(m_sec, width=None, height=315)
             st.markdown('</div>', unsafe_allow_html=True)
 
