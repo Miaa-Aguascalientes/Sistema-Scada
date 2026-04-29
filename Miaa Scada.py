@@ -16,7 +16,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
-
+from streamlit_folium import st_folium
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -1017,33 +1017,41 @@ if sector_seleccionado:
             ).add_to(m_sec)
             
 
-# 4. MARCADORES CON STREET VIEW INTEGRADO (Garantizado)
-            if dict_reg:
-                for reg_id, info in dict_reg.items():
-                    if info.get('latitud') and info.get('longitud'):
-                        lat, lon = info['latitud'], info['longitud']
-                        
-                        # Generamos la URL de Street View específica para ESTE equipo
-                        sv_url = f"https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
-                        
-                        popup_html = f"""
-                            <div style="font-family: Arial; min-width: 150px; text-align: center;">
-                                <b style="color: #00d4ff;">{info.get('nombre', reg_id)}</b><br><hr>
-                                <a href="{sv_url}" target="_blank" 
-                                   style="background: #fbbc04; color: black; padding: 8px 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: block; margin-top: 5px;">
-                                   📍 STREET VIEW
-                                </a>
-                            </div>
-                        """
-                        
-                        folium.CircleMarker(
-                            location=[lat, lon],
-                            radius=8,
-                            color='#00ffcc',
-                            fill=True,
-                            fill_opacity=0.8,
-                            popup=folium.Popup(popup_html, max_width=200)
-                        ).add_to(m_sec)
+# 2. Marcadores de Equipos (Tu lógica de dict_reg)
+    if dict_reg:
+        for reg_id, info in dict_reg.items():
+            if info.get('latitud') and info.get('longitud'):
+                lat, lon = info['latitud'], info['longitud']
+                sv_url = f"https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
+                
+                popup_html = f"""
+                    <div style="font-family: Arial; min-width: 150px; text-align: center;">
+                        <b style="color: #00d4ff;">{info.get('nombre', reg_id)}</b><br><hr>
+                        <a href="{sv_url}" target="_blank" style="background:#fbbc04; color:black; padding:8px 12px; border-radius:10px; text-decoration:none; font-weight:bold; display:block;">📍 STREET VIEW</a>
+                    </div>
+                """
+                folium.CircleMarker(
+                    location=[lat, lon], radius=8, color='#00ffcc', fill=True,
+                    popup=folium.Popup(popup_html, max_width=200)
+                ).add_to(m_sec)
+
+    # --- RENDERIZADO Y CAPTURA ---
+    # Lo renderizamos AQUÍ mismo. 'salida' guardará el clic.
+    salida = st_folium(m_sec, width="100%", height=400, key="mapa_miaa_interactivo")
+    
+    # 3. MOSTRAR COORDENADAS JUSTO DEBAJO DEL MAPA (Solo en col_izq)
+    if salida and salida.get("last_clicked"):
+        c_lat = salida["last_clicked"]["lat"]
+        c_lng = salida["last_clicked"]["lng"]
+        sv_url_click = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
+        
+        # Un pequeño banner informativo que no estorba
+        st.write(f"📍 **Punto en mapa:** `{c_lat:.5f}, {c_lng:.5f}`")
+        st.link_button("🚹 Ver Street View de este punto", sv_url_click, type="primary")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+                
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
