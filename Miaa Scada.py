@@ -1173,39 +1173,46 @@ if sector_seleccionado:
                             popup=folium.Popup(html_popup_sec, max_width=400)
                         ).add_to(m_sec)
 
+# --- 7.9. Carga de VRP y Puntos de Control ---
         dict_vrp_all = cargar_vrp_desde_db() 
         dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+        
+        # Preparación de UI para filtros (si fuera necesario)
         reg_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
         opciones_equipo = list(reg_nombres.keys())
-        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00])
-
+        
+        # Carga de datos SCADA específicos para VRP
         scada_res_vrp = cargar_datos_scada(list(set(tags_para_scada)))
 
-            # 7.6. Marcadores de puntos de control
-            for r in dict_vrp.values():
-                def get_rv(tk):
-                    v, f = scada_res_vrp.get(r.get(tk), (0.0, "N/A"))
-                    try: return float(v), f
-                    except: return 0.0, f
+        # Marcadores de puntos de control (VRP)
+        for r in dict_vrp.values():
+            def get_rv(tk):
+                v, f = scada_res_vrp.get(r.get(tk), (0.0, "N/A"))
+                try: 
+                    return float(v), f
+                except: 
+                    return 0.0, f
 
-                rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
-                
-                html_popup_vrp = f"""
-                <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
-                    <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
-                    <hr style="opacity:0.2; margin:8px 0;">
-                    <div style="font-size:11px;">
-                        💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>
-                        🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>
-                        🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span>
-                    </div>
+            rp1, fp1 = get_rv('tag_p1')
+            rcau, fq = get_rv('tag_q')
+            rbat, fb = get_rv('tag_vbat')
+            
+            html_popup_vrp = f"""
+            <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
+                <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
+                <hr style="opacity:0.2; margin:8px 0;">
+                <div style="font-size:11px;">
+                    💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>
+                    🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>
+                    🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span>
                 </div>
-                """
-                folium.Marker(
-                    location=r['coord'], 
-                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
-                    popup=folium.Popup(html_popup_reg, max_width=300)
-                ).add_to(m_sec)        
+            </div>
+            """
+            folium.Marker(
+                location=r['coord'], 
+                icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
+                popup=folium.Popup(html_popup_vrp, max_width=300)
+            ).add_to(m_sec)       
 
         
 
