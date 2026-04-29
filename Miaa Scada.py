@@ -1134,30 +1134,35 @@ if sector_seleccionado:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
             # --- INSERCIÓN DEL MARCADOR DINÁMICO (Antes de renderizar) ---
-            if st.session_state.ultimo_clic_sv:
-                c_lat = st.session_state.ultimo_clic_sv["lat"]
-                c_lng = st.session_state.ultimo_clic_sv["lng"]
-        
-        # Usamos Search API para evitar pantallas negras
-                sv_url = f"https://www.google.com/maps/search/?api=1&query={c_lat},{c_lng}"
-        
-                html_popup_sv = f"""
-                <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00d4ff; width:180px; font-family:sans-serif;">
-                    <b style="color:#00d4ff; font-size:12px;">COORDENADAS</b><br>
-                    <code style="font-size:10px;">{c_lat:.5f}, {c_lng:.5f}</code><br><br>
-                    <a href="{sv_url}" target="_blank" 
-                       style="display:block; text-align:center; background:#00d4ff; color:black; padding:8px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:10px;">
-                      🚹 ABRIR STREET VIEW
-                    </a>
-                </div>
-                """
-               folium.Marker(
-                   [c_lat, c_lng],
-                   popup=folium.Popup(html_popup_sv, max_width=200),
-                   icon=folium.Icon(color='blue', icon='map-marker', prefix='fa')
-               ).add_to(m_sec)
+if st.session_state.get("ultimo_clic_sv"):
+                try:
+                    c_lat = st.session_state.ultimo_clic_sv["lat"]
+                    c_lng = st.session_state.ultimo_clic_sv["lng"]
+            
+                    # Usamos Search API para mayor compatibilidad con coordenadas exactas
+                    sv_url = f"https://www.google.com/maps/search/?api=1&query={c_lat},{c_lng}"
+            
+                    html_popup_sv = f"""
+                    <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00d4ff; width:180px; font-family:sans-serif;">
+                        <b style="color:#00d4ff; font-size:12px;">COORDENADAS</b><br>
+                        <code style="font-size:10px;">{c_lat:.5f}, {c_lng:.5f}</code><br><br>
+                        <a href="{sv_url}" target="_blank" 
+                           style="display:block; text-align:center; background:#00d4ff; color:black; padding:8px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:10px;">
+                           🚹 ABRIR STREET VIEW
+                        </a>
+                    </div>
+                    """
+                    
+                    folium.Marker(
+                        location=[c_lat, c_lng],
+                        popup=folium.Popup(html_popup_sv, max_width=200),
+                        icon=folium.Icon(color='blue', icon='map-marker', prefix='fa'),
+                        tooltip="Click para ver Street View"
+                    ).add_to(m_sec)
+                except Exception:
+                    pass # Evita que un clic mal formado rompa el renderizado
 
-# 5. Controles y Render
+            # --- 7.8. CONTROLES Y RENDERIZADO FINAL ---
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
@@ -1169,12 +1174,13 @@ if sector_seleccionado:
                 key="mapa_miaa_interactivo_v4",
                 returned_objects=["last_clicked"]
             )
-            # 8. CAPTURA DE CLIC
+
+            # --- 7.9. CAPTURA DE EVENTO ---
             if salida and salida.get("last_clicked"):
                 nuevo_clic = salida["last_clicked"]
-                if st.session_state.ultimo_clic_sv != nuevo_clic:
-                st.session_state.ultimo_clic_sv = nuevo_clic
-                st.rerun()
+                if st.session_state.get("ultimo_clic_sv") != nuevo_clic:
+                    st.session_state.ultimo_clic_sv = nuevo_clic
+                    st.rerun()
             
             st.markdown('</div>', unsafe_allow_html=True)
             
