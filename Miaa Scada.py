@@ -1148,9 +1148,9 @@ if sector_seleccionado:
                     <a href="{sv_url}" target="_blank" 
                        style="display:block; text-align:center; background:#00d4ff; color:black; padding:8px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:10px;">
                       🚹 ABRIR STREET VIEW
-                   </a>
-               </div>
-               """
+                    </a>
+                </div>
+                """
                folium.Marker(
                    [c_lat, c_lng],
                    popup=folium.Popup(html_popup_sv, max_width=200),
