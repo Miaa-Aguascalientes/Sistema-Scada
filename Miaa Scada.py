@@ -1015,7 +1015,7 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-            
+            m_sec.add_child(folium.LatLngPopup())
 # --- LÓGICA DE STREET VIEW EN CUALQUIER PUNTO ---
             # Reemplazamos LatLngPopup por un script que genera el link de Google Maps
             custom_js = """
