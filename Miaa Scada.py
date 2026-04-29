@@ -1017,31 +1017,44 @@ if sector_seleccionado:
             ).add_to(m_sec)
             
 
-# --- MOTOR DINÁMICO DE STREET VIEW ---
-            map_name = m_sec.get_name()
-            click_script = f"""
+# --- SCRIPT DE CLIC UNIVERSAL (CORREGIDO) ---
+            # Este script busca el mapa automáticamente sin importar el ID dinámico
+            map_id = m_sec.get_name()
+            click_js = f"""
             <script>
-            function onMapClick(e) {{
-                var lat = e.latlng.lat.toFixed(6);
-                var lng = e.latlng.lng.toFixed(6);
-                
-                // URL que fuerza la entrada a la cámara (3a)
-                var url = "https://www.google.com/maps/@" + lat + "," + lng + ",3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192";
-                
-                var content = '<div style="text-align:center; font-family:sans-serif; min-width:140px;">' +
-                              '<b style="color:#00d4ff;">UBICACIÓN SELECCIONADA</b><br>' +
-                              '<small>' + lat + ', ' + lng + '</small><br><hr>' +
-                              '<a href="' + url + '" target="_blank" ' +
-                              'style="background:#fbbc04; color:black; padding:8px 12px; border-radius:4px; text-decoration:none; font-weight:bold; display:block; margin-top:5px;">' +
-                              'VER STREET VIEW</a></div>';
-                
-                L.popup().setLatLng(e.latlng).setContent(content).openOn({map_name});
+            function injectStreetView() {{
+                // Buscamos el objeto del mapa de Leaflet
+                var map_instance = window['{map_id}'];
+                if (!map_instance) return;
+
+                map_instance.on('click', function(e) {{
+                    var lat = e.latlng.lat.toFixed(6);
+                    var lng = e.latlng.lng.toFixed(6);
+                    
+                    var sv_url = "https://www.google.com/maps/@" + lat + "," + lng + ",3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192";
+                    
+                    var content = `
+                        <div style="text-align:center; font-family:sans-serif; min-width:150px;">
+                            <b style="color:#00d4ff; font-size:14px;">COORDENADAS</b><br>
+                            <small>${{lat}}, ${{lng}}</small><br><hr>
+                            <a href="${{sv_url}}" target="_blank" 
+                               style="background:#fbbc04; color:black; padding:10px 15px; border-radius:20px; text-decoration:none; font-weight:bold; display:block; margin-top:5px;">
+                               VER STREET VIEW
+                            </a>
+                        </div>
+                    `;
+                    
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(content)
+                        .openOn(map_instance);
+                });
             }}
-            {map_name}.on('click', onMapClick);
+            // Ejecutar después de que Leaflet cargue
+            setTimeout(injectStreetView, 500);
             </script>
             """
-            m_sec.get_root().html.add_child(folium.Element(click_script))
-
+            m_sec.get_root().html.add_child(folium.Element(click_js))
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
