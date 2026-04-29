@@ -1015,21 +1015,37 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-# 3. LÓGICA DE STREET VIEW (NATIVA Y ESTABLE)
-            # Al hacer clic, se crea un marcador temporal con el link a Street View
-            m_sec.add_child(folium.ClickForMarker(popup="""
-                <div style="font-family: Arial; font-size: 12px; width: 140px;">
-                    <b>Ubicación marcada</b><br><hr>
-                    <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=LAT,LON" 
-                       target="_blank" 
-                       style="color: #0078ff; font-weight: bold; text-decoration: none;">
-                       📍 Abrir Street View
-                    </a>
-                </div>
-            """))
-            # Nota: Folium reemplaza automáticamente LAT y LON en el ClickForMarker 
-            # en la mayoría de las versiones, pero para asegurar compatibilidad total:
-            m_sec.add_child(folium.LatLngPopup()) # Esto muestra las coordenadas arriba del link
+# --- SOLUCIÓN DEFINITIVA: POPUP PERSONALIZADO ---
+            # Eliminamos folium.LatLngPopup() y usamos este JS inyectado directamente
+            click_js = """
+            var popup = L.popup();
+            function onMapClick(e) {
+                var lat = e.latlng.lat.toFixed(6);
+                var lng = e.latlng.lng.toFixed(6);
+                var url = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + lat + "," + lng;
+                
+                var content = `
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; size: 12px; color: #333; min-width: 160px;">
+                        <span style="font-weight: bold; color: #00d4ff;">COORDENADAS</span><br>
+                        <b>Lat:</b> ${lat}<br>
+                        <b>Lon:</b> ${lng}
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;">
+                        <a href="${url}" target="_blank" 
+                           style="display: block; background: #00d4ff; color: white; text-align: center; 
+                                  padding: 5px; border-radius: 4px; text-decoration: none; font-weight: bold;">
+                           🌐 ABRIR STREET VIEW
+                        </a>
+                    </div>
+                `;
+                
+                popup
+                    .setLatLng(e.latlng)
+                    .setContent(content)
+                    .openOn(this);
+            }
+            this.on('click', onMapClick);
+            """
+            m_sec.get_root().script.add_child(folium.Element(click_js))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
