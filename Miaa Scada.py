@@ -1149,7 +1149,9 @@ if sector_seleccionado:
                 st.info(f"📍 **Coordenadas:** `{c_lat:.5f}, {c_lng:.5f}`")
                 st.link_button("🚹 Abrir Street View", sv_url, use_container_width=True)
 
+            folium_static(m_sec, width=None, height=315)
             st.markdown('</div>', unsafe_allow_html=True)
+            
 
 
 # 7.8. Sección de Gráficos Históricos puntos de control
