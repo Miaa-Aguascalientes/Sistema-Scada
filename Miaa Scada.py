@@ -1017,19 +1017,22 @@ if sector_seleccionado:
             ).add_to(m_sec)
             
 
-# --- LA SOLUCIÓN DEFINITIVA Y NATIVA ---
-            # ClickForMarker pone un marcador donde picas. 
-            # El popup NO necesita JS dinámico, Folium se encarga de todo.
-            m_sec.add_child(folium.ClickForMarker(popup="""
-                <div style="width:160px; text-align:center; font-family: sans-serif;">
-                    <b style="color:#00d4ff;">UBICACIÓN SELECCIONADA</b><br><hr>
-                    <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=LAT,LON" 
+# --- ESTE ES EL TRUCO PARA EL "MONITO" ---
+            # Usamos un marcador de clic que inyecta la URL de panorama (pano)
+            click_template = """
+                <div style="width:180px; text-align:center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <span style="font-size: 40px;">🚹</span><br>
+                    <b style="color:#00d4ff; font-size: 14px;">MODO STREET VIEW</b><br>
+                    <p style="font-size: 10px; color: #555;">Punto: LAT, LON</p>
+                    <a href="https://www.google.com/maps/@LAT,LON,3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192" 
                        target="_blank" 
-                       style="background-color: #00d4ff; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px;">
-                       ABRIR STREET VIEW
+                       style="background-color: #fbbc04; color: black; padding: 10px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                       ENTRAR A LA CALLE
                     </a>
                 </div>
-            """))
+            """
+            
+            m_sec.add_child(folium.ClickForMarker(popup=click_template))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
@@ -1154,11 +1157,12 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-            MousePosition().add_to(m_sec)
-           
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+# Controles
+            folium.LayerControl(position='topright').add_to(m_sec)
+            from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
-            
+
+            from streamlit_folium import folium_static
             folium_static(m_sec, width=None, height=315)
             st.markdown('</div>', unsafe_allow_html=True)
 
