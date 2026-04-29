@@ -1392,7 +1392,7 @@ with col_mapa:
     m = folium.Map(
         location=st.session_state.centro_mapa, 
         zoom_start=st.session_state.zoom_inicial, 
-        tiles="CartoDB dark_matter"
+        
     )
 
     folium.TileLayer(
@@ -1411,7 +1411,14 @@ with col_mapa:
         control=True
     ).add_to(m)
 
-
+            # 2. Capas de Fondo (Selectors)
+    folium.TileLayer(
+        tiles="CartoDB dark_matter",
+        name="Vista Nocturna",
+        attr="CartoDB",
+        overlay=False,
+        control=True
+    ).add_to(m)
 
     Fullscreen().add_to(m)
 
