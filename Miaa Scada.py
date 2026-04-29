@@ -464,36 +464,7 @@ def cargar_puntos_criticos_desde_db():
                     "coord": [float(lat_s), float(lon_s)],
                     "sector": str(r['Sector']).split('.')[0].strip(),
                     "tag_p1": r.get('Presion_1'),
-                         
-                }
-            except Exception as e:
-                continue
-        return d_res
-    except Exception as e:
-        return {}
-
-# Funcion para optener las vrp's del diccionario_vrp
-@st.cache_data(ttl=5)
-def cargar_vrp_desde_db():
-    engine = get_mysql_telemetria_engine()
-    if not engine: return {}
-    try:
-        df = pd.read_sql("SELECT * FROM Diccionario_vrp", engine)
-        d_res = {}
-        for _, r in df.iterrows():
-            try:
-                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
-                lat_s, lon_s = raw_c.split(',')
-                id_reg = r.get('Serie', r.get('Registrador', 'ID'))
-                d_res[str(id_reg)] = {
-                    "nombre": str(r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))),
-                    "coord": [float(lat_s), float(lon_s)],
-                    "sector": str(r['Sector']).split('.')[0].strip(),
-                    "tag_p1": r.get('Presion_1'), 
-                    "tag_p2": r.get('Presion_2'), 
-                    "tag_q": r.get('Caudal'),     
-                    "tag_vbat": r.get('bateria'), 
-                    "tag_idx": r.get('indice')    
+                    "tag_q": r.get('Caudal'),        
                 }
             except Exception as e:
                 continue
@@ -1173,50 +1144,7 @@ if sector_seleccionado:
                             popup=folium.Popup(html_popup_sec, max_width=400)
                         ).add_to(m_sec)
 
-# --- 7.9. Carga de VRP y Puntos de Control ---
-        dict_vrp_all = cargar_vrp_desde_db() 
-        dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
-        
-        # Preparación de UI para filtros (si fuera necesario)
-        reg_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
-        opciones_equipo = list(reg_nombres.keys())
-        
-        # Carga de datos SCADA específicos para VRP
-        scada_res_vrp = cargar_datos_scada(list(set(tags_para_scada)))
-
-        # Marcadores de puntos de control (VRP)
-        for r in dict_vrp.values():
-            def get_rv(tk):
-                v, f = scada_res_vrp.get(r.get(tk), (0.0, "N/A"))
-                try: 
-                    return float(v), f
-                except: 
-                    return 0.0, f
-
-            rp1, fp1 = get_rv('tag_p1')
-            rcau, fq = get_rv('tag_q')
-            rbat, fb = get_rv('tag_vbat')
-            
-            html_popup_vrp = f"""
-            <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
-                <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
-                <hr style="opacity:0.2; margin:8px 0;">
-                <div style="font-size:11px;">
-                    💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>
-                    🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>
-                    🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span>
-                </div>
-            </div>
-            """
-            folium.Marker(
-                location=r['coord'], 
-                icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
-                popup=folium.Popup(html_popup_vrp, max_width=300)
-            ).add_to(m_sec)       
-
-        
-
-            # --- 7.9. INSERCIÓN DEL MARCADOR DINÁMICO PARA EL STREET VIEW (Antes de renderizar) ---
+            # --- 7.9. INSERCIÓN DEL MARCADOR DINÁMICO (Antes de renderizar) ---
             if st.session_state.get("ultimo_clic_sv"):
                 try:
                     c_lat = st.session_state.ultimo_clic_sv["lat"]
