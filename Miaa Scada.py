@@ -986,7 +986,7 @@ if sector_seleccionado:
             # 1. Preparar el objeto mapa (No dibuja nada todavía)
             m_sec = folium.Map(
                 location=[21.8820, -102.2800], 
-                zoom_start=14, 
+                zoom_start=12, 
                 tiles=None,
                 height=400 
             )
@@ -998,12 +998,14 @@ if sector_seleccionado:
             ).add_to(m_sec)
 
             folium.TileLayer(
+                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attr='Esri', name='Satélite (Esri)', overlay=False, control=True
+            ).add_to(m_sec)
+
+            folium.TileLayer(
                 tiles="CartoDB dark_matter", name="Vista Nocturna", attr="CartoDB", 
                 overlay=False, control=True
             ).add_to(m_sec)
-
-
-     
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
