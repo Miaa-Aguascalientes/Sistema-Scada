@@ -1002,39 +1002,8 @@ if sector_seleccionado:
                 overlay=False, control=True
             ).add_to(m_sec)
 
-            # 3. Insertar marcadores de equipos (Mantiene la lógica de dict_reg)
-            if dict_reg:
-                for reg_id, info in dict_reg.items():
-                    if info.get('latitud') and info.get('longitud'):
-                        lat_p, lon_p = info['latitud'], info['longitud']
-                        folium.CircleMarker(
-                            location=[lat_p, lon_p], radius=8, color='#00ffcc', fill=True,
-                            popup=folium.Popup(f"<b>{info.get('nombre', reg_id)}</b>", max_width=200)
-                        ).add_to(m_sec)
 
-            # 4. EL ÚNICO RENDERIZADO (Debe estar dentro del 'with col_izq')
-            # Solo una llamada a st_folium aquí:
-            salida = st_folium(
-                m_sec, 
-                width="100%", 
-                height=400, 
-                key="mapa_miaa_unico_v3",
-                returned_objects=["last_clicked"]
-            )
-            
-            # 5. Captura de clic (Justo debajo del mapa, misma columna)
-            if salida and salida.get("last_clicked"):
-                c_lat = salida["last_clicked"]["lat"]
-                c_lng = salida["last_clicked"]["lng"]
-                sv_url = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
-                
-                st.info(f"📍 **Coordenadas:** `{c_lat:.5f}, {c_lng:.5f}`")
-                st.link_button("🚹 Abrir Street View", sv_url, use_container_width=True)
-
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            
-        
+     
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
@@ -1166,9 +1135,23 @@ if sector_seleccionado:
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
 
-            from streamlit_folium import folium_static
-            folium_static(m_sec, width=None, height=315)
+            salida = st_folium(
+                m_sec, 
+                width="100%", 
+                height=400, 
+                key="mapa_miaa_interactivo_v4",
+                returned_objects=["last_clicked"]
+            )
+            # 8. CAPTURA DE CLIC
+            if salida and salida.get("last_clicked"):
+                c_lat = salida["last_clicked"]["lat"]
+                c_lng = salida["last_clicked"]["lng"]
+                sv_url = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
+                st.info(f"📍 **Coordenadas:** `{c_lat:.5f}, {c_lng:.5f}`")
+                st.link_button("🚹 Abrir Street View", sv_url, use_container_width=True)
+
             st.markdown('</div>', unsafe_allow_html=True)
+
 
 # 7.8. Sección de Gráficos Históricos puntos de control
         with col_der:
