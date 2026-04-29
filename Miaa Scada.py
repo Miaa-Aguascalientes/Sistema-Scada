@@ -991,6 +991,8 @@ if sector_seleccionado:
                 height=400 
             )
 
+
+
             folium.TileLayer(
                 tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
                 attr='Google',
@@ -1024,9 +1026,9 @@ if sector_seleccionado:
                 width="100%", 
                 height=400, 
                 key="mapa_interactivo_miaa",
-                returned_objects=["last_clicked"], # Crucial: solo pedimos el clic
-                zoom=14 # Mantiene el zoom fijo para evitar el recuadro gris
-            )
+                returned_objects=["last_clicked"], 
+                zoom=14 
+    )
             
             # 4. CAPTURA DE COORDENADAS
             # Verificamos que 'salida' no sea None antes de buscar el clic
