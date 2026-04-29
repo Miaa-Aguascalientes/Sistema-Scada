@@ -1041,7 +1041,7 @@ if sector_seleccionado:
                 st.info(f"📍 **Punto capturado:** `{c_lat:.6f}, {c_lng:.6f}`")
                 st.link_button("🚹 Abrir Street View aquí", sv_url_click, use_container_width=True)
 
-            st.markdown('</div>', unsafe_allow_html=True)
+            
         
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
