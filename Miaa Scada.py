@@ -1015,28 +1015,19 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-# 3. SOLUCIÓN COMPATIBLE: Elemento de clic nativo con Popup formateado
-            # Usamos LatLngPopup pero lo personalizamos mediante un macro de Leaflet
-            click_macro = """
-            {% macro script(this, kwargs) %}
-            var popup = L.popup();
-            function onMapClick(e) {
-                var lat = e.latlng.lat.toFixed(6);
-                var lng = e.latlng.lng.toFixed(6);
-                var url = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + lat + "," + lng;
-                var content = `<div style="text-align:center; font-family:sans-serif; min-width:120px;">
-                                <b>Ubicar en Street View</b><br>
-                                <a href="${url}" target="_blank" style="color:#00d4ff; font-weight:bold; text-decoration:none;">
-                                   [ ABRIR AQUÍ ]
-                                </a>
-                               </div>`;
-                popup.setLatLng(e.latlng).setContent(content).openOn(this);
-            }
-            {{this._parent.get_name()}}.on('click', onMapClick);
-            {% endmacro %}
-            """
-            from jinja2 import Template
-            m_sec.get_root().header.add_child(folium.Element(Template(click_macro).render(this=m_sec)))
+# --- LA SOLUCIÓN SIN JAVASCRIPT EXTERNO ---
+            # ClickForMarker es un componente nativo que Folium maneja internamente.
+            # Al no ser un script "suelto", el sandbox suele permitirlo.
+            m_sec.add_child(folium.ClickForMarker(popup="""
+                <div style="width:150px; text-align:center;">
+                    <b>Punto Marcado</b><br><hr>
+                    <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=LAT,LON" 
+                       target="_blank" 
+                       style="color:#00d4ff; font-weight:bold; text-decoration:none;">
+                       VER STREET VIEW
+                    </a>
+                </div>
+            """))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
