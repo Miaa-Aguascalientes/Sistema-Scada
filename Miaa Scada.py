@@ -1419,7 +1419,8 @@ with col_mapa:
         overlay=False,
         control=True
     ).add_to(m)
-    
+
+    Fullscreen().add_to(m)
 
 
 # 9.2. Añadir el resaltado del sector si existe
