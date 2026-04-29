@@ -1131,6 +1131,8 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
+            MousePosition().add_to(m_sec)
+            LocateControl().add_to(m_sec)
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             Fullscreen(position='topleft').add_to(m_sec)
             
