@@ -1017,36 +1017,29 @@ if sector_seleccionado:
             ).add_to(m_sec)
             
 
-# 3. Marcadores de Equipos
-            if dict_reg:
-                for reg_id, info in dict_reg.items():
-                    if info.get('latitud') and info.get('longitud'):
-                        lat, lon = info['latitud'], info['longitud']
-                        sv_url = f"https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
-                
-                        popup_html = f"""
-                            <div style="font-family: Arial; min-width: 150px; text-align: center;">
-                                <b style="color: #00d4ff;">{info.get('nombre', reg_id)}</b><br><hr>
-                                <a href="{sv_url}" target="_blank" style="background:#fbbc04; color:black; padding:8px 12px; border-radius:10px; text-decoration:none; font-weight:bold; display:block;">📍 STREET VIEW</a>
-                            </div>
-                        """
-                        folium.CircleMarker(
-                            location=[lat, lon], radius=8, color='#00ffcc', fill=True,
-                            popup=folium.Popup(popup_html, max_width=200)
-                        ).add_to(m_sec)
-
-            # --- RENDERIZADO Y CAPTURA ---
-            # El componente debe estar dentro del 'with col_izq'
-            salida = st_folium(m_sec, width="100%", height=400, key="mapa_miaa_interactivo")
+# --- RENDERIZADO OPTIMIZADO PARA MIAA ---
+            # Usamos returned_objects para que solo nos regrese el clic y no recargue todo el mapa por cada movimiento
+            salida = st_folium(
+                m_sec, 
+                width="100%", 
+                height=400, 
+                key="mapa_interactivo_miaa",
+                returned_objects=["last_clicked"], # Crucial: solo pedimos el clic
+                zoom=14 # Mantiene el zoom fijo para evitar el recuadro gris
+            )
             
-            # 4. MOSTRAR COORDENADAS (Dentro de col_izq)
+            # 4. CAPTURA DE COORDENADAS
+            # Verificamos que 'salida' no sea None antes de buscar el clic
             if salida and salida.get("last_clicked"):
                 c_lat = salida["last_clicked"]["lat"]
                 c_lng = salida["last_clicked"]["lng"]
+                
+                # Generamos URL de Street View
                 sv_url_click = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
                 
-                st.write(f"📍 **Punto en mapa:** `{c_lat:.5f}, {c_lng:.5f}`")
-                st.link_button("🚹 Ver Street View de este punto", sv_url_click, type="primary")
+                # Mostramos la info de forma elegante
+                st.info(f"📍 **Punto capturado:** `{c_lat:.6f}, {c_lng:.6f}`")
+                st.link_button("🚹 Abrir Street View aquí", sv_url_click, use_container_width=True)
 
             st.markdown('</div>', unsafe_allow_html=True)
         
