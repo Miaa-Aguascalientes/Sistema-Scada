@@ -464,7 +464,36 @@ def cargar_puntos_criticos_desde_db():
                     "coord": [float(lat_s), float(lon_s)],
                     "sector": str(r['Sector']).split('.')[0].strip(),
                     "tag_p1": r.get('Presion_1'),
-                    "tag_q": r.get('Caudal'),        
+                         
+                }
+            except Exception as e:
+                continue
+        return d_res
+    except Exception as e:
+        return {}
+
+# Funcion para optener las vrp's del diccionario_vrp
+@st.cache_data(ttl=5)
+def cargar_vrp_desde_db():
+    engine = get_mysql_telemetria_engine()
+    if not engine: return {}
+    try:
+        df = pd.read_sql("SELECT * FROM Diccionario_vrp", engine)
+        d_res = {}
+        for _, r in df.iterrows():
+            try:
+                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
+                lat_s, lon_s = raw_c.split(',')
+                id_reg = r.get('Serie', r.get('Registrador', 'ID'))
+                d_res[str(id_reg)] = {
+                    "nombre": str(r.get('Domicilio', r.get('Nombre_registrador', 'S/N'))),
+                    "coord": [float(lat_s), float(lon_s)],
+                    "sector": str(r['Sector']).split('.')[0].strip(),
+                    "tag_p1": r.get('Presion_1'), 
+                    "tag_p2": r.get('Presion_2'), 
+                    "tag_q": r.get('Caudal'),     
+                    "tag_vbat": r.get('bateria'), 
+                    "tag_idx": r.get('indice')    
                 }
             except Exception as e:
                 continue
@@ -844,7 +873,7 @@ for id_rb, info in mapa_rebombeos_dict.items():
             })
 
 
-# 7. SECCION DETALLE DE SECTOR ---------------------------------------------------------
+# 7. SECCION ------------------------------------------------------------------7. DETALLE DE SECTOR -------------------------------------------------------------------------------------------
 if sector_seleccionado:
     # 7.1. Estilos CSS: Ajuste agresivo para subir el mapa al ras de los indicadores
     st.markdown(
@@ -929,7 +958,6 @@ if sector_seleccionado:
             margin-bottom: 10px !important;
             }}
 
-
         </style>
         <div class="contenedor-centrado">
             <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
@@ -977,17 +1005,17 @@ if sector_seleccionado:
             else:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
-# 7.4. Layout: Mapa e Histórico
+        # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.0, 1.0])
         
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
 
-            # --- LÓGICA DE PERSISTENCIA PARA EL POPUP ---
+            #  LÓGICA DE PERSISTENCIA PARA EL POPUP ---
             if "ultimo_clic_sv" not in st.session_state:
                 st.session_state.ultimo_clic_sv = None
             
-            # 1. Preparar el objeto mapa (No dibuja nada todavía)
+            #  Preparar el objeto mapa (No dibuja nada todavía)
             m_sec = folium.Map(
                 location=[21.8820, -102.2800], 
                 zoom_start=12, 
@@ -995,7 +1023,7 @@ if sector_seleccionado:
                 height=350 
             )
 
-            # 2. Configurar capas en el objeto m_sec
+            #  Configurar capas en el objeto m_sec
             folium.TileLayer(
                 tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
                 attr='Google', name='Vista Satélite', overlay=False, control=True
@@ -1011,7 +1039,7 @@ if sector_seleccionado:
                 overlay=False, control=True
             ).add_to(m_sec)
 
-            # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
+            #  DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
                 try:
                     geo_data = json.loads(datos_s['geo'])
@@ -1070,7 +1098,7 @@ if sector_seleccionado:
                     popup=folium.Popup(html_popup_reg, max_width=300)
                 ).add_to(m_sec)
 
-            # 7.6.1. Marcadores de Puntos Críticos
+            # 7.7 Marcadores de Puntos Críticos
             for id_pc, pc in dict_pc_sec.items():
                 val_p, fec_p = scada_res_reg.get(pc['tag_p1'], (0.0, "N/A"))
                 html_pc = f"""
@@ -1087,7 +1115,7 @@ if sector_seleccionado:
                     fill=True, fill_color='#FF00FF', popup=folium.Popup(html_pc, max_width=250)
                 ).add_to(m_sec)
 
-            # 7.7. Marcadores de Pozos
+            # 7.8. Marcadores de Pozos
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
@@ -1145,7 +1173,43 @@ if sector_seleccionado:
                             popup=folium.Popup(html_popup_sec, max_width=400)
                         ).add_to(m_sec)
 
-            # --- 7.7.1. INSERCIÓN DEL MARCADOR DINÁMICO (Antes de renderizar) ---
+        dict_vrp_all = cargar_vrp_desde_db() 
+        dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+        reg_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
+        opciones_equipo = list(reg_nombres.keys())
+        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00])
+
+            scada_res_vrp = cargar_datos_scada(list(set(tags_para_scada)))
+
+            # 7.6. Marcadores de puntos de control
+            for r in dict_vrp.values():
+                def get_rv(tk):
+                    v, f = scada_res_vrp.get(r.get(tk), (0.0, "N/A"))
+                    try: return float(v), f
+                    except: return 0.0, f
+
+                rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
+                
+                html_popup_vrp = f"""
+                <div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;">
+                    <b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b>
+                    <hr style="opacity:0.2; margin:8px 0;">
+                    <div style="font-size:11px;">
+                        💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>
+                        🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>
+                        🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span>
+                    </div>
+                </div>
+                """
+                folium.Marker(
+                    location=r['coord'], 
+                    icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
+                    popup=folium.Popup(html_popup_reg, max_width=300)
+                ).add_to(m_sec)        
+
+        
+
+            # --- 7.9. INSERCIÓN DEL MARCADOR DINÁMICO PARA EL STREET VIEW (Antes de renderizar) ---
             if st.session_state.get("ultimo_clic_sv"):
                 try:
                     c_lat = st.session_state.ultimo_clic_sv["lat"]
@@ -1172,7 +1236,7 @@ if sector_seleccionado:
                 except Exception:
                     pass 
 
-            # --- 7.8. CONTROLES Y RENDERIZADO FINAL ---
+            #  CONTROLES Y RENDERIZADO FINAL ---
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
@@ -1185,7 +1249,7 @@ if sector_seleccionado:
                 returned_objects=["last_clicked"]
             )
 
-            # --- 7.9. CAPTURA DE EVENTO ---
+            #  CAPTURA DE EVENTO ---
             if salida and salida.get("last_clicked"):
                 nuevo_clic = salida["last_clicked"]
                 if st.session_state.get("ultimo_clic_sv") != nuevo_clic:
@@ -1196,7 +1260,7 @@ if sector_seleccionado:
             
 
 
-# 7.8. Sección de Gráficos Históricos puntos de control
+# 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
             hoy = datetime.now().date()
             if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
@@ -1269,7 +1333,7 @@ if sector_seleccionado:
             else:
                 st.info("Seleccione un equipo del sector actual para ver el gráfico histórico.")
 
-            # --- GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS
+# 7.11. ------------------ GRÁFICO 2: HISTÓRICO PUNTOS CRÍTICOS -----------------------------------------------------------------------------------------------------------------------------------
             if dict_pc_sec:
                 tags_pc = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
                 
