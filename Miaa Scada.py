@@ -1395,30 +1395,30 @@ with col_mapa:
         tiles="CartoDB dark_matter"
     )
 
-            folium.TileLayer(
-                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google',
-                name='Vista Satélite',
-                overlay=False,
-                control=True
-            ).add_to(m_sec)
+    folium.TileLayer(
+        tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        attr='Google',
+        name='Vista Satélite',
+        overlay=False,
+        control=True
+    ).add_to(m_sec)
 
-            folium.TileLayer(
-                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attr='Esri',
-                name='Satélite (Esri)',
-                overlay=False,
-                control=True
-            ).add_to(m_sec)
+    folium.TileLayer(
+        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attr='Esri',
+        name='Satélite (Esri)',
+        overlay=False,
+        control=True
+    ).add_to(m_sec)
 
             # 2. Capas de Fondo (Selectors)
-            folium.TileLayer(
-                tiles="CartoDB dark_matter",
-                name="Vista Nocturna",
-                attr="CartoDB",
-                overlay=False,
-                control=True
-            ).add_to(m_sec)
+    folium.TileLayer(
+        tiles="CartoDB dark_matter",
+        name="Vista Nocturna",
+        attr="CartoDB",
+        overlay=False,
+        control=True
+    ).add_to(m_sec)
     
     Fullscreen().add_to(m)
 
