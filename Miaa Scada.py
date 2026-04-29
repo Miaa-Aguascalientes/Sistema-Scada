@@ -1018,13 +1018,13 @@ if sector_seleccionado:
             
 
 # 2. Marcadores de Equipos (Tu lógica de dict_reg)
-    if dict_reg:
-        for reg_id, info in dict_reg.items():
-            if info.get('latitud') and info.get('longitud'):
-                lat, lon = info['latitud'], info['longitud']
-                sv_url = f"https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
+            if dict_reg:
+                for reg_id, info in dict_reg.items():
+                    if info.get('latitud') and info.get('longitud'):
+                        lat, lon = info['latitud'], info['longitud']
+                        sv_url = f"https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
                 
-                popup_html = f"""
+                        popup_html = f"""
                     <div style="font-family: Arial; min-width: 150px; text-align: center;">
                         <b style="color: #00d4ff;">{info.get('nombre', reg_id)}</b><br><hr>
                         <a href="{sv_url}" target="_blank" style="background:#fbbc04; color:black; padding:8px 12px; border-radius:10px; text-decoration:none; font-weight:bold; display:block;">📍 STREET VIEW</a>
