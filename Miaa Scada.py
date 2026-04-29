@@ -990,6 +990,14 @@ if sector_seleccionado:
                 height=400 
             )
 
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Vista Satélite',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
             # 2. Capas de Fondo (Selectors)
             folium.TileLayer(
                 tiles="CartoDB dark_matter",
@@ -999,13 +1007,7 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-            folium.TileLayer(
-                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google',
-                name='Vista Satélite',
-                overlay=False,
-                control=True
-            ).add_to(m_sec)
+
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
