@@ -984,13 +984,12 @@ if sector_seleccionado:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             
             # 1. Preparar el objeto mapa (No dibuja nada todavía)
-            # 1. Preparar el objeto mapa (No dibuja nada todavía)
             m_sec = folium.Map(
                 location=[21.8820, -102.2800], 
                 zoom_start=12, 
                 tiles=None,
                 height=350 
-            )         
+            )
 
             # 2. Configurar capas en el objeto m_sec
             folium.TileLayer(
@@ -1007,44 +1006,6 @@ if sector_seleccionado:
                 tiles="CartoDB dark_matter", name="Vista Nocturna", attr="CartoDB", 
                 overlay=False, control=True
             ).add_to(m_sec)
-
-            
-            salida = st_folium(
-                m_sec, 
-                width="100%", 
-                height=400, 
-                key="mapa_miaa_popup_v5",
-                returned_objects=["last_clicked"]
-            )
-            # 8. CAPTURA DE CLIC
-            if salida and salida.get("last_clicked"):
-                lat = salida["last_clicked"]["lat"]
-                lng = salida["last_clicked"]["lng"]
-                
-                # Usamos la Search API para evitar el error de pantalla negra
-                sv_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
-                
-                # HTML personalizado para el Popup (Estilo HUD/Futurista como el resto de tu UI)
-                html_popup = f"""
-                <div style="font-family: 'Arial'; color: white; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #00d4ff; min-width: 150px;">
-                    <small style="color: #888;">COORDENADAS</small><br>
-                    <b style="font-size: 12px;">{lat:.6f}, {lng:.6f}</b><br><br>
-                    <a href="{sv_url}" target="_blank" 
-                       style="display: block; text-align: center; background: #00d4ff; color: black; padding: 8px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 11px;">
-                       🚹 ABRIR STREET VIEW
-                    </a>
-                </div>
-                """
-                
-                # Agregamos un marcador temporal con el popup abierto
-                folium.Marker(
-                    [lat, lng],
-                    popup=folium.Popup(html_popup, max_width=200),
-                    icon=folium.Icon(color='blue', icon='info-sign')
-                ).add_to(m_sec)
-                
-                # Forzamos a que el mapa se redibuje con el marcador del clic
-                st.rerun()            
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
@@ -1173,7 +1134,20 @@ if sector_seleccionado:
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
 
-
+            salida = st_folium(
+                m_sec, 
+                width="100%", 
+                height=330, 
+                key="mapa_miaa_interactivo_v4",
+                returned_objects=["last_clicked"]
+            )
+            # 8. CAPTURA DE CLIC
+            if salida and salida.get("last_clicked"):
+                c_lat = salida["last_clicked"]["lat"]
+                c_lng = salida["last_clicked"]["lng"]
+                sv_url = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
+                st.info(f"📍 **Coordenadas:** `{c_lat:.5f}, {c_lng:.5f}`")
+                st.link_button("🚹 Abrir Street View", sv_url, use_container_width=True)
 
             
             st.markdown('</div>', unsafe_allow_html=True)
