@@ -984,16 +984,13 @@ if sector_seleccionado:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             
             # 1. Preparar el objeto mapa (No dibuja nada todavía)
-            salida = st_folium(
-                m_sec, 
-                location=[21.8820, -102.2800],
-                zoom_start=12,
+            # 1. Preparar el objeto mapa (No dibuja nada todavía)
+            m_sec = folium.Map(
+                location=[21.8820, -102.2800], 
+                zoom_start=12, 
                 tiles=None,
-                width="100%", 
-                height=330, 
-                key="mapa_miaa_interactivo_v4",
-                returned_objects=["last_clicked"]
-            )            
+                height=350 
+            )         
 
             # 2. Configurar capas en el objeto m_sec
             folium.TileLayer(
@@ -1011,7 +1008,14 @@ if sector_seleccionado:
                 overlay=False, control=True
             ).add_to(m_sec)
 
-
+            
+            salida = st_folium(
+                m_sec, 
+                width="100%", 
+                height=400, 
+                key="mapa_miaa_popup_v5",
+                returned_objects=["last_clicked"]
+            )
             # 8. CAPTURA DE CLIC
             if salida and salida.get("last_clicked"):
                 lat = salida["last_clicked"]["lat"]
