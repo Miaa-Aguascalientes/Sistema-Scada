@@ -1137,7 +1137,7 @@ if sector_seleccionado:
             salida = st_folium(
                 m_sec, 
                 width="100%", 
-                height=350, 
+                height=300, 
                 key="mapa_miaa_interactivo_v4",
                 returned_objects=["last_clicked"]
             )
