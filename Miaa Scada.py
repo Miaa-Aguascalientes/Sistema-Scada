@@ -978,72 +978,60 @@ if sector_seleccionado:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
 # 7.4. Layout: Mapa e Histórico
-        col_izq, col_der = st.columns([1.0, 1.0])
+col_izq, col_der = st.columns([1.0, 1.0])
+
+with col_izq:
+    st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
+    
+    # 1. DEFINICIÓN DEL OBJETO (No dibuja nada todavía)
+    m_sec = folium.Map(
+        location=[21.8820, -102.2800], 
+        zoom_start=14, 
+        tiles=None,
+        height=400 
+    )
+
+    # 2. AGREGAR CAPAS (Configuramos el objeto m_sec)
+    folium.TileLayer(
+        tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        attr='Google', name='Vista Satélite', overlay=False, control=True
+    ).add_to(m_sec)
+
+    folium.TileLayer(
+        tiles="CartoDB dark_matter", name="Vista Nocturna", attr="CartoDB", 
+        overlay=False, control=True
+    ).add_to(m_sec)
+
+    # 3. MARCADORES (Si hay equipos, los añadimos al objeto m_sec)
+    if dict_reg:
+        for reg_id, info in dict_reg.items():
+            if info.get('latitud') and info.get('longitud'):
+                lat, lon = info['latitud'], info['longitud']
+                folium.CircleMarker(
+                    location=[lat, lon], radius=8, color='#00ffcc', fill=True,
+                    popup=folium.Popup(f"<b>{info.get('nombre', reg_id)}</b>", max_width=200)
+                ).add_to(m_sec)
+
+    # 4. EL ÚNICO RENDERIZADO (Solo una llamada a st_folium al final)
+    # Importante: Todo esto debe estar indentado dentro del "with col_izq"
+    salida = st_folium(
+        m_sec, 
+        width="100%", 
+        height=400, 
+        key="mapa_final_miaa", # Key único para evitar duplicados
+        returned_objects=["last_clicked"]
+    )
+    
+    # 5. CAPTURA DE CLIC
+    if salida and salida.get("last_clicked"):
+        c_lat = salida["last_clicked"]["lat"]
+        c_lng = salida["last_clicked"]["lng"]
+        sv_url = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
         
-        with col_izq:
-            st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
-            
-            # 1. Configuración del objeto Mapa (Aún no se dibuja)
-            m_sec = folium.Map(
-                location=[21.8820, -102.2800], 
-                zoom_start=14, 
-                tiles=None,
-                height=400 
-            )
+        st.info(f"📍 **Punto:** `{c_lat:.5f}, {c_lng:.5f}`")
+        st.link_button("🚹 Street View", sv_url, use_container_width=True)
 
-            # 2. Agregar Capas al objeto
-            folium.TileLayer(
-                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attr='Google', name='Vista Satélite', overlay=False, control=True
-            ).add_to(m_sec)
-
-            folium.TileLayer(
-                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attr='Esri', name='Satélite (Esri)', overlay=False, control=True
-            ).add_to(m_sec)
-
-            folium.TileLayer(
-                tiles="CartoDB dark_matter", name="Vista Nocturna", attr="CartoDB", 
-                overlay=False, control=True
-            ).add_to(m_sec)
-
-            # 3. Agregar Marcadores de Equipos (Debe ir antes de st_folium)
-            if dict_reg:
-                for reg_id, info in dict_reg.items():
-                    if info.get('latitud') and info.get('longitud'):
-                        lat_e, lon_e = info['latitud'], info['longitud']
-                        sv_url_e = f"https://www.google.com/maps/@{lat_e},{lon_e},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
-                        
-                        popup_html = f"""
-                            <div style="font-family: Arial; min-width: 150px; text-align: center;">
-                                <b style="color: #00d4ff;">{info.get('nombre', reg_id)}</b><br><hr>
-                                <a href="{sv_url_e}" target="_blank" style="background:#fbbc04; color:black; padding:8px 12px; border-radius:10px; text-decoration:none; font-weight:bold; display:block;">📍 STREET VIEW</a>
-                            </div>
-                        """
-                        folium.CircleMarker(
-                            location=[lat_e, lon_e], radius=8, color='#00ffcc', fill=True,
-                            popup=folium.Popup(popup_html, max_width=200)
-                        ).add_to(m_sec)
-
-            # 4. EL ÚNICO RENDERIZADO (Indentado dentro de col_izq)
-            salida = st_folium(
-                m_sec, 
-                width="100%", 
-                height=400, 
-                key="mapa_interactivo_miaa",
-                returned_objects=["last_clicked"]
-            )
-            
-            # 5. CAPTURA DE COORDENADAS (Debajo del mapa)
-            if salida and salida.get("last_clicked"):
-                c_lat = salida["last_clicked"]["lat"]
-                c_lng = salida["last_clicked"]["lng"]
-                sv_url_click = f"https://www.google.com/maps/@{c_lat},{c_lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192"
-                
-                st.info(f"📍 **Punto capturado:** `{c_lat:.6f}, {c_lng:.6f}`")
-                st.link_button("🚹 Abrir Street View aquí", sv_url_click, use_container_width=True)
-
-            st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
             
         
