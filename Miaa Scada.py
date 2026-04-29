@@ -1015,7 +1015,20 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-
+# --- LÓGICA DE STREET VIEW (Clic en el mapa) ---
+            # Este JS detecta el clic, obtiene lat/lon y abre Google Street View en otra pestaña
+            click_js = """
+            function onClick(e) {
+                var lat = e.latlng.lat;
+                var lng = e.latlng.lng;
+                var url = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + lat + "," + lng;
+                window.open(url, '_blank');
+            }
+            """
+            # Inyectamos el evento al objeto del mapa
+            m_sec.add_child(folium.ClickForMarker(popup="Abriendo Street View...")) # Opcional: deja una marca visual
+            m_sec.get_root().script.add_child(folium.Element(f"function onMapClick(e) {{ {click_js} }}"))
+            m_sec.add_child(folium.Element('map.on("click", onClick);'))
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
