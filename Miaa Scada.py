@@ -1411,14 +1411,7 @@ with col_mapa:
         control=True
     ).add_to(m)
 
-            # 2. Capas de Fondo (Selectors)
-    folium.TileLayer(
-        tiles="CartoDB dark_matter",
-        name="Vista Nocturna",
-        attr="CartoDB",
-        overlay=False,
-        control=True
-    ).add_to(m)
+
 
     Fullscreen().add_to(m)
 
