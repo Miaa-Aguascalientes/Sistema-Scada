@@ -1394,6 +1394,32 @@ with col_mapa:
         zoom_start=st.session_state.zoom_inicial, 
         tiles="CartoDB dark_matter"
     )
+
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Vista Satélite',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+            folium.TileLayer(
+                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attr='Esri',
+                name='Satélite (Esri)',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
+            # 2. Capas de Fondo (Selectors)
+            folium.TileLayer(
+                tiles="CartoDB dark_matter",
+                name="Vista Nocturna",
+                attr="CartoDB",
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+    
     Fullscreen().add_to(m)
 
 # 9.2. Añadir el resaltado del sector si existe
@@ -1702,4 +1728,8 @@ if sectores_data:
                 folium.Marker(location=info['coord'], icon=folium.DivIcon(icon_anchor=(-15, 15), html=f'<div style="font-size: 10px; font-weight: bold; color: {info["color_final"]}; text-shadow: 1px 1px #000;">{id_rb}</div>')).add_to(m)
             except:
                 continue
+                MousePosition().add_to(m_sec)
+           
+    folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+    Fullscreen(position='topleft').add_to(m_sec)            
     folium_static(m, width=None, height=750)
