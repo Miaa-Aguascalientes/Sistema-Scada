@@ -1420,7 +1420,7 @@ with col_mapa:
         control=True
     ).add_to(m)
     
-    Fullscreen().add_to(m)
+
 
 # 9.2. Añadir el resaltado del sector si existe
     if datos_sector_resaltado:
