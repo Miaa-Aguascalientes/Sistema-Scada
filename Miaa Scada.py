@@ -988,7 +988,7 @@ if sector_seleccionado:
                 location=[21.8820, -102.2800], 
                 zoom_start=12, 
                 tiles=None,
-                height=400 
+                height=350 
             )
 
             # 2. Configurar capas en el objeto m_sec
@@ -1130,9 +1130,6 @@ if sector_seleccionado:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
 # 5. Controles y Render
-            # --- RENDERIZADO Y CAPTURA ---
-            # El componente debe estar dentro del 'with col_izq'
-            
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
