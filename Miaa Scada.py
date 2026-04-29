@@ -1035,6 +1035,10 @@ if sector_seleccionado:
                             popup=folium.Popup(popup_html, max_width=200)
                         ).add_to(m_sec)
 
+                        
+# --- RENDERIZADO Y CAPTURA ---
+            # El componente debe estar dentro del 'with col_izq'
+            salida = st_folium(m_sec, width="100%", height=400, key="mapa_miaa_interactivo")
             
             # 4. MOSTRAR COORDENADAS (Dentro de col_izq)
             if salida and salida.get("last_clicked"):
@@ -1044,10 +1048,7 @@ if sector_seleccionado:
                 
                 st.write(f"📍 **Punto en mapa:** `{c_lat:.5f}, {c_lng:.5f}`")
                 st.link_button("🚹 Ver Street View de este punto", sv_url_click, type="primary")
-
-            
-
-                
+        
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
