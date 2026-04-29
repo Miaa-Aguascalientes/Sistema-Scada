@@ -1179,7 +1179,7 @@ if sector_seleccionado:
         opciones_equipo = list(reg_nombres.keys())
         c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00])
 
-            scada_res_vrp = cargar_datos_scada(list(set(tags_para_scada)))
+        scada_res_vrp = cargar_datos_scada(list(set(tags_para_scada)))
 
             # 7.6. Marcadores de puntos de control
             for r in dict_vrp.values():
