@@ -1017,36 +1017,30 @@ if sector_seleccionado:
             ).add_to(m_sec)
             
 
-# --- SCRIPT PARA CAPTURAR CLIC REAL Y GENERAR URL DINÁMICA ---
-            # Obtenemos el ID interno del mapa para que el JS sepa a quién escuchar
-            map_id = m_sec.get_name()
-            
-            click_js = f"""
+# --- MOTOR DINÁMICO DE STREET VIEW ---
+            map_name = m_sec.get_name()
+            click_script = f"""
             <script>
             function onMapClick(e) {{
                 var lat = e.latlng.lat.toFixed(6);
                 var lng = e.latlng.lng.toFixed(6);
                 
-                // Construimos la URL forzando el modo panorama (3a)
-                var sv_url = "https://www.google.com/maps/@" + lat + "," + lng + ",3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192";
+                // URL que fuerza la entrada a la cámara (3a)
+                var url = "https://www.google.com/maps/@" + lat + "," + lng + ",3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192";
                 
-                var popupContent = '<div style="text-align:center; font-family:sans-serif; min-width:150px;">' +
-                    '<span style="font-size:30px;">🚹</span><br>' +
-                    '<b style="color:#00d4ff;">STREET VIEW AQUÍ</b><br>' +
-                    '<small>' + lat + ', ' + lng + '</small><br><br>' +
-                    '<a href="' + sv_url + '" target="_blank" ' +
-                    'style="background:#fbbc04; color:black; padding:8px 12px; border-radius:15px; text-decoration:none; font-weight:bold; display:block;">' +
-                    'ABRIR CÁMARA</a></div>';
+                var content = '<div style="text-align:center; font-family:sans-serif; min-width:140px;">' +
+                              '<b style="color:#00d4ff;">UBICACIÓN SELECCIONADA</b><br>' +
+                              '<small>' + lat + ', ' + lng + '</small><br><hr>' +
+                              '<a href="' + url + '" target="_blank" ' +
+                              'style="background:#fbbc04; color:black; padding:8px 12px; border-radius:4px; text-decoration:none; font-weight:bold; display:block; margin-top:5px;">' +
+                              'VER STREET VIEW</a></div>';
                 
-                L.popup()
-                    .setLatLng(e.latlng)
-                    .setContent(popupContent)
-                    .openOn({map_id});
+                L.popup().setLatLng(e.latlng).setContent(content).openOn({map_name});
             }}
-            {map_id}.on('click', onMapClick);
+            {map_name}.on('click', onMapClick);
             </script>
             """
-            m_sec.get_root().html.add_child(folium.Element(click_js))
+            m_sec.get_root().html.add_child(folium.Element(click_script))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
@@ -1171,7 +1165,10 @@ if sector_seleccionado:
                     else:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
-
+# 5. Controles y Render
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+            from folium.plugins import Fullscreen
+            Fullscreen(position='topleft').add_to(m_sec)
 
             from streamlit_folium import folium_static
             folium_static(m_sec, width=None, height=315)
