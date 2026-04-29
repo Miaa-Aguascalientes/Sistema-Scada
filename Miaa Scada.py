@@ -16,7 +16,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
-from jinja2 import Template
+
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -1017,35 +1017,34 @@ if sector_seleccionado:
             ).add_to(m_sec)
             
 
-# --- EL MOTOR DINÁMICO DE STREET VIEW ---
-            # Este código se ejecuta en el navegador cada vez que haces clic
-            click_macro = """
-            {% macro script(this, kwargs) %}
+# --- MOTOR DE STREET VIEW (INYECCIÓN DIRECTA SIN MACROS) ---
+            # Obtenemos el nombre interno del mapa para que el JS sepa a quién hablarle
+            map_name = m_sec.get_name()
+            
+            click_js = f"""
+            <script>
             var popup = L.popup();
-            function onMapClick(e) {
+            function onMapClick(e) {{
                 var lat = e.latlng.lat.toFixed(6);
                 var lng = e.latlng.lng.toFixed(6);
                 
-                // URL que fuerza la entrada a Street View (3a) en las coordenadas del clic
-                var url = `https://www.google.com/maps/@${lat},${lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192`;
+                // URL dinámica con parámetros de forzado de Street View
+                var url = "https://www.google.com/maps/@" + lat + "," + lng + ",3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192";
                 
-                var content = `
-                    <div style="text-align:center; font-family:sans-serif; min-width:140px;">
-                        <b style="color:#00d4ff;">UBICACIÓN SELECCIONADA</b><br>
-                        <small>${lat}, ${lng}</small><br><hr>
-                        <a href="${url}" target="_blank" 
-                           style="background:#00d4ff; color:white; padding:5px 10px; border-radius:4px; text-decoration:none; font-weight:bold; display:block;">
-                           ENTRAR A STREET VIEW
-                        </a>
-                    </div>`;
+                var content = '<div style="text-align:center; font-family:sans-serif; min-width:140px;">' +
+                              '<b style="color:#00d4ff;">UBICACIÓN SELECCIONADA</b><br>' +
+                              '<small>' + lat + ', ' + lng + '</small><br><hr>' +
+                              '<a href="' + url + '" target="_blank" ' +
+                              'style="background:#00d4ff; color:white; padding:8px 12px; border-radius:4px; text-decoration:none; font-weight:bold; display:block; margin-top:5px;">' +
+                              'VER STREET VIEW</a></div>';
                 
-                popup.setLatLng(e.latlng).setContent(content).openOn(this);
-            }
-            {{this._parent.get_name()}}.on('click', onMapClick);
-            {% endmacro %}
+                popup.setLatLng(e.latlng).setContent(content).openOn({map_name});
+            }}
+            {map_name}.on('click', onMapClick);
+            </script>
             """
-           
-            m_sec.get_root().header.add_child(folium.Element(Template(click_macro).render(this=m_sec)))
+            # Añadimos el script al HTML del mapa
+            m_sec.get_root().html.add_child(folium.Element(click_js))
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
