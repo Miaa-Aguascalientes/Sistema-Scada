@@ -998,6 +998,14 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
+            folium.TileLayer(
+                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attr='Esri',
+                name='Satélite (Esri)',
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
+
             # 2. Capas de Fondo (Selectors)
             folium.TileLayer(
                 tiles="CartoDB dark_matter",
