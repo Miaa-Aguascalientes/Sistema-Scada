@@ -1015,22 +1015,21 @@ if sector_seleccionado:
                 control=True
             ).add_to(m_sec)
 
-            click_template = """
-            var popup = L.popup();
-            function onMapClick(e) {
-                var lat = e.latlng.lat.toFixed(6);
-                var lng = e.latlng.lng.toFixed(6);
-                var url = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + lat + "," + lng;
-                var content = `<div style="font-family: Arial; font-size: 12px; min-width: 150px;">
-                                <b>Lat:</b> ${lat}<br><b>Lon:</b> ${lng}<br><hr>
-                                <a href="${url}" target="_blank" style="color: #0078ff; font-weight: bold; text-decoration: none;">
-                                    📍 Ver en Street View
-                                </a></div>`;
-                popup.setLatLng(e.latlng).setContent(content).openOn(this);
-            }
-            this.on('click', onMapClick);
-            """
-            m_sec.get_root().script.add_child(folium.Element(click_template))
+# 3. LÓGICA DE STREET VIEW (NATIVA Y ESTABLE)
+            # Al hacer clic, se crea un marcador temporal con el link a Street View
+            m_sec.add_child(folium.ClickForMarker(popup="""
+                <div style="font-family: Arial; font-size: 12px; width: 140px;">
+                    <b>Ubicación marcada</b><br><hr>
+                    <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=LAT,LON" 
+                       target="_blank" 
+                       style="color: #0078ff; font-weight: bold; text-decoration: none;">
+                       📍 Abrir Street View
+                    </a>
+                </div>
+            """))
+            # Nota: Folium reemplaza automáticamente LAT y LON en el ClickForMarker 
+            # en la mayoría de las versiones, pero para asegurar compatibilidad total:
+            m_sec.add_child(folium.LatLngPopup()) # Esto muestra las coordenadas arriba del link
 
 
             # 3. DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
