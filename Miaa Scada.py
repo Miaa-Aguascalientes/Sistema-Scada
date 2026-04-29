@@ -1035,9 +1035,6 @@ if sector_seleccionado:
                             popup=folium.Popup(popup_html, max_width=200)
                         ).add_to(m_sec)
 
-            # --- RENDERIZADO Y CAPTURA ---
-            # El componente debe estar dentro del 'with col_izq'
-            salida = st_folium(m_sec, width="100%", height=400, key="mapa_miaa_interactivo")
             
             # 4. MOSTRAR COORDENADAS (Dentro de col_izq)
             if salida and salida.get("last_clicked"):
@@ -1175,12 +1172,15 @@ if sector_seleccionado:
                         folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
 # 5. Controles y Render
+            # --- RENDERIZADO Y CAPTURA ---
+            # El componente debe estar dentro del 'with col_izq'
+            
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
 
             from streamlit_folium import folium_static
-            folium_static(m_sec, width=None, height=315)
+            salida = st_folium(m_sec, width="100%", height=315, key="mapa_miaa_interactivo")
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.8. Sección de Gráficos Históricos puntos de control
