@@ -1151,7 +1151,7 @@ if sector_seleccionado:
                     c_lat = st.session_state.ultimo_clic_sv["lat"]
                     c_lng = st.session_state.ultimo_clic_sv["lng"]
                     
-                    sv_url = f"https://www.google.com/maps/search/?api=1&query={c_lat},{c_lng}"
+                    sv_url = f"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={c_lat},{c_lng}"
             
                     html_popup_sv = f"""
                     <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00d4ff; width:180px; font-family:sans-serif;">
