@@ -1401,7 +1401,7 @@ with col_mapa:
         name='Vista Satélite',
         overlay=False,
         control=True
-    ).add_to(m_sec)
+    ).add_to(m)
 
     folium.TileLayer(
         tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -1409,7 +1409,7 @@ with col_mapa:
         name='Satélite (Esri)',
         overlay=False,
         control=True
-    ).add_to(m_sec)
+    ).add_to(m)
 
             # 2. Capas de Fondo (Selectors)
     folium.TileLayer(
@@ -1418,7 +1418,7 @@ with col_mapa:
         attr="CartoDB",
         overlay=False,
         control=True
-    ).add_to(m_sec)
+    ).add_to(m)
     
     Fullscreen().add_to(m)
 
