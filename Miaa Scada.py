@@ -1415,7 +1415,8 @@ if sector_seleccionado:
                     
                     fig_vrp.update_layout(
                         template="plotly_dark", 
-                        height=200, 
+                        height=350,
+                        width=300,
                         margin=dict(l=10, r=10, t=20, b=10), 
                         paper_bgcolor='rgba(0,0,0,0)', 
                         plot_bgcolor='rgba(0,0,0,0)',
