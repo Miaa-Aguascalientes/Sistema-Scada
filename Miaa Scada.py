@@ -1346,15 +1346,14 @@ if sector_seleccionado:
                         yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
-                    st.plotly_chart(fig_vrp, use_container_width=500)
+                    
+                    st.plotly_chart(fig_vrp, use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
-                   
-                else:
-                    st.info(f"Sin datos para {sel_vrp} en este periodo.")
             except Exception as e:
-                st.error(f"Error en Gráfico VRP: {e}")
+                st.error(f"Error: {e}")
 
-
+    # Cerramos el div del col-mapa-offset
+    st.markdown('</div>', unsafe_allow_html=True)
                 
             #  CONTROLES Y RENDERIZADO FINAL ---
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
