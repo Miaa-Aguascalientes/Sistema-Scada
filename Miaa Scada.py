@@ -472,6 +472,32 @@ def cargar_puntos_criticos_desde_db():
     except Exception as e:
         return {}
 
+# 3.6. Funcion para optener las vrp's de la base de datos Diccionario_vrp
+@st.cache_data(ttl=5)
+def cargar_vrp_desde_db():
+    engine = get_mysql_telemetria_engine()
+    if not engine: return {}
+    try:
+        df = pd.read_sql("SELECT * FROM Diccionario_vrp", engine)
+        d_res = {}
+        for _, r in df.iterrows():
+            try:
+                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
+                lat_s, lon_s = raw_c.split(',')
+                id_vrp = r.get('Serie', r.get('ID_VRP', 'ID'))
+                d_res[str(id_vrp)] = {
+                    "nombre": str(r.get('Nombre', 'VRP S/N')),
+                    "coord": [float(lat_s), float(lon_s)],
+                    "sector": str(r['Sector']).split('.')[0].strip(),
+                    "tag_p_entrada": r.get('Presion_1'), 
+                    "tag_p_salida": r.get('Presion_2'), 
+                    "tag_caudal": r.get('Caudal'),     
+                    "tag_consigna": r.get('Consigna')
+                }
+            except: continue
+        return d_res
+    except: return {}
+
 
 
 # 4. SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
@@ -966,6 +992,12 @@ if sector_seleccionado:
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
         opciones_equipo = list(reg_nombres.keys())
+
+        # --- Obtener datos de VRP ---
+        dict_vrp_all = cargar_vrp_desde_db()
+        dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+        vrp_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
+        
         c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
@@ -975,6 +1007,11 @@ if sector_seleccionado:
                 st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
             else:
                 sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
+
+        with c_sel3:
+                sel_vrp = st.selectbox("Seleccionar VRP:", list(vrp_nombres.keys()) if vrp_nombres else ["Sin VRP en sector"])
+
+
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.0, 1.0])
@@ -1067,6 +1104,28 @@ if sector_seleccionado:
                     location=r['coord'], 
                     icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
                     popup=folium.Popup(html_popup_reg, max_width=300)
+                ).add_to(m_sec)
+
+            # --- Marcadores VRP en el Mapa (Dentro de col_izq) ---
+            for v_id, v_info in dict_vrp.items():
+    # Consulta rápida al SCADA para el popup
+                tags_v = [v_info['tag_p_entrada'], v_info['tag_p_salida'], v_info['tag_caudal']]
+                res_v = cargar_datos_scada([t for t in tags_v if t])
+    
+                pe, _ = res_v.get(v_info['tag_p_entrada'], (0.0, "N/A"))
+                ps, _ = res_v.get(v_info['tag_p_salida'], (0.0, "N/A"))
+    
+                html_vrp = f"""
+                <div style="background:#050a10; color:white; padding:10px; border-radius:8px; border:1px solid #00ffcc; width:200px;">
+                    <b style="color:#00ffcc;">VRP: {v_info['nombre']}</b><hr>
+                    P. Entrada: <b>{pe:.2f} kg</b><br>
+                    P. Salida: <b>{ps:.2f} kg</b>
+                </div>
+                """
+                folium.Marker(
+                    location=v_info['coord'],
+                    icon=folium.Icon(color='green', icon='cog', prefix='fa'),
+                    popup=folium.Popup(html_vrp, max_width=250)
                 ).add_to(m_sec)
 
             # 7.7 Marcadores de Puntos Críticos
@@ -1312,6 +1371,38 @@ if sector_seleccionado:
                             st.plotly_chart(fig_pc, use_container_width=True)
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
+
+            # --- 7.12. GRÁFICO HISTÓRICO VRP ---
+            if sel_vrp and sel_vrp in vrp_nombres:
+                st.markdown("---")
+                v_data = dict_vrp[vrp_nombres[sel_vrp]]
+                tags_h_vrp = [t for t in [v_data['tag_p_entrada'], v_data['tag_p_salida'], v_data['tag_caudal']] if t]
+    
+                if tags_h_vrp:
+                    try:
+                        tags_in_vrp = "', '".join(tags_h_vrp)
+                        q_vrp = f"""SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h 
+                                    JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                                    WHERE r.NAME IN ('{tags_in_vrp}') 
+                                    AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"""
+                        df_vrp_h = pd.read_sql(q_vrp, engine_h)
+            
+                        if not df_vrp_h.empty:
+                            st.markdown(f"<h3 style='color:#00ffcc; font-size:16px;'>Histórico VRP: {sel_vrp}</h3>", unsafe_allow_html=True)
+                            fig_vrp = go.Figure()
+                
+                            # Mapeo de nombres para legibilidad
+                            nombres_tags = {v_data['tag_p_entrada']: 'P. Entrada', v_data['tag_p_salida']: 'P. Salida', v_data['tag_caudal']: 'Caudal'}
+                
+                            for t_name in tags_h_vrp:
+                                df_t = df_vrp_h[df_vrp_h['TAG'] == t_name]
+                                if not df_t.empty:
+                                    fig_vrp.add_trace(go.Scatter(x=df_t['FECHA'], y=df_t['VALUE'], name=nombres_tags[t_name]))
+                
+                            fig_vrp.update_layout(template="plotly_dark", height=300, margin=dict(l=10, r=10, t=30, b=10), paper_bgcolor='black', plot_bgcolor='black')
+                            st.plotly_chart(fig_vrp, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Error en gráfico VRP: {e}")            
 
     st.stop()
     
