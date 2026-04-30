@@ -1251,6 +1251,15 @@ if sector_seleccionado:
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
+            hoy = datetime.now().date()
+            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
+            elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+            elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+            elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+            else:
+                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
+                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
+
 
             # --- OBTENCIÓN DE DATOS REGISTRADOR (Punto de Control) ---
             # Verificamos que sel_r sea válido y exista en nuestro diccionario filtrado
