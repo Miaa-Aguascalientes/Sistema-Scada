@@ -1302,7 +1302,7 @@ if sector_seleccionado:
                 if not df_vrp_h.empty:
                     # Título con márgenes ajustados para pegarse al mapa
                     st.markdown(f"""
-                    <h3 style='color:#00ffcc; font-size:16px; margin-top:-35px; margin-bottom:-40px; font-family:sans-serif;'>
+                    <h3 style='color:#00ffcc; font-size:16px; margin-top:-85px; margin-bottom:-40px; font-family:sans-serif;'>
                         Histórico VRP: {sel_vrp}
                     </h3>
                     """, unsafe_allow_html=True)
