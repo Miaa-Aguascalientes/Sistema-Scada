@@ -1297,6 +1297,16 @@ if sector_seleccionado:
                         Histórico VRP: {sel_vrp}
                     </h3>
                     """, unsafe_allow_html=True)
+
+# --- CSS para succionar todo el bloque de la columna izquierda hacia arriba ---
+                    st.markdown("""
+                        <style>
+                        /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
+                       [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {
+                       gap: 0rem !important;
+                       }
+                       </style>
+                       """, unsafe_allow_html=True)
                     
                     fig_vrp = go.Figure()
 
