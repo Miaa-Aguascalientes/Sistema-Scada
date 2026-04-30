@@ -1298,15 +1298,7 @@ if sector_seleccionado:
                     </h3>
                     """, unsafe_allow_html=True)
 
-# --- CSS para succionar todo el bloque de la columna izquierda hacia arriba ---
-                    st.markdown("""
-                        <style>
-                        /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
-                       [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {
-                       gap: -50rem !important;
-                       }
-                       </style>
-                       """, unsafe_allow_html=True)
+
                     
                     fig_vrp = go.Figure()
 
@@ -1333,6 +1325,25 @@ if sector_seleccionado:
                             x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
                             yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
                         ))
+
+# --- CSS para succionar todo el bloque de la columna izquierda hacia arriba ---
+                    st.markdown("""
+                        <style>
+                        /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
+                       [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {
+                       gap: -50rem !important;
+                       }
+                       </style>
+                       """, unsafe_allow_html=True)                        
+
+# 1. El Título (con margen superior negativo para acercarse al mapa)
+                    st.markdown(f"""
+                        <div style='margin-top: -50px; margin-bottom: 0px;'>
+                        <h3 style='color:#00ffcc; font-size:16px; font-family:sans-serif;'>
+                            Histórico VRP: {sel_vrp}
+                        </h3>
+                    </div>
+                    """, unsafe_allow_html=True)
 
                     fig_vrp.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
