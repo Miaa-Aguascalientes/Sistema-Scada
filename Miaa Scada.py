@@ -950,11 +950,31 @@ if sector_seleccionado:
               margin-top: 0px !important;
               }}
 
-
-
              /* Reducir el padding de los gráficos de Plotly para aprovechar el ancho */
             .js-plotly-plot {{
             margin-bottom: 10px !important;
+            }}
+
+            /* Elimina el espacio entre el mapa (col_izq) y el gráfico que sigue */
+            [data-testid="column"]:nth-child(1) > div {{
+            gap: 0px !important;
+            }}
+
+            /* Ajuste específico para el contenedor del gráfico VRP */
+            .contenedor-grafico-vrp {{
+            margin-top: -30px !important; /* Sube el gráfico hacia el mapa */
+            padding-top: 0px !important;
+            }}
+
+            /* Reduce el espacio del título del gráfico */
+            .titulo-vrp-ajustado {{
+            color: #00ffcc; 
+            font-size: 16px; 
+            margin-top: 5px !important; 
+            margin-bottom: 5px !important; 
+            font-family: sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             }}
 
         </style>
@@ -1284,11 +1304,7 @@ if sector_seleccionado:
                 
                 if not df_vrp_h.empty:
                     # Título con márgenes ajustados para pegarse al mapa
-                    st.markdown(f"""
-                    <h3 style='color:#00ffcc; font-size:16px; margin-top:-35px; margin-bottom:-80px; font-family:sans-serif;'>
-                        Histórico VRP: {sel_vrp}
-                    </h3>
-                    """, unsafe_allow_html=True)
+                    st.markdown(f'<h3 class="titulo-vrp-ajustado">📊 Histórico VRP: {sel_vrp}</h3>', unsafe_allow_html=True)
 
                     fig_vrp = go.Figure()
 
@@ -1341,7 +1357,8 @@ if sector_seleccionado:
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
             
-
+            fig_vrp.update_layout(height=250) # Altura fija más pequeña para que no se desparrame
+            st.plotly_chart(fig_vrp, use_container_width=True)
             st.plotly_chart(fig_vrp, use_container_width=False, width=1020)
             st.markdown('</div>', unsafe_allow_html=True)
 
