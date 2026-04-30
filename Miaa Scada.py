@@ -1430,8 +1430,7 @@ if sector_seleccionado:
 
                      
                     fig_vrp.update_layout(
-                        paper_bgcolor='black', plot_bgcolor='black', height=300,
-                        height=280, 
+                        paper_bgcolor='black', plot_bgcolor='black', height=300, 
                         margin=dict(l=50, r=50, t=50, b=10),
                         hovermode="x unified",
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
