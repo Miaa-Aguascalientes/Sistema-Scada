@@ -1275,7 +1275,7 @@ if sector_seleccionado:
         rango_vrp = st.date_input("Periodo Histórico:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_vrp")
         f_ini_h, f_fin_h = rango_vrp if isinstance(rango_vrp, tuple) and len(rango_vrp)==2 else (hoy, hoy)
 
-    # --- 3. GRÁFICO HISTÓRICO VRP ---
+    # ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
     if vrp_nombres and sel_vrp in vrp_nombres:
         v_data = dict_vrp[vrp_nombres[sel_vrp]]
         t_qe = v_data.get('tag_caudal')      
@@ -1344,7 +1344,7 @@ if sector_seleccionado:
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
 
-                    st.plotly_chart(fig_vrp, use_container_width=False, width=620)
+                    st.plotly_chart(fig_vrp, use_container_width=False, width=920)
 
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
