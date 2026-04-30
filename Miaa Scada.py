@@ -1019,6 +1019,13 @@ if sector_seleccionado:
             if "ultimo_clic_sv" not in st.session_state:
                 st.session_state.ultimo_clic_sv = None
             
+            #  Preparar el objeto mapa (No dibuja nada todavía)
+            m_sec = folium.Map(
+                location=[21.8820, -102.2800], 
+                zoom_start=12, 
+                tiles=None,
+                height=350 
+            )
 
             #  Configurar capas en el objeto m_sec
             folium.TileLayer(
@@ -1220,13 +1227,7 @@ if sector_seleccionado:
                 except Exception:
                     pass 
 
-            salida = st_folium(
-                m_sec, 
-                width="100%", 
-                height=330, 
-                key="mapa_miaa_interactivo_v4",
-                returned_objects=["last_clicked"]
-            )
+
 
             #  CAPTURA DE EVENTO ---
             if salida and salida.get("last_clicked"):
@@ -1337,6 +1338,14 @@ if sector_seleccionado:
 
             st.plotly_chart(fig_vrp, use_container_width=False, width=800)
             st.markdown('</div>', unsafe_allow_html=True)
+
+            salida = st_folium(
+                m_sec, 
+                width="100%", 
+                height=330, 
+                key="mapa_miaa_interactivo_v4",
+                returned_objects=["last_clicked"]
+            )
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
