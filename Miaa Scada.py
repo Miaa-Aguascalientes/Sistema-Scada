@@ -1339,15 +1339,15 @@ if sector_seleccionado:
                      
                     fig_vrp.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                        height=280, 
-                        margin=dict(l=0, r=0, t=0, b=10),
+                        height=250, margin=dict(l=10, r=10, t=35, b=10),
                         hovermode="x unified",
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
                         xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
                         yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
-
+                    st.plotly_chart(fig_vrp, use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
                    
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
