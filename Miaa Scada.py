@@ -1351,6 +1351,9 @@ if sector_seleccionado:
             st.plotly_chart(fig_vrp, use_container_width=False, width=800)
             st.markdown('</div>', unsafe_allow_html=True)
 
+            st.markdown('</div>', unsafe_allow_html=True) # Cierre del div de posicionamiento
+            st.markdown('</div>', unsafe_allow_html=True) # Cierre de col-mapa-offset
+
 
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
