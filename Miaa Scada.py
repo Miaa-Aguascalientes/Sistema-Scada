@@ -486,7 +486,7 @@ def cargar_vrp_desde_db():
                 lat_s, lon_s = raw_c.split(',')
                 id_vrp = r.get('Serie', r.get('ID_VRP', 'ID'))
                 d_res[str(id_vrp)] = {
-                    "nombre": str(r.get('Nombre', 'VRP S/N')),
+                    "nombre": str(r.get('Domicilio', 'VRP', 'S/N')),
                     "coord": [float(lat_s), float(lon_s)],
                     "sector": str(r['Sector']).split('.')[0].strip(),
                     "tag_p_entrada": r.get('Presion_1'), 
