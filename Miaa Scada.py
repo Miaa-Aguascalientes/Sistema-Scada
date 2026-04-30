@@ -950,10 +950,7 @@ if sector_seleccionado:
               margin-top: 0px !important;
               }}
 
-              /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
-              [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {{
-              gap: -50rem !important;
-              }}
+
 
              /* Reducir el padding de los gráficos de Plotly para aprovechar el ancho */
             .js-plotly-plot {{
