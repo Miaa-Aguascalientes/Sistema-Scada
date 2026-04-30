@@ -1230,8 +1230,6 @@ if sector_seleccionado:
                 except Exception:
                     pass 
 
-
-
             salida = st_folium(
                 m_sec, 
                 width="100%", 
@@ -1246,7 +1244,6 @@ if sector_seleccionado:
                 if st.session_state.get("ultimo_clic_sv") != nuevo_clic:
                     st.session_state.ultimo_clic_sv = nuevo_clic
                     st.rerun()
-
 
 
     # 2. Lógica de Fechas (Mantenemos las variables accesibles para esta columna)
@@ -1336,7 +1333,7 @@ if sector_seleccionado:
                     fig_vrp.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
                         height=280, 
-                        margin=dict(l=50, r=50, t=10, b=10),
+                        margin=dict(l=50, r=50, t=100, b=10),
                         hovermode="x unified",
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
                         xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
