@@ -1439,7 +1439,7 @@ if sector_seleccionado:
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
 
-                    st.plotly_chart(fig_vrp, use_container_width=True)
+                   
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
             except Exception as e:
