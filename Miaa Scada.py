@@ -1428,10 +1428,11 @@ if sector_seleccionado:
                             yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
                         ))
 
+                     
                     fig_vrp.update_layout(
-                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                        paper_bgcolor='black', plot_bgcolor='black', height=300,
                         height=280, 
-                        margin=dict(l=0, r=0, t=50, b=10),
+                        margin=dict(l=50, r=50, t=50, b=10),
                         hovermode="x unified",
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
                         xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
@@ -1442,10 +1443,9 @@ if sector_seleccionado:
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
             except Exception as e:
-                st.error(f"Error en Gráfico VRP: {e}")                     
+                st.error(f"Error en Gráfico VRP: {e}")
 
-    st.stop()
-    
+            
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
     # 8.1. Contenedor del logo
