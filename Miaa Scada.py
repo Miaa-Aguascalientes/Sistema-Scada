@@ -950,6 +950,11 @@ if sector_seleccionado:
               margin-top: 0px !important;
               }}
 
+              /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
+              [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {{
+              gap: -50rem !important;
+              }}
+
              /* Reducir el padding de los gráficos de Plotly para aprovechar el ancho */
             .js-plotly-plot {{
             margin-bottom: 10px !important;
@@ -1337,11 +1342,10 @@ if sector_seleccionado:
                        """, unsafe_allow_html=True)                        
 
 
-
                     fig_vrp.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
                         height=280, 
-                        margin=dict(l=50, r=50, t=-50, b=10),
+                        margin=dict(l=50, r=50, t=0, b=10),
                         hovermode="x unified",
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
                         xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
