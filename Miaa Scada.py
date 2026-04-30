@@ -1230,10 +1230,7 @@ if sector_seleccionado:
                 except Exception:
                     pass 
 
-            #  CONTROLES Y RENDERIZADO FINAL ---
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-            from folium.plugins import Fullscreen
-            Fullscreen(position='topleft').add_to(m_sec)
+
 
             salida = st_folium(
                 m_sec, 
@@ -1354,6 +1351,11 @@ if sector_seleccionado:
             except Exception as e:
                 st.error(f"Error en Gráfico VRP: {e}")
 
+                
+            #  CONTROLES Y RENDERIZADO FINAL ---
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+            from folium.plugins import Fullscreen
+            Fullscreen(position='topleft').add_to(m_sec)
                 
             st.markdown('</div>', unsafe_allow_html=True)
 
