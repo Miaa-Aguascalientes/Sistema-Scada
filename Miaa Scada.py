@@ -1331,7 +1331,7 @@ if sector_seleccionado:
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
 
-                    st.plotly_chart(fig_vrp, use_container_width=False, width=920)
+                   
 
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
@@ -1343,8 +1343,9 @@ if sector_seleccionado:
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
+            
 
-                   st.plotly_chart(fig_vrp, use_container_width=True)
+                    st.plotly_chart(fig_vrp, use_container_width=False, width=920)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
