@@ -1359,6 +1359,7 @@ if sector_seleccionado:
             
             fig_vrp.update_layout(height=250) # Altura fija más pequeña para que no se desparrame
             st.plotly_chart(fig_vrp, use_container_width=500)
+            st.markdown('</div>', unsafe_allow_html=True)
            
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
