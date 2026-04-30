@@ -1227,10 +1227,6 @@ if sector_seleccionado:
                 except Exception:
                     pass 
 
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-            from folium.plugins import Fullscreen
-            Fullscreen(position='topleft').add_to(m_sec)                    
-
             salida = st_folium(
                 m_sec, 
                 width="100%", 
@@ -1261,8 +1257,6 @@ if sector_seleccionado:
         # Usamos un key único para evitar conflictos con otros selectores de fecha
         rango_vrp = st.date_input("Periodo Histórico:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_vrp")
         f_ini_h, f_fin_h = rango_vrp if isinstance(rango_vrp, tuple) and len(rango_vrp)==2 else (hoy, hoy)
-
-    
 
     # ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
     if vrp_nombres and sel_vrp in vrp_nombres:
@@ -1334,7 +1328,7 @@ if sector_seleccionado:
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
 
-            st.markdown('<div style="position: relative; margin-top: -80px; z-index: 999;">', unsafe_allow_html=True)                   
+                   
 
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
@@ -1343,18 +1337,13 @@ if sector_seleccionado:
 
                 
             #  CONTROLES Y RENDERIZADO FINAL ---
-          
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
             
 
-            st.plotly_chart(fig_vrp, use_container_width=False, width=800)
+            st.plotly_chart(fig_vrp, use_container_width=False, width=1020)
             st.markdown('</div>', unsafe_allow_html=True)
-
-            st.markdown('</div>', unsafe_allow_html=True) # Cierre del div de posicionamiento
-            st.markdown('</div>', unsafe_allow_html=True) # Cierre de col-mapa-offset
-
-
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
