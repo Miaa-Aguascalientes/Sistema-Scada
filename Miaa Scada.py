@@ -1253,8 +1253,87 @@ if sector_seleccionado:
                 if st.session_state.get("ultimo_clic_sv") != nuevo_clic:
                     st.session_state.ultimo_clic_sv = nuevo_clic
                     st.rerun()
+
+                    
             
             st.markdown('</div>', unsafe_allow_html=True)
+
+
+# --- GRÁFICO HISTÓRICO VRP (Justo debajo del mapa) ---columna izquierda
+            if vrp_nombres and sel_vrp in vrp_nombres:
+                v_data = dict_vrp[vrp_nombres[sel_vrp]]
+                t_qe = v_data.get('tag_caudal')      
+                t_pe = v_data.get('tag_p_entrada')  
+                t_ps = v_data.get('tag_p_salida')   
+                
+                tags_h_vrp = [t for t in [t_qe, t_pe, t_ps] if t]
+                
+                if tags_h_vrp:
+                    try:
+                        tags_in_vrp = "', '".join(tags_h_vrp)
+                        # Usamos el engine_h y las fechas ya definidas en tu lógica de filtros
+                        q_vrp = f"""
+                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                            FROM vfitagnumhistory h 
+                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                            WHERE r.NAME IN ('{tags_in_vrp}') 
+                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                            ORDER BY h.FECHA ASC
+                        """
+                        df_vrp_h = pd.read_sql(q_vrp, engine_h)
+                        
+                        if not df_vrp_h.empty:
+                            # Título con margen negativo para "pegarse" al mapa
+                            st.markdown(f"""
+                                <h3 style='color:#00ffcc; font-size:16px; margin-bottom:-45px; margin-top:-25px; font-family:sans-serif;'>
+                                    Histórico VRP: {sel_vrp}
+                                </h3>
+                            """, unsafe_allow_html=True)
+                            
+                            fig_vrp = go.Figure()
+
+                            # 1. Caudal (Eje Y Izquierdo)
+                            if t_qe and not df_vrp_h[df_vrp_h['TAG'] == t_qe].empty:
+                                df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
+                                fig_vrp.add_trace(go.Scatter(
+                                    x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
+                                    line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
+                                ))
+
+                            # 2. P. Entrada (Eje Y2 Derecho)
+                            if t_pe and not df_vrp_h[df_vrp_h['TAG'] == t_pe].empty:
+                                df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
+                                fig_vrp.add_trace(go.Scatter(
+                                    x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
+                                    yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
+                                ))
+
+                            # 3. P. Salida (Eje Y2 Derecho)
+                            if t_ps and not df_vrp_h[df_vrp_h['TAG'] == t_ps].empty:
+                                df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
+                                fig_vrp.add_trace(go.Scatter(
+                                    x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
+                                    yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
+                                ))
+
+                            fig_vrp.update_layout(
+                                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                                height=280, 
+                                margin=dict(l=50, r=50, t=20, b=10),
+                                hovermode="x unified",
+                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
+                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
+                                yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
+                                yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                            )
+
+                            # Mostrar el gráfico con ancho manual para evitar solapamiento con col_der
+                            st.plotly_chart(fig_vrp, use_container_width=False, width=620)
+
+                        else:
+                            st.info(f"Sin datos históricos para {sel_vrp}.")
+                    except Exception as e:
+                        st.error(f"Error en Gráfico VRP: {e}")            
             
 
 
@@ -1376,57 +1455,7 @@ if sector_seleccionado:
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
 
-# 7.12. Gráfico Histórico de la VRP seleccionada
-    if vrp_nombres and sel_vrp in vrp_nombres:
-        v_data = dict_vrp[vrp_nombres[sel_vrp]]
-        tags_h_vrp = [t for t in [v_data['tag_p_entrada'], v_data['tag_p_salida'], v_data['tag_caudal']] if t]
-        
-        if tags_h_vrp:
-            try:
-                tags_in_vrp = "', '".join(tags_h_vrp)
-                q_vrp = f"""SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h 
-                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                            WHERE r.NAME IN ('{tags_in_vrp}') 
-                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"""
-                df_vrp_h = pd.read_sql(q_vrp, engine_h)
-                
-                if not df_vrp_h.empty:
-                    st.markdown(f"<h3 style='color:#00ffcc; font-size:16px; margin-top:10px;'>Histórico VRP: {sel_vrp}</h3>", unsafe_allow_html=True)
-                    
-                    fig_vrp = go.Figure()
-                    nombres_tags = {
-                        v_data['tag_p_entrada']: 'P. Entrada (kg)', 
-                        v_data['tag_p_salida']: 'P. Salida (kg)', 
-                        v_data['tag_caudal']: 'Caudal (Lps)'
-                    }
-                    
-                    # Colores estilo HUD/SCADA
-                    colores_vrp = {v_data['tag_p_entrada']: '#ff00ff', v_data['tag_p_salida']: '#00ff00', v_data['tag_caudal']: '#00ffff'}
-
-                    for t_name in tags_h_vrp:
-                        df_t = df_vrp_h[df_vrp_h['TAG'] == t_name]
-                        if not df_t.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_t['FECHA'], 
-                                y=df_t['VALUE'], 
-                                name=nombres_tags.get(t_name, t_name),
-                                line=dict(color=colores_vrp.get(t_name, '#ffffff'), width=1.5)
-                            ))
-                    
-                    fig_vrp.update_layout(
-                        template="plotly_dark", 
-                        height=350,
-                        width=300,
-                        margin=dict(l=10, r=10, t=20, b=10), 
-                        paper_bgcolor='rgba(0,0,0,0)', 
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
-                    st.plotly_chart(fig_vrp, use_container_width=False, width=900)
-                else:
-                    st.info("No hay datos históricos para esta VRP en el rango seleccionado.")
-            except Exception as e:
-                st.error(f"Error al cargar histórico VRP: {e}")       
+   
 
     st.stop()
     
