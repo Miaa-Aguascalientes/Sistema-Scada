@@ -1319,17 +1319,7 @@ if sector_seleccionado:
                             yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
                         ))
 
-# --- CSS para succionar todo el bloque de la columna izquierda hacia arriba ---
-                    st.markdown("""
-                        <style>
-                        /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
-                       [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {
-                       gap: -50rem !important;
-                       }
-                       </style>
-                       """, unsafe_allow_html=True)                        
-
-
+                     
                     fig_vrp.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
                         height=280, 
