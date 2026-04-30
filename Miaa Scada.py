@@ -1447,7 +1447,7 @@ if sector_seleccionado:
 
                 
 
-            st.markdown('</div>', unsafe_allow_html=True)
+          
             
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
