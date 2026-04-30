@@ -1361,9 +1361,12 @@ if sector_seleccionado:
                     st.plotly_chart(fig_vrp, use_container_width=True) # Cambié a True para que no se desfase
                     st.markdown('</div>', unsafe_allow_html=True)
             
+                    st.markdown('<div style="background-color: #050505; border-radius: 10px; padding: 10px; border: 1px solid #333;">', unsafe_allow_html=True)
+                    st.plotly_chart(fig_vrp, use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-            st.plotly_chart(fig_vrp, use_container_width=False, width=1020)
-            st.markdown('</div>', unsafe_allow_html=True)
+            except Exception as e:  # <--- ESTO ES LO QUE FALTA O ESTÁ MAL IDENTADO
+                st.error(f"Error en Gráfico VRP: {e}")
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
