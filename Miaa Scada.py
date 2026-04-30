@@ -1317,29 +1317,49 @@ if sector_seleccionado:
                         ))
 
                      
+# Configuración estética para que coincida con el HUD
                     fig_vrp.update_layout(
-                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                        # Forzamos el color de todo el texto a blanco
+                        font=dict(color="white"),
+                        # Mantenemos transparencia para que tome el color del div inferior
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        plot_bgcolor='rgba(0,0,0,0)', 
                         height=280, 
-                        margin=dict(l=0, r=0, t=0, b=10),
+                        margin=dict(l=40, r=40, t=20, b=40), # Ajusté márgenes para que no se corten los títulos de los ejes
                         hovermode="x unified",
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
-                        xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
-                        yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
-                        yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                        legend=dict(
+                            orientation="h", 
+                            yanchor="bottom", 
+                            y=1.02, 
+                            xanchor="left", 
+                            x=0, 
+                            font=dict(size=9)
+                        ),
+                        xaxis=dict(
+                            showgrid=True, 
+                            gridcolor='rgba(255, 255, 255, 0.1)', # Rejilla sutil
+                            color="white"
+                        ),
+                        yaxis=dict(
+                            title="Caudal (L/s)", 
+                            color="#00ffff", 
+                            showgrid=True, 
+                            gridcolor='rgba(255, 255, 255, 0.1)'
+                        ),
+                        yaxis2=dict(
+                            title="Presión (kg)", 
+                            side="right", 
+                            color="#ff00ff", 
+                            overlaying="y", 
+                            showgrid=False
+                        )
                     )
 
-                   
-
-                else:
-                    st.info(f"Sin datos para {sel_vrp} en este periodo.")
-            except Exception as e:
-                st.error(f"Error en Gráfico VRP: {e}")
-
-                
-            #  CONTROLES Y RENDERIZADO FINAL ---
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-            from folium.plugins import Fullscreen
-            Fullscreen(position='topleft').add_to(m_sec)
+                    # --- EL TRUCO DEL FONDO ---
+                    # Usamos un div que encapsule el gráfico con el fondo negro sólido del HUD
+                    st.markdown('<div style="background-color: #050505; border-radius: 10px; padding: 10px; border: 1px solid #333;">', unsafe_allow_html=True)
+                    st.plotly_chart(fig_vrp, use_container_width=True) # Cambié a True para que no se desfase
+                    st.markdown('</div>', unsafe_allow_html=True)
             
 
             st.plotly_chart(fig_vrp, use_container_width=False, width=1020)
