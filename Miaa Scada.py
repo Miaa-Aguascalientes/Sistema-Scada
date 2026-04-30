@@ -1355,10 +1355,7 @@ if sector_seleccionado:
     # Cerramos el div del col-mapa-offset
     st.markdown('</div>', unsafe_allow_html=True)
                 
-            #  CONTROLES Y RENDERIZADO FINAL ---
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-            from folium.plugins import Fullscreen
-            Fullscreen(position='topleft').add_to(m_sec)
+
                      
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
