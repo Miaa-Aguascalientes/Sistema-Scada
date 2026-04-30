@@ -1250,10 +1250,6 @@ if sector_seleccionado:
                     st.session_state.ultimo_clic_sv = nuevo_clic
                     st.rerun()
 
-                    
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-
 
 
     # 2. Lógica de Fechas (Mantenemos las variables accesibles para esta columna)
@@ -1303,8 +1299,6 @@ if sector_seleccionado:
                     </h3>
                     """, unsafe_allow_html=True)
 
-
-                    
                     fig_vrp = go.Figure()
 
                     # Caudal (Eje Y1)
@@ -1360,6 +1354,8 @@ if sector_seleccionado:
             except Exception as e:
                 st.error(f"Error en Gráfico VRP: {e}")
 
+                
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
