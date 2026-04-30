@@ -1258,92 +1258,98 @@ if sector_seleccionado:
             
             st.markdown('</div>', unsafe_allow_html=True)
 
-            hoy = datetime.now().date()
-            if opcion_fecha == "Hoy": f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
-            elif opcion_fecha == "Últimos 14 días": f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
-            elif opcion_fecha == "Este Mes": f_ini_h, f_fin_h = hoy.replace(day=1), hoy
-            else:
-            rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
-            f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
 
 
-# --- GRÁFICO HISTÓRICO VRP (Justo debajo del mapa) ---columna izquierda
-            if vrp_nombres and sel_vrp in vrp_nombres:
-                v_data = dict_vrp[vrp_nombres[sel_vrp]]
-                t_qe = v_data.get('tag_caudal')      
-                t_pe = v_data.get('tag_p_entrada')  
-                t_ps = v_data.get('tag_p_salida')   
+    # 2. Lógica de Fechas (Mantenemos las variables accesibles para esta columna)
+    hoy = datetime.now().date()
+    if opcion_fecha == "Hoy": 
+        f_ini_h, f_fin_h = hoy, hoy
+    elif opcion_fecha == "Esta Semana": 
+        f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+    elif opcion_fecha == "Últimos 14 días": 
+        f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+    elif opcion_fecha == "Este Mes": 
+        f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+    else:
+        # Usamos un key único para evitar conflictos con otros selectores de fecha
+        rango_vrp = st.date_input("Periodo Histórico:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_vrp")
+        f_ini_h, f_fin_h = rango_vrp if isinstance(rango_vrp, tuple) and len(rango_vrp)==2 else (hoy, hoy)
+
+    # --- 3. GRÁFICO HISTÓRICO VRP ---
+    if vrp_nombres and sel_vrp in vrp_nombres:
+        v_data = dict_vrp[vrp_nombres[sel_vrp]]
+        t_qe = v_data.get('tag_caudal')      
+        t_pe = v_data.get('tag_p_entrada')  
+        t_ps = v_data.get('tag_p_salida')   
+        
+        tags_h_vrp = [t for t in [t_qe, t_pe, t_ps] if t]
+        
+        if tags_h_vrp:
+            try:
+                engine_h = get_mysql_scada_engine()
+                tags_in_vrp = "', '".join(tags_h_vrp)
                 
-                tags_h_vrp = [t for t in [t_qe, t_pe, t_ps] if t]
+                q_vrp = f"""
+                    SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                    FROM vfitagnumhistory h 
+                    JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                    WHERE r.NAME IN ('{tags_in_vrp}') 
+                    AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                    ORDER BY h.FECHA ASC
+                """
+                df_vrp_h = pd.read_sql(q_vrp, engine_h)
                 
-                if tags_h_vrp:
-                    try:
-                        tags_in_vrp = "', '".join(tags_h_vrp)
-                        # Usamos el engine_h y las fechas ya definidas en tu lógica de filtros
-                        q_vrp = f"""
-                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
-                            FROM vfitagnumhistory h 
-                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                            WHERE r.NAME IN ('{tags_in_vrp}') 
-                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
-                            ORDER BY h.FECHA ASC
-                        """
-                        df_vrp_h = pd.read_sql(q_vrp, engine_h)
-                        
-                        if not df_vrp_h.empty:
-                            # Título con margen negativo para "pegarse" al mapa
-                            st.markdown(f"""
-                                <h3 style='color:#00ffcc; font-size:16px; margin-bottom:-45px; margin-top:-25px; font-family:sans-serif;'>
-                                    Histórico VRP: {sel_vrp}
-                                </h3>
-                            """, unsafe_allow_html=True)
-                            
-                            fig_vrp = go.Figure()
+                if not df_vrp_h.empty:
+                    # Título con márgenes ajustados para pegarse al mapa
+                    st.markdown(f"""
+                        <h3 style='color:#00ffcc; font-size:16px; margin-bottom:-45px; margin-top:10px; font-family:sans-serif;'>
+                            Histórico VRP: {sel_vrp}
+                        </h3>
+                    """, unsafe_allow_html=True)
+                    
+                    fig_vrp = go.Figure()
 
-                            # 1. Caudal (Eje Y Izquierdo)
-                            if t_qe and not df_vrp_h[df_vrp_h['TAG'] == t_qe].empty:
-                                df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
-                                fig_vrp.add_trace(go.Scatter(
-                                    x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
-                                    line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
-                                ))
+                    # Caudal (Eje Y1)
+                    if t_qe and not df_vrp_h[df_vrp_h['TAG'] == t_qe].empty:
+                        df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
+                        fig_vrp.add_trace(go.Scatter(
+                            x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
+                            line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
+                        ))
 
-                            # 2. P. Entrada (Eje Y2 Derecho)
-                            if t_pe and not df_vrp_h[df_vrp_h['TAG'] == t_pe].empty:
-                                df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
-                                fig_vrp.add_trace(go.Scatter(
-                                    x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
-                                    yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
-                                ))
+                    # Presión Entrada (Eje Y2)
+                    if t_pe and not df_vrp_h[df_vrp_h['TAG'] == t_pe].empty:
+                        df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
+                        fig_vrp.add_trace(go.Scatter(
+                            x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
+                            yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
+                        ))
 
-                            # 3. P. Salida (Eje Y2 Derecho)
-                            if t_ps and not df_vrp_h[df_vrp_h['TAG'] == t_ps].empty:
-                                df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
-                                fig_vrp.add_trace(go.Scatter(
-                                    x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
-                                    yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
-                                ))
+                    # Presión Salida (Eje Y2)
+                    if t_ps and not df_vrp_h[df_vrp_h['TAG'] == t_ps].empty:
+                        df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
+                        fig_vrp.add_trace(go.Scatter(
+                            x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
+                            yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
+                        ))
 
-                            fig_vrp.update_layout(
-                                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                                height=280, 
-                                margin=dict(l=50, r=50, t=20, b=10),
-                                hovermode="x unified",
-                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
-                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
-                                yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
-                                yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
-                            )
+                    fig_vrp.update_layout(
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                        height=280, 
+                        margin=dict(l=50, r=50, t=20, b=10),
+                        hovermode="x unified",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
+                        xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
+                        yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
+                        yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                    )
 
-                            # Mostrar el gráfico con ancho manual para evitar solapamiento con col_der
-                            st.plotly_chart(fig_vrp, use_container_width=False, width=620)
+                    st.plotly_chart(fig_vrp, use_container_width=False, width=620)
 
-                        else:
-                            st.info(f"Sin datos históricos para {sel_vrp}.")
-                    except Exception as e:
-                        st.error(f"Error en Gráfico VRP: {e}")            
-            
+                else:
+                    st.info(f"Sin datos para {sel_vrp} en este periodo.")
+            except Exception as e:
+                st.error(f"Error en Gráfico VRP: {e}")
 
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
