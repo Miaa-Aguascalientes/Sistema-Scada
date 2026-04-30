@@ -1303,7 +1303,7 @@ if sector_seleccionado:
                         <style>
                         /* Buscamos el contenedor de la columna izquierda y reducimos el espacio entre elementos */
                        [data-testid="stVerticalBlock"] > div:has(div[data-testid="stPlotlyChart"]) {
-                       gap: 0rem !important;
+                       gap: -50rem !important;
                        }
                        </style>
                        """, unsafe_allow_html=True)
