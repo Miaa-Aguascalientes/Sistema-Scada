@@ -1346,7 +1346,7 @@ if sector_seleccionado:
                         yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
-                    st.plotly_chart(fig_vrp, use_container_width=True)
+                    st.plotly_chart(fig_vrp, use_container_width=500)
                     st.markdown('</div>', unsafe_allow_html=True)
                    
                 else:
