@@ -1019,13 +1019,6 @@ if sector_seleccionado:
             if "ultimo_clic_sv" not in st.session_state:
                 st.session_state.ultimo_clic_sv = None
             
-            #  Preparar el objeto mapa (No dibuja nada todavía)
-            m_sec = folium.Map(
-                location=[21.8820, -102.2800], 
-                zoom_start=12, 
-                tiles=None,
-                height=350 
-            )
 
             #  Configurar capas en el objeto m_sec
             folium.TileLayer(
