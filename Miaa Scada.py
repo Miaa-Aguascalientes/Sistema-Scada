@@ -1041,6 +1041,17 @@ if sector_seleccionado:
                 overlay=False, control=True
             ).add_to(m_sec)
 
+            # 1. Selector de VRP (Solo para este sector)
+            dict_vrp_all = cargar_vrp_desde_db()
+            dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
+            vrp_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
+    
+            sel_vrp = st.selectbox(
+                "🔍 Seleccionar Válvula Reguladora (VRP):", 
+                options=list(vrp_nombres.keys()) if vrp_nombres else ["Sin VRP registradas en este sector"],
+                label_visibility="visible"
+            )
+
             #  DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
                 try:
@@ -1102,7 +1113,6 @@ if sector_seleccionado:
 
             # --- Marcadores VRP en el Mapa (Dentro de col_izq) ---
             for v_id, v_info in dict_vrp.items():
-    # Consulta rápida al SCADA para el popup
                 tags_v = [v_info['tag_p_entrada'], v_info['tag_p_salida'], v_info['tag_caudal']]
                 res_v = cargar_datos_scada([t for t in tags_v if t])
     
