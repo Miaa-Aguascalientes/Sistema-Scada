@@ -1368,20 +1368,7 @@ if sector_seleccionado:
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
 
-       # 2. Lógica de Fechas (Mantenemos las variables accesibles para esta columna)
-    hoy = datetime.now().date()
-    if opcion_fecha == "Hoy": 
-        f_ini_h, f_fin_h = hoy, hoy
-    elif opcion_fecha == "Esta Semana": 
-        f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
-    elif opcion_fecha == "Últimos 14 días": 
-        f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
-    elif opcion_fecha == "Este Mes": 
-        f_ini_h, f_fin_h = hoy.replace(day=1), hoy
-    else:
-        # Usamos un key único para evitar conflictos con otros selectores de fecha
-        rango_vrp = st.date_input("Periodo Histórico:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_vrp")
-        f_ini_h, f_fin_h = rango_vrp if isinstance(rango_vrp, tuple) and len(rango_vrp)==2 else (hoy, hoy)
+
 
     # ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
     if vrp_nombres and sel_vrp in vrp_nombres:
@@ -1441,7 +1428,6 @@ if sector_seleccionado:
                             yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
                         ))
 
-                     
                     fig_vrp.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
                         height=280, 
@@ -1453,14 +1439,10 @@ if sector_seleccionado:
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
 
-                   
-
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
             except Exception as e:
                 st.error(f"Error en Gráfico VRP: {e}")                     
-
-   
 
     st.stop()
     
