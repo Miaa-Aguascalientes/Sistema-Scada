@@ -1376,7 +1376,7 @@ if sector_seleccionado:
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
 
-# 12. Gráfico Histórico de la VRP seleccionada
+# 7.12. Gráfico Histórico de la VRP seleccionada
     if vrp_nombres and sel_vrp in vrp_nombres:
         v_data = dict_vrp[vrp_nombres[sel_vrp]]
         tags_h_vrp = [t for t in [v_data['tag_p_entrada'], v_data['tag_p_salida'], v_data['tag_caudal']] if t]
@@ -1415,7 +1415,7 @@ if sector_seleccionado:
                     
                     fig_vrp.update_layout(
                         template="plotly_dark", 
-                        height=350, 
+                        height=200, 
                         margin=dict(l=10, r=10, t=20, b=10), 
                         paper_bgcolor='rgba(0,0,0,0)', 
                         plot_bgcolor='rgba(0,0,0,0)',
