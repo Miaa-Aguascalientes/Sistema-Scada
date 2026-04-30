@@ -1262,7 +1262,7 @@ if sector_seleccionado:
         rango_vrp = st.date_input("Periodo Histórico:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_vrp")
         f_ini_h, f_fin_h = rango_vrp if isinstance(rango_vrp, tuple) and len(rango_vrp)==2 else (hoy, hoy)
 
-    st.markdown('<div style="position: relative; margin-top: -80px; z-index: 999;">', unsafe_allow_html=True)       
+    st.markdown('<div style="position: relative; margin-top: 80px; z-index: 999;">', unsafe_allow_html=True)       
 
     # ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
     if vrp_nombres and sel_vrp in vrp_nombres:
