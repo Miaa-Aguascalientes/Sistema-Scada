@@ -1344,7 +1344,7 @@ if sector_seleccionado:
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
 
-                    st.plotly_chart(fig_vrp, use_container_width=True)
+                   st.plotly_chart(fig_vrp, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
