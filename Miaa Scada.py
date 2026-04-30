@@ -472,32 +472,6 @@ def cargar_puntos_criticos_desde_db():
     except Exception as e:
         return {}
 
-# 3.6. Funcion para optener las vrp's de la base de datos Diccionario_vrp
-@st.cache_data(ttl=5)
-def cargar_vrp_desde_db():
-    engine = get_mysql_telemetria_engine()
-    if not engine: return {}
-    try:
-        df = pd.read_sql("SELECT * FROM Diccionario_vrp", engine)
-        d_res = {}
-        for _, r in df.iterrows():
-            try:
-                raw_c = str(r['coord']).replace('(', '').replace(')', '').replace(' ', '').strip()
-                lat_s, lon_s = raw_c.split(',')
-                id_vrp = r.get('Serie', r.get('ID_VRP', 'ID'))
-                d_res[str(id_vrp)] = {
-                    "nombre": str(r.get('Nombre', 'VRP S/N')),
-                    "coord": [float(lat_s), float(lon_s)],
-                    "sector": str(r['Sector']).split('.')[0].strip(),
-                    "tag_p_entrada": r.get('Presion_1'), 
-                    "tag_p_salida": r.get('Presion_2'), 
-                    "tag_caudal": r.get('Caudal'),     
-                    "tag_consigna": r.get('Consigna')
-                }
-            except: continue
-        return d_res
-    except: return {}
-
 
 
 # 4. SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
@@ -950,8 +924,6 @@ if sector_seleccionado:
               margin-top: 0px !important;
               }}
 
-
-
              /* Reducir el padding de los gráficos de Plotly para aprovechar el ancho */
             .js-plotly-plot {{
             margin-bottom: 10px !important;
@@ -994,20 +966,15 @@ if sector_seleccionado:
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
         opciones_equipo = list(reg_nombres.keys())
-
-        # --- Obtener datos de VRP ---
-        dict_vrp_all = cargar_vrp_desde_db()
-        dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
-        vrp_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
-        
-        c_vacia, c_sel1, c_sel2, c_sel3 = st.columns([0.5, 2, 2, 2])
+        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
         with c_sel2:
-            sel_r = st.selectbox("Punto Control:", list(reg_nombres.keys()) if reg_nombres else ["Sin equipos"])
-        with c_sel3:
-            sel_vrp = st.selectbox("Seleccionar VRP:", list(vrp_nombres.keys()) if vrp_nombres else ["Sin VRP en sector"])
-
+            if not opciones_equipo:
+                sel_r = None
+                st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
+            else:
+                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
 
         # 7.4. Layout: Mapa e Histórico
         col_izq, col_der = st.columns([1.0, 1.0])
@@ -1042,8 +1009,6 @@ if sector_seleccionado:
                 tiles="CartoDB dark_matter", name="Vista Nocturna", attr="CartoDB", 
                 overlay=False, control=True
             ).add_to(m_sec)
-
-
 
             #  DIBUJAR EL SECTOR SELECCIONADO (GeoJSON)
             if datos_s and datos_s.get('geo'):
@@ -1102,27 +1067,6 @@ if sector_seleccionado:
                     location=r['coord'], 
                     icon=folium.Icon(color='cadetblue', icon='star', prefix='fa'), 
                     popup=folium.Popup(html_popup_reg, max_width=300)
-                ).add_to(m_sec)
-
-            # --- Marcadores VRP en el Mapa (Dentro de col_izq) ---
-            for v_id, v_info in dict_vrp.items():
-                tags_v = [v_info['tag_p_entrada'], v_info['tag_p_salida'], v_info['tag_caudal']]
-                res_v = cargar_datos_scada([t for t in tags_v if t])
-    
-                pe, _ = res_v.get(v_info['tag_p_entrada'], (0.0, "N/A"))
-                ps, _ = res_v.get(v_info['tag_p_salida'], (0.0, "N/A"))
-    
-                html_vrp = f"""
-                <div style="background:#050a10; color:white; padding:10px; border-radius:8px; border:1px solid #00ffcc; width:200px;">
-                    <b style="color:#00ffcc;">VRP: {v_info['nombre']}</b><hr>
-                    P. Entrada: <b>{pe:.2f} kg</b><br>
-                    P. Salida: <b>{ps:.2f} kg</b>
-                </div>
-                """
-                folium.Marker(
-                    location=v_info['coord'],
-                    icon=folium.Icon(color='green', icon='cog', prefix='fa'),
-                    popup=folium.Popup(html_vrp, max_width=250)
                 ).add_to(m_sec)
 
             # 7.7 Marcadores de Puntos Críticos
@@ -1226,7 +1170,7 @@ if sector_seleccionado:
                     ).add_to(m_sec)
                 except Exception:
                     pass 
-                    
+
             #  CONTROLES Y RENDERIZADO FINAL ---
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
             from folium.plugins import Fullscreen
@@ -1246,8 +1190,10 @@ if sector_seleccionado:
                 if st.session_state.get("ultimo_clic_sv") != nuevo_clic:
                     st.session_state.ultimo_clic_sv = nuevo_clic
                     st.rerun()
-
             
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
@@ -1259,7 +1205,6 @@ if sector_seleccionado:
             else:
                 rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_f")
                 f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
-
 
             # --- OBTENCIÓN DE DATOS REGISTRADOR (Punto de Control) ---
             # Verificamos que sel_r sea válido y exista en nuestro diccionario filtrado
@@ -1368,93 +1313,8 @@ if sector_seleccionado:
                     except Exception as e: 
                         st.error(f"Error en Puntos Críticos: {e}")
 
-
-
-# ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
-    if vrp_nombres and sel_vrp in vrp_nombres:
-        v_data = dict_vrp[vrp_nombres[sel_vrp]]
-        t_qe = v_data.get('tag_caudal')      
-        t_pe = v_data.get('tag_p_entrada')  
-        t_ps = v_data.get('tag_p_salida')   
-        
-        tags_h_vrp = [t for t in [t_qe, t_pe, t_ps] if t]
-        
-        if tags_h_vrp:
-            try:
-                engine_h = get_mysql_scada_engine()
-                tags_in_vrp = "', '".join(tags_h_vrp)
-                
-                q_vrp = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG 
-                    FROM vfitagnumhistory h 
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                    WHERE r.NAME IN ('{tags_in_vrp}') 
-                    AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
-                    ORDER BY h.FECHA ASC
-                """
-                df_vrp_h = pd.read_sql(q_vrp, engine_h)
-                
-                if not df_vrp_h.empty:
-                    # Título con márgenes ajustados
-                    st.markdown(f"""
-                    <h3 style='color:#00ffcc; font-size:16px; margin-top:-35px; margin-bottom:-10px; font-family:sans-serif;'>
-                        Histórico VRP: {sel_vrp}
-                    </h3>
-                    """, unsafe_allow_html=True)
-
-                    fig_vrp = go.Figure()
-
-                    # Caudal (Eje Y1)
-                    if t_qe:
-                        df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
-                        if not df_q.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
-                                line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
-                            ))
-
-                    # Presión Entrada (Eje Y2)
-                    if t_pe:
-                        df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
-                        if not df_pe.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
-                                yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
-                            ))
-
-                    # Presión Salida (Eje Y2)
-                    if t_ps:
-                        df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
-                        if not df_ps.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
-                                yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
-                            ))
-
-                    fig_vrp.update_layout(
-                        paper_bgcolor='black', plot_bgcolor='black', height=300, 
-                        margin=dict(l=50, r=50, t=50, b=10),
-                        hovermode="x unified",
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
-                        xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
-                        yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
-                        yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
-                    )
-
-                    # Corregido: st.plotly_chart ahora está dentro del bloque if not df_vrp_h.empty
-                    st.plotly_chart(fig_vrp, use_container_width=True)
-                
-                else:
-                    st.info(f"Sin datos para {sel_vrp} en este periodo.")
-
-            except Exception as e:
-                st.error(f"Error en Gráfico VRP: {e}")
-                
-
-          
-            st.plotly_chart(fig_vrp, use_container_width=False, width=500)
-          
-            
+    st.stop()
+    
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
     # 8.1. Contenedor del logo
