@@ -1247,7 +1247,7 @@ if sector_seleccionado:
                     st.session_state.ultimo_clic_sv = nuevo_clic
                     st.rerun()
 
-            st.markdown('</div>', unsafe_allow_html=True)
+            
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
         with col_der:
@@ -1444,6 +1444,7 @@ if sector_seleccionado:
             except Exception as e:
                 st.error(f"Error en Gráfico VRP: {e}")
 
+            st.markdown('</div>', unsafe_allow_html=True)
             
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 with st.sidebar:
