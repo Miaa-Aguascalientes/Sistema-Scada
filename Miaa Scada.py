@@ -1452,7 +1452,7 @@ if sector_seleccionado:
                 
 
           
-
+            st.plotly_chart(fig_vrp, use_container_width=False, width=500)
           
             
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
