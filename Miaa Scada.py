@@ -998,19 +998,15 @@ if sector_seleccionado:
         dict_vrp = {k: v for k, v in dict_vrp_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         vrp_nombres = {v['nombre']: k for k, v in dict_vrp.items()}
         
-        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00])
+        c_vacia, c_sel1, c_sel2 = st.columns([1.0, 150.00, 150.00, 2])
         with c_sel1:
             opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
+        with c_sel1:
+            opcion_fecha = st.selectbox("Rango:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2)
         with c_sel2:
-            if not opciones_equipo:
-                sel_r = None
-                st.selectbox("Equipo punto de control:", ["Sin equipos en este sector"], key="sel_reg_full", disabled=True)
-            else:
-                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
-
+            sel_r = st.selectbox("Punto Control:", list(reg_nombres.keys()) if reg_nombres else ["Sin equipos"])
         with c_sel3:
-                sel_vrp = st.selectbox("Seleccionar VRP:", list(vrp_nombres.keys()) if vrp_nombres else ["Sin VRP en sector"])
-
+            sel_vrp = st.selectbox("Seleccionar VRP:", list(vrp_nombres.keys()) if vrp_nombres else ["Sin VRP en sector"])
 
 
         # 7.4. Layout: Mapa e Histórico
