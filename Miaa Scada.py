@@ -1354,8 +1354,7 @@ if sector_seleccionado:
             except Exception as e:
                 st.error(f"Error en Gráfico VRP: {e}")
 
-            st.plotly_chart(fig_vrp, use_container_width=False, width=900)
-            st.markdown('</div>', unsafe_allow_html=True)
+
                 
             #  CONTROLES Y RENDERIZADO FINAL ---
             folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
