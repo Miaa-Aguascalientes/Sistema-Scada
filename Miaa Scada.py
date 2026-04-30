@@ -1279,127 +1279,92 @@ if sector_seleccionado:
         f_ini_h, f_fin_h = rango_vrp if isinstance(rango_vrp, tuple) and len(rango_vrp)==2 else (hoy, hoy)
 
 # -------------------------------------------------------------------------------------------------------------------------------------------
-    # 3. GRÁFICO HISTÓRICO VRP
-    # -------------------------------------------------------------------------------------------------------------------------------------------
-    if vrp_nombres and sel_vrp in vrp_nombres:
-        v_data = dict_vrp[vrp_nombres[sel_vrp]]
-        t_qe = v_data.get('tag_caudal')      
-        t_pe = v_data.get('tag_p_entrada')  
-        t_ps = v_data.get('tag_p_salida')   
-        
-        tags_h_vrp = [t for t in [t_qe, t_pe, t_ps] if t]
-        
-        if tags_h_vrp:
-            try:
-                engine_h = get_mysql_scada_engine()
-                tags_in_vrp = "', '".join(tags_h_vrp)
+            # 3. GRÁFICO HISTÓRICO VRP
+            # -------------------------------------------------------------------------------------------------------------------------------------------
+            if vrp_nombres and sel_vrp in vrp_nombres:
+                v_data = dict_vrp[vrp_nombres[sel_vrp]]
+                t_qe = v_data.get('tag_caudal')      
+                t_pe = v_data.get('tag_p_entrada')  
+                t_ps = v_data.get('tag_p_salida')   
                 
-                q_vrp = f"""
-                    SELECT h.FECHA, h.VALUE, r.NAME as TAG 
-                    FROM vfitagnumhistory h 
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                    WHERE r.NAME IN ('{tags_in_vrp}') 
-                    AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
-                    ORDER BY h.FECHA ASC
-                """
-                df_vrp_h = pd.read_sql(q_vrp, engine_h)
+                tags_h_vrp = [t for t in [t_qe, t_pe, t_ps] if t]
                 
-                if not df_vrp_h.empty:
-                    # Contenedor para aplicar márgenes CSS y agrupar elementos
-                    st.markdown('<div class="contenedor-grafico-vrp">', unsafe_allow_html=True)
+                if tags_h_vrp:
+                    try:
+                        engine_h = get_mysql_scada_engine()
+                        tags_in_vrp = "', '".join(tags_h_vrp)
+                        
+                        q_vrp = f"""
+                            SELECT h.FECHA, h.VALUE, r.NAME as TAG 
+                            FROM vfitagnumhistory h 
+                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                            WHERE r.NAME IN ('{tags_in_vrp}') 
+                            AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' 
+                            ORDER BY h.FECHA ASC
+                        """
+                        df_vrp_h = pd.read_sql(q_vrp, engine_h)
+                        
+                        if not df_vrp_h.empty:
+                            # Contenedor para aplicar márgenes CSS y agrupar elementos
+                            st.markdown('<div class="contenedor-grafico-vrp">', unsafe_allow_html=True)
+                            
+                            # Título estilizado
+                            st.markdown(f'<h3 class="titulo-vrp-ajustado">📊 Histórico VRP: {sel_vrp}</h3>', unsafe_allow_html=True)
+
+                            fig_vrp = go.Figure()
+
+                            # --- Trazo: Caudal (Eje Y1) ---
+                            if t_qe:
+                                df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
+                                if not df_q.empty:
+                                    fig_vrp.add_trace(go.Scatter(
+                                        x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
+                                        line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
+                                    ))
+
+                            # --- Trazo: Presión Entrada (Eje Y2) ---
+                            if t_pe:
+                                df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
+                                if not df_pe.empty:
+                                    fig_vrp.add_trace(go.Scatter(
+                                        x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
+                                        yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
+                                    ))
+
+                            # --- Trazo: Presión Salida (Eje Y2) ---
+                            if t_ps:
+                                df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
+                                if not df_ps.empty:
+                                    fig_vrp.add_trace(go.Scatter(
+                                        x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
+                                        yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
+                                    ))
+
+                            # Configuración estética del gráfico (SCADA Mode)
+                            fig_vrp.update_layout(
+                                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                                height=250, margin=dict(l=10, r=10, t=35, b=10),
+                                hovermode="x unified",
+                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color="white", size=9)),
+                                xaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', color="white"),
+                                yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
+                                yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
+                            )
+
+                            # Renderizado del gráfico y cierre de contenedor
+                            st.plotly_chart(fig_vrp, use_container_width=True)
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                        else:
+                            st.info(f"Sin datos históricos para {sel_vrp} en el rango seleccionado.")
                     
-                    # Título estilizado
-                    st.markdown(f'<h3 class="titulo-vrp-ajustado">📊 Histórico VRP: {sel_vrp}</h3>', unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error al generar gráfico histórico VRP: {e}")
 
-                    fig_vrp = go.Figure()
-
-                    # --- Trazo: Caudal (Eje Y1) ---
-                    if t_qe:
-                        df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
-                        if not df_q.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_q['FECHA'], 
-                                y=df_q['VALUE'], 
-                                name="Caudal (Lps)", 
-                                line=dict(color='#00ffff', width=2), 
-                                hovertemplate='%{y:.2f} Lps'
-                            ))
-
-                    # --- Trazo: Presión Entrada (Eje Y2) ---
-                    if t_pe:
-                        df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
-                        if not df_pe.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_pe['FECHA'], 
-                                y=df_pe['VALUE'], 
-                                name="P. Entrada", 
-                                yaxis="y2", 
-                                line=dict(color='#ff00ff', width=2), 
-                                hovertemplate='%{y:.2f} kg'
-                            ))
-
-                    # --- Trazo: Presión Salida (Eje Y2) ---
-                    if t_ps:
-                        df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
-                        if not df_ps.empty:
-                            fig_vrp.add_trace(go.Scatter(
-                                x=df_ps['FECHA'], 
-                                y=df_ps['VALUE'], 
-                                name="P. Salida", 
-                                yaxis="y2", 
-                                line=dict(color='#00ff00', width=2), 
-                                hovertemplate='%{y:.2f} kg'
-                            ))
-
-                    # Configuración estética del gráfico (SCADA Mode)
-                    fig_vrp.update_layout(
-                        paper_bgcolor='rgba(0,0,0,0)', 
-                        plot_bgcolor='rgba(0,0,0,0)', 
-                        height=250, 
-                        margin=dict(l=10, r=10, t=35, b=10),
-                        hovermode="x unified",
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="bottom", 
-                            y=1.02, 
-                            xanchor="left", 
-                            x=0, 
-                            font=dict(color="white", size=9)
-                        ),
-                        xaxis=dict(
-                            showgrid=True, 
-                            gridcolor='rgba(255, 255, 255, 0.05)', 
-                            color="white"
-                        ),
-                        yaxis=dict(
-                            title="Caudal (L/s)", 
-                            color="#00ffff", 
-                            showgrid=True, 
-                            gridcolor='rgba(255, 255, 255, 0.05)'
-                        ),
-                        yaxis2=dict(
-                            title="Presión (kg)", 
-                            side="right", 
-                            color="#ff00ff", 
-                            overlaying="y", 
-                            showgrid=False
-                        )
-                    )
-
-                    # Renderizado del gráfico y cierre de contenedor
-                    st.plotly_chart(fig_vrp, use_container_width=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                else:
-                    st.info(f"Sin datos históricos para {sel_vrp} en el rango seleccionado.")
-            
-            except Exception as e:
-                st.error(f"Error al generar gráfico histórico VRP: {e}")
-
-    # --- Controles finales del mapa (Fuera del bloque del gráfico) ---
-    folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
-    from folium.plugins import Fullscreen
-    Fullscreen(position='topleft').add_to(m_sec)
+            # --- Controles finales del mapa (Fuera del bloque del gráfico) ---
+            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+            from folium.plugins import Fullscreen
+            Fullscreen(position='topleft').add_to(m_sec)
            
 
 # 7.10. ----------------------------------------- Sección de Gráficos Históricos puntos de control -------------------------------------------------------------------------------------------------
