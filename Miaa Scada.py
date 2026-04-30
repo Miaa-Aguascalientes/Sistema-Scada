@@ -1337,7 +1337,7 @@ if sector_seleccionado:
 
                 
             #  CONTROLES Y RENDERIZADO FINAL ---
-            folium.LayerControl(position='topright', collapsed=False).add_to(m_sec)
+          
             from folium.plugins import Fullscreen
             Fullscreen(position='topleft').add_to(m_sec)
             
