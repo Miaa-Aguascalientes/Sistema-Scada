@@ -1370,7 +1370,7 @@ if sector_seleccionado:
 
 
 
-    # ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------- 3. GRÁFICO HISTÓRICO VRP ------------------------------------------------------------------------------------------------------------
     if vrp_nombres and sel_vrp in vrp_nombres:
         v_data = dict_vrp[vrp_nombres[sel_vrp]]
         t_qe = v_data.get('tag_caudal')      
@@ -1395,9 +1395,9 @@ if sector_seleccionado:
                 df_vrp_h = pd.read_sql(q_vrp, engine_h)
                 
                 if not df_vrp_h.empty:
-                    # Título con márgenes ajustados para pegarse al mapa
+                    # Título con márgenes ajustados
                     st.markdown(f"""
-                    <h3 style='color:#00ffcc; font-size:16px; margin-top:-35px; margin-bottom:-80px; font-family:sans-serif;'>
+                    <h3 style='color:#00ffcc; font-size:16px; margin-top:-35px; margin-bottom:-10px; font-family:sans-serif;'>
                         Histórico VRP: {sel_vrp}
                     </h3>
                     """, unsafe_allow_html=True)
@@ -1405,30 +1405,32 @@ if sector_seleccionado:
                     fig_vrp = go.Figure()
 
                     # Caudal (Eje Y1)
-                    if t_qe and not df_vrp_h[df_vrp_h['TAG'] == t_qe].empty:
+                    if t_qe:
                         df_q = df_vrp_h[df_vrp_h['TAG'] == t_qe]
-                        fig_vrp.add_trace(go.Scatter(
-                            x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
-                            line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
-                        ))
+                        if not df_q.empty:
+                            fig_vrp.add_trace(go.Scatter(
+                                x=df_q['FECHA'], y=df_q['VALUE'], name="Caudal (Lps)", 
+                                line=dict(color='#00ffff', width=2), hovertemplate='%{y:.2f} Lps'
+                            ))
 
                     # Presión Entrada (Eje Y2)
-                    if t_pe and not df_vrp_h[df_vrp_h['TAG'] == t_pe].empty:
+                    if t_pe:
                         df_pe = df_vrp_h[df_vrp_h['TAG'] == t_pe]
-                        fig_vrp.add_trace(go.Scatter(
-                            x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
-                            yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
-                        ))
+                        if not df_pe.empty:
+                            fig_vrp.add_trace(go.Scatter(
+                                x=df_pe['FECHA'], y=df_pe['VALUE'], name="P. Entrada", 
+                                yaxis="y2", line=dict(color='#ff00ff', width=2), hovertemplate='%{y:.2f} kg'
+                            ))
 
                     # Presión Salida (Eje Y2)
-                    if t_ps and not df_vrp_h[df_vrp_h['TAG'] == t_ps].empty:
+                    if t_ps:
                         df_ps = df_vrp_h[df_vrp_h['TAG'] == t_ps]
-                        fig_vrp.add_trace(go.Scatter(
-                            x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
-                            yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
-                        ))
+                        if not df_ps.empty:
+                            fig_vrp.add_trace(go.Scatter(
+                                x=df_ps['FECHA'], y=df_ps['VALUE'], name="P. Salida", 
+                                yaxis="y2", line=dict(color='#00ff00', width=2), hovertemplate='%{y:.2f} kg'
+                            ))
 
-                     
                     fig_vrp.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black', height=300, 
                         margin=dict(l=50, r=50, t=50, b=10),
@@ -1438,14 +1440,15 @@ if sector_seleccionado:
                         yaxis=dict(title="Caudal (L/s)", color="#00ffff", showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)'),
                         yaxis2=dict(title="Presión (kg)", side="right", color="#ff00ff", overlaying="y", showgrid=False)
                     )
-                        st.plotly_chart(fig_vrp, use_container_width=False, width=500)
-                        st.markdown('</div>', unsafe_allow_html=True)
-                   
+
+                    # Corregido: st.plotly_chart ahora está dentro del bloque if not df_vrp_h.empty
+                    st.plotly_chart(fig_vrp, use_container_width=True)
+                
                 else:
                     st.info(f"Sin datos para {sel_vrp} en este periodo.")
+
             except Exception as e:
                 st.error(f"Error en Gráfico VRP: {e}")
-
                 
 
           
