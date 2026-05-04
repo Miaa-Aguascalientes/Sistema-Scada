@@ -1750,9 +1750,8 @@ for id_p, info in mapa_pozos_dict.items():
             else:
                 folium.CircleMarker(location=info['coord'], radius=4, color=info['color_final'], fill=True, fill_color=info['color_final'], fill_opacity=1, popup=folium.Popup(html_popup, max_width=450)).add_to(m)
 
-        except Exception as e:
-            print(f"Error en pozo {id_p}: {e}")
-            continue
+
+            except: continue
 
 
             
