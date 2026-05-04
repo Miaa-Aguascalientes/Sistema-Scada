@@ -1696,8 +1696,11 @@ if sectores_data:
             v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
             a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-            # URL codificada para abrir en PESTAÑA NUEVA
-            url_pozo_graf = f"?graficar_pozo={id_p}&nombre={urllib.parse.quote(id_p)}"
+            # SOLUCIÓN AL LOGIN: Incluimos access=granted y el rol actual en la URL
+            rol_actual = st.session_state.get('rol', 'usuario')
+            nombre_codificado = urllib.parse.quote(id_p)
+            
+            url_pozo_graf = f"?graficar_pozo={id_p}&nombre={nombre_codificado}&access=granted&role={rol_actual}"
 
             html_popup = f"""
                 <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
@@ -1762,21 +1765,11 @@ if sectores_data:
                                 <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
                             </tr>
                         </table>
-                        
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>▶️ Arranque: <b>{h_arr_fmt}</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_arr}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 8px;">
-                            <span>⏹️ Paro: <b>{h_par_fmt}</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
-                        </div>
                     </div>
 
-                    <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
+                    <div style="border-top: 1px solid #333; padding-top: 10px;">
                         <a href="{url_pozo_graf}" target="_blank" style="text-decoration: none;">
-                            <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);">
+                            <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px;">
                                 📊 VER ANÁLISIS HISTÓRICO
                             </div>
                         </a>
@@ -1784,7 +1777,6 @@ if sectores_data:
                 </div>
                 """
 
-            # Renderizado del marcador en el mapa
             folium.Marker(
                 location=info['coord'],
                 icon=folium.DivIcon(
