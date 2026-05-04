@@ -604,6 +604,7 @@ if tag_a_graficar:
 
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
+import pandas as pd
 
 params = st.query_params
 
@@ -626,25 +627,41 @@ if "graficar_pozo" in params:
         opcion_fecha = st.selectbox(
             "Rango de tiempo:", 
             ["Hoy", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
-            index=2, key="fecha_pozo_v5"
+            index=1, # <--- CAMBIO: Ahora selecciona 'Últimos 7 días' por defecto
+            key="fecha_pozo_v6"
         )
     with col_f2:
         tipo_analisis = st.radio("Tipo de Análisis:", ["Hidráulico (Q/P)", "Eléctrico (V/A)"], horizontal=True)
 
-    # Lógica de fechas
+    # --- LÓGICA DE FECHAS CORREGIDA ---
     hoy_dt = datetime.now()
     f_fin = hoy_dt
-    if opcion_fecha == "Hoy": f_ini = hoy_dt.replace(hour=0, minute=0, second=0)
-    elif opcion_fecha == "Últimos 7 días": f_ini = hoy_dt - timedelta(days=7)
-    elif opcion_fecha == "Últimos 14 días": f_ini = hoy_dt - timedelta(days=14)
-    elif opcion_fecha == "Este Mes": f_ini = hoy_dt.replace(day=1, hour=0, minute=0)
-    elif opcion_fecha == "Últimos 6 meses": f_ini = hoy_dt - timedelta(days=180)
-    else: f_ini = hoy_dt - timedelta(days=7) # Default
-
-    # 5.2. CONSTRUCCIÓN DE LA CONFIGURACIÓN DE TAGS
-    # Formato: (tag_id_en_diccionario, etiqueta_grafico, es_eje_derecho, color)
-    config_visual = []
     
+    if opcion_fecha == "Hoy":
+        f_ini = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif opcion_fecha == "Últimos 7 días":
+        f_ini = hoy_dt - timedelta(days=7)
+    elif opcion_fecha == "Últimos 14 días":
+        f_ini = hoy_dt - timedelta(days=14)
+    elif opcion_fecha == "Este Mes":
+        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif opcion_fecha == "Último Mes":
+        # Lógica para obtener el mes calendario anterior completo
+        primero_este_mes = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        f_fin = primero_este_mes - timedelta(seconds=1) # Último segundo del mes pasado
+        f_ini = (primero_este_mes - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0) # Primero del mes pasado
+    elif opcion_fecha == "Últimos 6 meses":
+        f_ini = hoy_dt - timedelta(days=180)
+    else: # Personalizado
+        rango = st.date_input("Periodo:", value=(hoy_dt.date() - timedelta(days=7), hoy_dt.date()))
+        if isinstance(rango, tuple) and len(rango) == 2:
+            f_ini = datetime.combine(rango[0], datetime.min.time())
+            f_fin = datetime.combine(rango[1], datetime.max.time())
+        else:
+            f_ini, f_fin = hoy_dt, hoy_dt
+
+    # 5.2. CONFIGURACIÓN DE TAGS (Igual a la lógica anterior)
+    config_visual = []
     if tipo_analisis == "Hidráulico (Q/P)":
         config_visual = [
             ('caudal', "Caudal (Lps)", False, '#00d4ff'), 
@@ -653,17 +670,16 @@ if "graficar_pozo" in params:
         titulo_izq, titulo_der = "Caudal (Lps)", "Presión (Kg/cm²)"
     else:
         for i, t in enumerate(pozo_info.get('voltajes_l', [])):
-            config_visual.append((t, f"V L{i+1}", True, '#00d4ff'))
+            if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", True, '#00d4ff'))
         for i, t in enumerate(pozo_info.get('amperajes_l', [])):
-            config_visual.append((t, f"Amp L{i+1}", True, '#ff8000'))
+            if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", True, '#ff8000'))
         titulo_izq, titulo_der = "", "Parámetros Eléctricos"
 
-    # --- RESOLVER TAGS REALES ---
+    # 5.3. EJECUCIÓN DE CONSULTA
     tags_finales = []
     for item in config_visual:
-        tag_key_or_name, label, side, color = item
-        # Si la llave existe en pozo_info (caudal, presion), sacamos el valor. Si no, usamos el nombre directo.
-        real_tag = pozo_info.get(tag_key_or_name, tag_key_or_name)
+        tag_key, label, side, color = item
+        real_tag = pozo_info.get(tag_key, tag_key)
         if real_tag and real_tag != 'N/A':
             tags_finales.append({'tag': real_tag, 'label': label, 'side': side, 'color': color})
 
@@ -684,38 +700,26 @@ if "graficar_pozo" in params:
             
             if not df.empty:
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
-                
                 for t_info in tags_finales:
                     df_tag = df[df['TagName'] == t_info['tag']]
                     if not df_tag.empty:
                         fig.add_trace(
-                            go.Scatter(
-                                x=df_tag['FECHA'], 
-                                y=df_tag['VALUE'], 
-                                name=t_info['label'],
-                                line=dict(color=t_info['color'], width=2, 
-                                          dash='solid' if "Amp" not in t_info['label'] else 'dot')
-                            ),
+                            go.Scatter(x=df_tag['FECHA'], y=df_tag['VALUE'], name=t_info['label'],
+                                       line=dict(color=t_info['color'], width=2, 
+                                                 dash='solid' if "Amp" not in t_info['label'] else 'dot')),
                             secondary_y=t_info['side']
                         )
-
-                fig.update_layout(
-                    template="plotly_dark", hovermode="x unified",
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    legend=dict(orientation="h", y=1.1)
-                )
+                fig.update_layout(template="plotly_dark", hovermode="x unified",
+                                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                                 legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"))
                 fig.update_yaxes(title_text=titulo_izq, secondary_y=False)
                 fig.update_yaxes(title_text=f"<b>{titulo_der}</b>", secondary_y=True, gridcolor='#333')
-                
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning(f"No se encontraron datos en SCADA para los tags: {lista_tags_sql}")
-                
+                st.warning(f"Sin datos del {f_ini.strftime('%d/%m %H:%M')} al {f_fin.strftime('%d/%m %H:%M')}")
         except Exception as e:
-            st.error(f"Error técnico: {e}")
-    else:
-        st.info("Este pozo no tiene configurados los sensores para este análisis.")
-
+            st.error(f"Error: {e}")
+    
     st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
