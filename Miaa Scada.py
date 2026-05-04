@@ -602,42 +602,31 @@ if tag_a_graficar:
 
 # 4.6. SECCION -------------------------------------------------------------------------------- 5. GRAFICAR LOS POZOS --------------------------------------------------------------------
 
-# Capturamos parámetros de la URL
 params = st.query_params
 
 if "graficar_pozo" in params:
     id_pozo_graf = params["graficar_pozo"]
     nombre_pozo = params.get("nombre", id_pozo_graf)
     
-    # --- CARGA SEGURA DEL DICCIONARIO ---
-    # Verificamos si la función ya fue definida antes de llamarla
+    # 1. CARGA SEGURA DEL DICCIONARIO
     if 'cargar_mapa_pozos_desde_db' in globals():
         try:
             mapa_pozos_dict = cargar_mapa_pozos_desde_db()
         except Exception as e:
-            st.error(f"❌ Error al ejecutar la carga de datos: {e}")
+            st.error(f"❌ Error al cargar configuración: {e}")
             st.stop()
     else:
-        st.error("❌ ERROR DE ORDEN: La función 'cargar_mapa_pozos_desde_db' debe estar escrita ARRIBA de este bloque en tu archivo .py")
+        st.error("❌ Error de estructura: La función cargar_mapa_pozos_desde_db no es accesible.")
         st.stop()
 
-    # Estilo visual HUD
-    st.markdown("""
-        <style>
-            .stApp { background-color: #050a10; }
-            h1 { color: #00d4ff !important; text-shadow: 0px 0px 10px #00d4ff; }
-        </style>
-    """, unsafe_allow_html=True)
-
+    st.markdown("""<style>.stApp { background-color: #050a10; } h1 { color: #00d4ff !important; }</style>""", unsafe_allow_html=True)
     st.title(f"📈 Análisis Histórico: {nombre_pozo}")
     
-    # Selectores
     col1, col2 = st.columns([1, 2])
     with col1:
         periodo = st.selectbox("Seleccionar Periodo", ["Hoy", "Últimos 3 días", "Últimos 7 días"], index=1)
         tipo_analisis = st.radio("Variable", ["Hidráulico (Q/P)", "Eléctrico (V/A)"])
 
-    # Lógica de tiempo
     ahora = datetime.now()
     if periodo == "Hoy":
         fecha_inicio = ahora.replace(hour=0, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
@@ -645,10 +634,8 @@ if "graficar_pozo" in params:
         fecha_inicio = (ahora - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')
     else:
         fecha_inicio = (ahora - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-    
     fecha_fin = ahora.strftime('%Y-%m-%d %H:%M:%S')
 
-    # Obtener tags del pozo
     pozo_info = mapa_pozos_dict.get(id_pozo_graf)
     
     if pozo_info:
@@ -656,7 +643,7 @@ if "graficar_pozo" in params:
         nombres_trazas = []
         
         if tipo_analisis == "Hidráulico (Q/P)":
-            for k, n in [('caudal', "Caudal (Lps)"), ('presion', "Presión (Kg/cm²)"), ('nivel_tanque', "Nivel Tanque")]:
+            for k, n in [('caudal', "Caudal (Lps)"), ('presion', "Presión (Kg/cm²)")]:
                 t = pozo_info.get(k)
                 if t and t != 'N/A':
                     tags_validos.append(t)
@@ -673,8 +660,20 @@ if "graficar_pozo" in params:
 
         if tags_validos:
             try:
-                engine_h = create_engine(f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}")
-                q_sql = f"SELECT TagName, VariableValue, Timestamp FROM vfitagnumhistory WHERE TagName IN ('{ "','".join(tags_validos) }') AND Timestamp BETWEEN '{fecha_inicio}' AND '{fecha_fin}' ORDER BY Timestamp ASC"
+                # --- CORRECCIÓN CRÍTICA AQUÍ ---
+                # Usamos los secretos de mysql_scada que ya tienes en st.secrets
+                c = st.secrets["mysql_scada"]
+                pwd = urllib.parse.quote_plus(c["password"])
+                engine_h = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
+                
+                tags_str = "', '".join(tags_validos)
+                q_sql = f"""
+                    SELECT TagName, VariableValue, Timestamp 
+                    FROM vfitagnumhistory 
+                    WHERE TagName IN ('{tags_str}') 
+                    AND Timestamp BETWEEN '{fecha_inicio}' AND '{fecha_fin}' 
+                    ORDER BY Timestamp ASC
+                """
                 df = pd.read_sql(q_sql, engine_h)
                 
                 if not df.empty:
@@ -690,11 +689,14 @@ if "graficar_pozo" in params:
                     fig.update_layout(template="plotly_dark", height=600, hovermode="x unified", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("No hay datos para este periodo.")
+                    st.warning("No hay datos históricos para el rango seleccionado.")
             except Exception as e:
-                st.error(f"Error SQL: {e}")
+                st.error(f"Error de conexión SQL: {e}")
+        else:
+            st.warning("Este pozo no tiene tags configurados para esta variable.")
     else:
-        st.error("Pozo no encontrado.")
+        st.error(f"No se encontró información para el pozo: {id_pozo_graf}")
+    
     st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
