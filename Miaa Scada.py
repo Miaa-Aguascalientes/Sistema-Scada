@@ -595,6 +595,114 @@ if tag_a_graficar:
         st.error(f"Error en la consulta: {e}")
     
     st.stop()
+
+# 4.6. SECCION -------------------------------------------------------------------------------- 5. GRAFICAR LOS POZOS --------------------------------------------------------------------
+
+params = st.query_params
+if "graficar_pozo" in params:
+    id_pozo_graf = params["graficar_pozo"]
+    nombre_pozo = params.get("nombre", id_pozo_graf)
+    
+    # Estilo de fondo para la sección de gráficos
+    st.markdown("""
+        <style>
+            .stApp { background-color: #050a10; }
+            .stSelectbox label, .stRadio label { color: #00d4ff !important; font-weight: bold; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.title(f"📈 Análisis Histórico: {nombre_pozo}")
+    
+    if st.button("⬅️ VOLVER AL MONITOR PRINCIPAL"):
+        st.query_params.clear()
+        st.rerun()
+
+    # 5.1. Configuración de parámetros
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        periodo = st.selectbox("Seleccionar Periodo", ["Hoy", "Últimos 3 días", "Últimos 7 días"], index=1)
+        tipo_analisis = st.radio("Tipo de Análisis", ["Hidráulico (Q/P)", "Eléctrico (V/A)"])
+
+    # Lógica de tiempo
+    ahora = datetime.now()
+    if periodo == "Hoy":
+        fecha_inicio = ahora.replace(hour=0, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
+    elif periodo == "Últimos 3 días":
+        fecha_inicio = (ahora - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        fecha_inicio = (ahora - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    
+    fecha_fin = ahora.strftime('%Y-%m-%d %H:%M:%S')
+
+    # 5.2. Identificación de Tags
+    pozo_data = mapa_pozos_dict.get(id_pozo_graf)
+    
+    if pozo_data:
+        tags_a_consultar = []
+        nombres_trazas = []
+        
+        if tipo_analisis == "Hidráulico (Q/P)":
+            tags_a_consultar = [pozo_data['caudal'], pozo_data['presion']]
+            nombres_trazas = ["Caudal (Lps)", "Presión (Kg/cm²)"]
+        else:
+            # Combinar voltajes y amperajes de las listas del diccionario
+            tags_a_consultar = pozo_data['voltajes_l'] + pozo_data['amperajes_l']
+            nombres_trazas = ["Voltaje L1", "Voltaje L2", "Voltaje L3", "Amp L1", "Amp L2", "Amp L3"]
+
+        # 5.3. Consulta a Base de Datos
+        try:
+            conn = create_engine(f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}")
+            
+            # Construir consulta para múltiples tags
+            tags_str = "', '".join(tags_a_consultar)
+            query = f"""
+                SELECT TagName, VariableValue, Timestamp 
+                FROM vfitagnumhistory 
+                WHERE TagName IN ('{tags_str}') 
+                AND Timestamp BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
+                ORDER BY Timestamp ASC
+            """
+            df_hist = pd.read_sql(query, conn)
+            
+            if not df_hist.empty:
+                df_hist['Timestamp'] = pd.to_datetime(df_hist['Timestamp'])
+                
+                # 5.4. Creación del Gráfico con Plotly
+                fig = go.Figure()
+                
+                for tag, nombre in zip(tags_a_consultar, nombres_trazas):
+                    df_tag = df_hist[df_hist['TagName'] == tag]
+                    if not df_tag.empty:
+                        fig.add_trace(go.Scatter(
+                            x=df_tag['Timestamp'], 
+                            y=df_tag['VariableValue'],
+                            name=nombre,
+                            mode='lines',
+                            line=dict(width=2),
+                            hovertemplate='%{y:.2f}'
+                        ))
+
+                fig.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(showgrid=True, gridcolor='#1f4068', title="Fecha/Hora"),
+                    yaxis=dict(showgrid=True, gridcolor='#1f4068', title="Valor Medido"),
+                    hovermode="x unified",
+                    height=600,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("No se encontraron datos históricos en el periodo seleccionado.")
+                
+        except Exception as e:
+            st.error(f"Error al conectar con el histórico: {e}")
+    else:
+        st.error("Pozo no encontrado en el diccionario de configuración.")
+
+    st.stop() # Bloquea el resto de la app para mostrar solo el gráfico
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
@@ -1588,12 +1696,16 @@ if sectores_data:
             v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
             a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
+            # URL para la nueva sección de gráficos de pozos
+            url_pozo_graf = f"?graficar_pozo={id_p}&nombre={urllib.parse.quote(id_p)}"
+
             html_popup = f"""
                 <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
                         <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
                         <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
                     </div>
+                    
                     <div style="margin-bottom: 12px;">
                         <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
                         <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
@@ -1605,25 +1717,27 @@ if sectores_data:
                             <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
                         </div>
                     </div>
+
                     <div style="margin-bottom: 12px;">
                         <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
                         <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
+                            <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
+                        </div>
                     </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
-                    </div>
-                    <div style="display: flex; align-items: baseline; font-size: 11px;">
-                        <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
-                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
-                    </div>
-                    </div>
+
                     <div style="margin-bottom: 12px;">
                         <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
                         <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
@@ -1648,15 +1762,24 @@ if sectores_data:
                                 <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
                             </tr>
                         </table>
+                        
                         <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
                         <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
                             <span>▶️ Arranque: <b>{h_arr_fmt}</b></span>
                             <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_arr}</span>
                         </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 8px;">
                             <span>⏹️ Paro: <b>{h_par_fmt}</b></span>
                             <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
                         </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
+                        <a href="{url_pozo_graf}" target="_self" style="text-decoration: none;">
+                            <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);">
+                                📊 VER ANÁLISIS HISTÓRICO
+                            </div>
+                        </a>
                     </div>
                 </div>
                 """
