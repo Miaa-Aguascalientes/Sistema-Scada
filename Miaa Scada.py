@@ -1624,25 +1624,7 @@ for id_p, info in mapa_pozos_dict.items():
             v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
             a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-            # --- GENERACIÓN DEL GRÁFICO (Modo Seguro con try) ---
-            chart_html = ""
-            try:
-                fig = go.Figure()
-                fig.add_trace(go.Bar(x=['Q', 'P'], y=[q, p], marker_color='#00d4ff', yaxis='y1'))
-                fig.add_trace(go.Bar(x=['A1', 'A2', 'A3'], y=[a[0][0], a[1][0], a[2][0]], marker_color='#ccff00', yaxis='y1'))
-                fig.add_trace(go.Scatter(x=['L1', 'L2', 'L3'], y=[v[0][0], v[1][0], v[2][0]], line=dict(color='#ff00ff', width=2), yaxis='y2'))
 
-                fig.update_layout(
-                    template="plotly_dark", height=140, margin=dict(l=5, r=5, t=5, b=5),
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False, font=dict(size=8),
-                    yaxis=dict(showgrid=False, zeroline=False),
-                    yaxis2=dict(overlaying='y', side='right', showgrid=False, range=[0, 500])
-                )
-                # Usamos to_html con configuración mínima para evitar conflictos de JS
-                chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn', config={'displayModeBar': False})
-            except:
-                chart_html = "<p style='color:gray; font-size:10px;'>Gráfico no disponible</p>"
 
             # --- POPUP HTML (Estructura Original) ---
             html_popup = f"""
@@ -1745,10 +1727,7 @@ for id_p, info in mapa_pozos_dict.items():
                     popup=folium.Popup(html_popup, max_width=450)
                 ).add_to(m)
                 
-        except Exception as e:
-            # Si un pozo falla, imprimimos el error en consola pero NO detenemos el mapa
-            print(f"Error renderizando pozo {id_p}: {e}")
-            continue
+
 
             
 # 9.7. RENDERIZADO DE TANQUES EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------
