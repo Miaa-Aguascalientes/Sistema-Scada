@@ -1605,153 +1605,144 @@ if sectores_data:
 
 # 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------------
 for id_p, info in mapa_pozos_dict.items():
-    if ver_pozos:
-        try:
-            d = lambda tag: data_scada.get(tag, (0, "N/A"))
-            is_st = (info['status_label'] == 'SIN TELEMETRÍA')
-            
-            # --- 1. TUS DATOS ACTUALES (ESTRUCTURA ORIGINAL) ---
-            q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
-            p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
-            sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
-            dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
-            tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
-            col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
-            h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
-            h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
-            h_arr_fmt = formato_hora(h_arr_val)
-            h_par_fmt = formato_hora(h_par_val)
-            v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
-            a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
+    if not ver_pozos:
+        continue
+        
+    # Usamos un try global por pozo para que si uno falla, el mapa NO se corte
+    try:
+        d = lambda tag: data_scada.get(tag, (0, "N/A"))
+        is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+        
+        # --- DATOS ACTUALES ---
+        q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
+        p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+        sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
+        dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
+        tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
+        col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
+        h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
+        h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
+        h_arr_fmt = formato_hora(h_arr_val)
+        h_par_fmt = formato_hora(h_par_val)
+        v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
+        a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-            # --- 2. CONSULTA DE HISTÓRICO (7 DÍAS) ---
-            img_html = ""
-            if not is_st:
-                try:
-                    fecha_ini = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-                    # Usando tus tablas reales: vfitagnumhistory y VfiTagRef
-                    query_h = f"""
-                        SELECT h.FECHA, h.VALUE 
-                        FROM vfitagnumhistory h
-                        JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                        WHERE r.TAGNAME = '{info['caudal']}' 
-                        AND h.FECHA >= '{fecha_ini}'
-                        ORDER BY h.FECHA ASC
-                    """
-                    df_h = pd.read_sql(query_h, engine)
+        # --- CONSULTA DE HISTÓRICO (7 DÍAS) ---
+        img_html = ""
+        # Solo intentamos buscar historial si NO es "Sin Telemetría" y tenemos el TAG
+        if not is_st and info['caudal']:
+            try:
+                # Calculamos fechas
+                fecha_fin = datetime.now()
+                fecha_ini = (fecha_fin - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                query_h = f"""
+                    SELECT h.FECHA, h.VALUE 
+                    FROM vfitagnumhistory h
+                    JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                    WHERE r.TAGNAME = '{info['caudal']}' 
+                    AND h.FECHA >= '{fecha_ini}'
+                    ORDER BY h.FECHA ASC
+                """
+                df_h = pd.read_sql(query_h, engine)
 
-                    if not df_h.empty:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=df_h['FECHA'], y=df_h['VALUE'],
-                            line=dict(color='#00d4ff', width=1.5),
-                            fill='tozeroy', fillcolor='rgba(0, 212, 255, 0.1)'
-                        ))
-                        fig.update_layout(
-                            template="plotly_dark", height=100, width=320,
-                            margin=dict(l=0, r=0, t=0, b=0),
-                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                            xaxis=dict(showgrid=False, visible=False),
-                            yaxis=dict(showgrid=False, visible=False)
-                        )
-                        # Convertir a imagen para no saturar el mapa de JS
-                        img_bytes = fig.to_image(format="png", engine="kaleido")
-                        encoded = base64.b64encode(img_bytes).decode()
-                        img_html = f'<img src="data:image/png;base64,{encoded}" style="width:100%;">'
-                except:
-                    img_html = "<div style='color:gray; font-size:10px; text-align:center;'>Sin historial</div>"
-
-            # --- 3. POPUP (MANTENIENDO TU DISEÑO EXACTO) ---
-            html_popup = f"""
-                <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
-                        <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
-                        <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
-                    </div>
+                if not df_h.empty:
+                    # Limpieza básica para evitar errores de Plotly con Nulos
+                    df_h = df_h.dropna(subset=['VALUE'])
                     
-                    <div style="margin-bottom: 12px; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid #222;">
-                        <div style="font-size: 8px; color: #00d4ff; padding: 4px 0 0 8px; letter-spacing: 1px;">HISTÓRICO 7 DÍAS</div>
-                        {img_html}
-                    </div>
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=df_h['FECHA'], y=df_h['VALUE'],
+                        line=dict(color='#00d4ff', width=1.5),
+                        fill='tozeroy', fillcolor='rgba(0, 212, 255, 0.1)'
+                    ))
+                    fig.update_layout(
+                        template="plotly_dark", height=100, width=330,
+                        margin=dict(l=0, r=0, t=5, b=0),
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                        xaxis=dict(showgrid=False, visible=False),
+                        yaxis=dict(showgrid=False, visible=False)
+                    )
+                    # Imagen base64: Es la única forma de que carguen +200 pozos sin morir
+                    img_bytes = fig.to_image(format="png", engine="kaleido")
+                    encoded = base64.b64encode(img_bytes).decode()
+                    img_html = f'<img src="data:image/png;base64,{encoded}" style="width:100%; border-top: 1px solid #333; margin-top:10px;">'
+                else:
+                    img_html = "<div style='color:#555; font-size:9px; text-align:center; padding:10px;'>Sin datos en los últimos 7 días</div>"
+            except Exception as e:
+                img_html = f"<div style='color:#555; font-size:9px; text-align:center;'>Error de historial: {str(e)[:20]}</div>"
 
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
-                            <span>🚀 Presión: <b>{p:.2f} kg</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
-                        </div>
+        # --- POPUP HTML (GRÁFICO AL FINAL) ---
+        html_popup = f"""
+            <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
+                    <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
+                    <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>📉 Nivel Dinámico: <b>{dinam:.2f} m</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
-                            <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
-                        </div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
-                            <span>🏗️ Columna: <b>{col:.2f} m</b></span>
-                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
-                        <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
-                            <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
-                                <th style="padding: 4px;">Fase</th>
-                                <th style="padding: 4px;">Voltaje / Act.</th>
-                                <th style="padding: 4px;">Amp / Act.</th>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #222;">
-                                <td style="padding: 4px;">L1-L2</td>
-                                <td><b>{v[0][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px;">{v[0][1]}</span></td>
-                                <td><b>{a[0][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px;">{a[0][1]}</span></td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #222;">
-                                <td style="padding: 4px;">L2-L3</td>
-                                <td><b>{v[1][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px;">{v[1][1]}</span></td>
-                                <td><b>{a[1][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px;">{a[1][1]}</span></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 4px;">L1-L3</td>
-                                <td><b>{v[2][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px;">{v[2][1]}</span></td>
-                                <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px;">{a[2][1]}</span></td>
-                            </tr>
-                        </table>
-                        <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
-                        <div style="display: flex; align-items: baseline; font-size: 11px;">
-                            <span>▶️ Arr: <b>{h_arr_fmt}</b> | ⏹️ Paro: <b>{h_par_fmt}</b></span>
-                        </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <span>🚀 Presión: <b>{p:.2f} kg</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
                     </div>
                 </div>
-                """
 
-            # --- 4. DIBUJO EN MAPA (SIN CAMBIOS) ---
-            folium.Marker(
-                location=info['coord'],
-                icon=folium.DivIcon(
-                    icon_size=(150,36), icon_anchor=(-12, 10),
-                    html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]}; white-space: nowrap; text-shadow: 1px 1px #000; pointer-events: none;">{id_p}</div>'
-                )
-            ).add_to(m)
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
+                    <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                        <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
+                            <th>Fase</th><th>Voltaje</th><th>Amp</th>
+                        </tr>
+                        <tr>
+                            <td>L1-L2</td>
+                            <td><b>{v[0][0]:.1f}V</b> <small style="color:#FFFF00;">{v[0][1]}</small></td>
+                            <td><b>{a[0][0]:.1f}A</b> <small style="color:#FFFF00;">{a[0][1]}</small></td>
+                        </tr>
+                        <tr>
+                            <td>L2-L3</td>
+                            <td><b>{v[1][0]:.1f}V</b> <small style="color:#FFFF00;">{v[1][1]}</small></td>
+                            <td><b>{a[1][0]:.1f}A</b> <small style="color:#FFFF00;">{a[1][1]}</small></td>
+                        </tr>
+                    </table>
+                </div>
 
-            if info.get('blink'):
-                folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup, max_width=450)).add_to(m)
-            else:
-                folium.CircleMarker(location=info['coord'], radius=4, color=info['color_final'], fill=True, fill_color=info['color_final'], fill_opacity=1, popup=folium.Popup(html_popup, max_width=450)).add_to(m)
+                <div style="margin-bottom: 5px;">
+                    <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HORARIOS</div>
+                    <div style="font-size: 11px;">
+                        ▶️ Arr: <b>{h_arr_fmt}</b> ({f_h_arr}) | ⏹️ Paro: <b>{h_par_fmt}</b> ({f_h_par})
+                    </div>
+                </div>
 
+                <div style="background: #111; border-radius: 8px; overflow: hidden; margin-top:10px;">
+                    <div style="font-size: 8px; color: #00d4ff; padding: 5px 0 0 8px; letter-spacing: 1px;">TENDENCIA 7 DÍAS (CAUDAL)</div>
+                    {img_html}
+                </div>
+            </div>
+        """
 
-            except: continue
+        # --- DIBUJO EN MAPA ---
+        folium.Marker(
+            location=info['coord'],
+            icon=folium.DivIcon(
+                icon_size=(150,36), icon_anchor=(-12, 10),
+                html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]}; text-shadow: 1px 1px #000; pointer-events: none;">{id_p}</div>'
+            )
+        ).add_to(m)
+
+        if info.get('blink'):
+            folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup, max_width=450)).add_to(m)
+        else:
+            folium.CircleMarker(location=info['coord'], radius=4, color=info['color_final'], fill=True, fill_color=info['color_final'], fill_opacity=1, popup=folium.Popup(html_popup, max_width=450)).add_to(m)
+
+    except Exception as e:
+        # Esto imprime el error en la consola de GitHub Actions o local para saber por qué falló un pozo específico
+        print(f"CRÍTICO: Error en renderizado del pozo {id_p}: {e}")
+        continue
 
 
             
