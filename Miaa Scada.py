@@ -621,17 +621,20 @@ if "graficar_pozo" in params:
 
     st.title(f"📈 Análisis Integral: {nombre_pozo}")
     
-    # 5.1. FILTRO DE TIEMPO (Últimos 7 días por defecto)
-    opcion_fecha = st.selectbox(
-        "Rango de tiempo:", 
-        ["Hoy", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
-        index=1, 
-        key="fecha_pozo_v7"
-    )
+    # 5.1. FILTRO DE TIEMPO
+    col_f1, col_f2 = st.columns([2, 2])
+    with col_f1:
+        opcion_fecha = st.selectbox(
+            "Rango de tiempo:", 
+            ["Hoy", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
+            index=1, 
+            key="fecha_pozo_v8"
+        )
 
-    # Lógica de fechas (Corregida para el "Último Mes")
+    # --- LÓGICA DE FECHAS REFORZADA ---
     hoy_dt = datetime.now()
     f_fin = hoy_dt
+    
     if opcion_fecha == "Hoy":
         f_ini = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     elif opcion_fecha == "Últimos 7 días":
@@ -639,31 +642,41 @@ if "graficar_pozo" in params:
     elif opcion_fecha == "Últimos 14 días":
         f_ini = hoy_dt - timedelta(days=14)
     elif opcion_fecha == "Este Mes":
-        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0)
     elif opcion_fecha == "Último Mes":
-        primero_este_mes = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        primero_este_mes = hoy_dt.replace(day=1, hour=0, minute=0, second=0)
         f_fin = primero_este_mes - timedelta(seconds=1)
         f_ini = (primero_este_mes - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0)
     elif opcion_fecha == "Últimos 6 meses":
         f_ini = hoy_dt - timedelta(days=180)
+    elif opcion_fecha == "Personalizado":
+        with col_f2:
+            rango = st.date_input("Selecciona el periodo:", 
+                                 value=(hoy_dt.date() - timedelta(days=7), hoy_dt.date()),
+                                 max_value=hoy_dt.date())
+        # Validación crítica para el selector personalizado
+        if isinstance(rango, (list, tuple)) and len(rango) == 2:
+            f_ini = datetime.combine(rango[0], datetime.min.time())
+            f_fin = datetime.combine(rango[1], datetime.max.time())
+        else:
+            # Mientras el usuario elige la segunda fecha, evitamos que el código truene
+            st.info("Selecciona la fecha de inicio y fin en el calendario.")
+            st.stop()
     else:
         f_ini = hoy_dt - timedelta(days=7)
 
-    # 5.2. CONFIGURACIÓN DE LA VISTA UNIFICADA
-    # Solo Caudal va a la izquierda (False), todo lo demás a la derecha (True)
-    config_visual = []
+    # 5.2. CONFIGURACIÓN DE VARIABLES
+    config_visual = [
+        ('caudal', "Caudal (Lps)", False, '#00d4ff'),
+        ('presion', "Presión (Kg/cm²)", True, '#00ff00')
+    ]
     
-    # Hidráulicos
-    config_visual.append(('caudal', "Caudal (Lps)", False, '#00d4ff'))
-    config_visual.append(('presion', "Presión (Kg/cm²)", True, '#00ff00'))
-    
-    # Eléctricos (Todos a la derecha)
     for i, t in enumerate(pozo_info.get('voltajes_l', [])):
-        if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", True, '#fffb00')) # Amarillo para Voltaje
+        if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", True, '#fffb00'))
     for i, t in enumerate(pozo_info.get('amperajes_l', [])):
-        if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", True, '#ff8000')) # Naranja para Amp
+        if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", True, '#ff8000'))
 
-    # 5.3. CONSULTA Y GRÁFICO
+    # 5.3. PROCESAMIENTO Y GRÁFICO
     tags_finales = []
     for item in config_visual:
         tag_key, label, side, color = item
@@ -692,38 +705,38 @@ if "graficar_pozo" in params:
                 for t_info in tags_finales:
                     df_tag = df[df['TagName'] == t_info['tag']]
                     if not df_tag.empty:
-                        # Estilo: Caudal y Presión sólidos, Voltaje sólido fino, Amperaje punteado
-                        estilo_linea = 'solid'
-                        ancho = 2
-                        if "Amp" in t_info['label']: 
-                            estilo_linea = 'dot'
-                        elif "V L" in t_info['label']:
-                            ancho = 1.5
+                        # Estilos diferenciados
+                        is_amp = "Amp" in t_info['label']
                         
                         fig.add_trace(
-                            go.Scatter(x=df_tag['FECHA'], y=df_tag['VALUE'], name=t_info['label'],
-                                       line=dict(color=t_info['color'], width=ancho, dash=estilo_linea),
-                                       mode='lines'),
+                            go.Scatter(
+                                x=df_tag['FECHA'], 
+                                y=df_tag['VALUE'], 
+                                name=t_info['label'],
+                                line=dict(color=t_info['color'], width=1.5 if is_amp else 2),
+                                mode='lines+markers' if is_amp else 'lines', # Amperajes con puntos
+                                marker=dict(size=4) if is_amp else None
+                            ),
                             secondary_y=t_info['side']
                         )
 
                 fig.update_layout(
                     template="plotly_dark",
                     hovermode="x unified",
-                    height=700, # Un poco más alto para ver todo bien
+                    height=700,
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center")
                 )
                 
                 fig.update_yaxes(title_text="<b>Caudal (Lps)</b>", secondary_y=False, color='#00d4ff')
-                fig.update_yaxes(title_text="<b>Presión / Eléctricos</b>", secondary_y=True, showgrid=True, gridcolor='#333')
+                fig.update_yaxes(title_text="<b>Presión / Parámetros Eléctricos</b>", secondary_y=True, gridcolor='#333')
                 
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("No se encontraron datos históricos en el periodo seleccionado.")
+                st.warning(f"Sin datos en el rango: {f_ini.strftime('%d/%m %H:%M')} - {f_fin.strftime('%d/%m %H:%M')}")
         except Exception as e:
-            st.error(f"Error técnico: {e}")
+            st.error(f"Error en consulta SQL: {e}")
     
     st.stop()
     
