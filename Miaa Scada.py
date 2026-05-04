@@ -605,20 +605,25 @@ if "graficar_pozo" in params:
     id_pozo_graf = params["graficar_pozo"]
     nombre_pozo = params.get("nombre", id_pozo_graf)
     
-    # 5.1. VERIFICACIÓN DE DATOS (IMPORTANTE PARA EVITAR EL NAMEERROR)
-    # Si el diccionario aún no existe en este punto, necesitamos cargarlo o usar session_state
-    if 'mapa_pozos_dict' not in globals() and 'mapa_pozos_dict' not in locals():
-        st.error("Error crítico: El diccionario de pozos no ha sido cargado. Mueve la definición de 'mapa_pozos_dict' arriba de esta sección.")
-        st.stop()
+    # --- SOLUCIÓN AL NAMEERROR: Forzamos la carga del diccionario si no existe ---
+    if 'mapa_pozos_dict' not in globals() or not mapa_pozos_dict:
+        try:
+            # Ejecutamos tu función para llenar el diccionario
+            mapa_pozos_dict = cargar_mapa_pozos_desde_db()
+        except NameError:
+            st.error("La función 'cargar_mapa_pozos_desde_db' no está accesible. Verifica que no esté dentro de otro bloque 'if' que impida su lectura.")
+            st.stop()
+
+    st.markdown(f"""
+        <style>
+            .stApp {{ background-color: #050a10; }}
+            h1 {{ color: #00d4ff !important; text-shadow: 2px 2px #000; }}
+        </style>
+    """, unsafe_allow_html=True)
 
     st.title(f"📈 Análisis Histórico: {nombre_pozo}")
     
-    # Botón para cerrar la pestaña (opcional, ya que abre en nueva)
-    if st.button("❌ CERRAR ANÁLISIS"):
-        st.write("Puedes cerrar esta pestaña del navegador.")
-        st.stop()
-
-    # 5.2. Configuración de parámetros
+    # 5.1. Configuración de parámetros
     col1, col2 = st.columns([1, 2])
     with col1:
         periodo = st.selectbox("Seleccionar Periodo", ["Hoy", "Últimos 3 días", "Últimos 7 días"], index=1)
@@ -635,7 +640,7 @@ if "graficar_pozo" in params:
     
     fecha_fin = ahora.strftime('%Y-%m-%d %H:%M:%S')
 
-    # Acceder al pozo desde el diccionario global
+    # Obtener datos del pozo desde el diccionario cargado
     pozo_data = mapa_pozos_dict.get(id_pozo_graf)
     
     if pozo_data:
@@ -643,18 +648,21 @@ if "graficar_pozo" in params:
         nombres_trazas = []
         
         if tipo_analisis == "Hidráulico (Q/P)":
-            tags_a_consultar = [pozo_data['caudal'], pozo_data['presion']]
+            tags_a_consultar = [pozo_data.get('caudal'), pozo_data.get('presion')]
             nombres_trazas = ["Caudal (Lps)", "Presión (Kg/cm²)"]
         else:
-            tags_a_consultar = pozo_data['voltajes_l'] + pozo_data['amperajes_l']
+            tags_a_consultar = pozo_data.get('voltajes_l', []) + pozo_data.get('amperajes_l', [])
             nombres_trazas = ["Voltaje L1", "Voltaje L2", "Voltaje L3", "Amp L1", "Amp L2", "Amp L3"]
 
-        # 5.3. Consulta a Base de Datos (Usa tu engine configurado arriba)
+        # 5.3. Consulta a Base de Datos
         try:
-            # Asegúrate de usar las variables DB_HOST, DB_USER, etc., definidas al inicio
+            # Usamos los datos de conexión que ya tienes definidos arriba
             conn = create_engine(f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}")
             
+            # Limpiar tags nulos
+            tags_a_consultar = [t for t in tags_a_consultar if t]
             tags_str = "', '".join(tags_a_consultar)
+            
             query = f"""
                 SELECT TagName, VariableValue, Timestamp 
                 FROM vfitagnumhistory 
@@ -668,23 +676,35 @@ if "graficar_pozo" in params:
                 df_hist['Timestamp'] = pd.to_datetime(df_hist['Timestamp'])
                 fig = go.Figure()
                 
-                for tag, nombre in zip(tags_a_consultar, nombres_trazas):
+                # Colores estilo HUD
+                colores = ['#00d4ff', '#ff00ff', '#00ff00', '#ffff00', '#ff8000', '#ff0000']
+                
+                for i, (tag, nombre) in enumerate(zip(tags_a_consultar, nombres_trazas)):
                     df_tag = df_hist[df_hist['TagName'] == tag]
                     if not df_tag.empty:
                         fig.add_trace(go.Scatter(
                             x=df_tag['Timestamp'], 
                             y=df_tag['VariableValue'],
                             name=nombre,
+                            line=dict(width=2, color=colores[i % len(colores)]),
                             mode='lines'
                         ))
 
-                fig.update_layout(template="plotly_dark", height=600, hovermode="x unified")
+                fig.update_layout(
+                    template="plotly_dark",
+                    height=600,
+                    hovermode="x unified",
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("No hay datos históricos para este periodo.")
+                st.warning("No se encontraron registros para estos tags en el periodo seleccionado.")
         except Exception as e:
-            st.error(f"Error en base de datos: {e}")
-    
+            st.error(f"Error al consultar el histórico: {e}")
+    else:
+        st.error(f"El pozo {id_pozo_graf} no se encontró en la base de datos de configuración.")
+
     st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
