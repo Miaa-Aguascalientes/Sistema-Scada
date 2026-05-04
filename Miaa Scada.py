@@ -17,8 +17,6 @@ from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
 from streamlit_folium import st_folium
-import base64
-import io
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -473,36 +471,6 @@ def cargar_puntos_criticos_desde_db():
         return d_res
     except Exception as e:
         return {}
-        
-# 3.6. Funcion para optener el frafico en el popup de los pozos
-def crear_grafico_popup(caudal, presion, voltajes, amperajes):
-    # voltajes y amperajes suelen ser listas/tuplas [L1, L2, L3]
-    fig = go.Figure()
-
-    # Añadir Caudal y Presión
-    fig.add_trace(go.Bar(x=['Caudal (lps)', 'Presión (kg)'], y=[caudal, presion], 
-                         name='Operación', marker_color='#00f2ff'))
-
-    # Añadir Voltajes (Eje Y2 para manejar la escala de cientos)
-    fig.add_trace(go.Scatter(x=['V1', 'V2', 'V3'], y=voltajes, 
-                             name='Voltaje (V)', mode='lines+markers', yaxis='y2', line=dict(color='#ff00ff')))
-
-    # Añadir Amperajes
-    fig.add_trace(go.Bar(x=['A1', 'A2', 'A3'], y=amperajes, 
-                         name='Amperaje (A)', marker_color='#7aff00'))
-
-    fig.update_layout(
-        template="plotly_dark",
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        margin=dict(l=10, r=10, t=30, b=10),
-        height=200,
-        showlegend=False,
-        yaxis=dict(title="Caudal/Amp/Pres"),
-        yaxis2=dict(title="Voltaje", overlaying='y', side='right'),
-        font=dict(size=10)
-    )
-    return fig        
 
 
 
@@ -627,69 +595,6 @@ if tag_a_graficar:
         st.error(f"Error en la consulta: {e}")
     
     st.stop()
-
-# 4.6. SECCION --------------------------------------------------- GRAFICAR LOS POZOS (HISTÓRICO 7 DÍAS) -----------------------
-tag_pozo = st.query_params.get("graficar_pozo", None)
-nombre_pozo = st.query_params.get("nombre", "Pozo")
-
-if tag_pozo:
-    st.title(f"📊 Histórico de Extracción: {nombre_pozo}")
-    
-    # Botón para volver al mapa
-    if st.button("⬅️ Volver al Mapa Principal"):
-        st.query_params.clear()
-        st.rerun()
-
-    try:
-        engine = get_mysql_scada_engine()
-        # Definimos los últimos 7 días por defecto
-        f_fin = datetime.datetime.now()
-        f_ini = f_fin - datetime.timedelta(days=7)
-        
-        query = f"""
-            SELECT h.FECHA, h.VALUE 
-            FROM vfitagnumhistory h
-            JOIN VfiTagRef r ON h.GATEID = r.GATEID
-            WHERE r.TAGNAME = '{tag_pozo}'
-            AND h.FECHA BETWEEN '{f_ini.strftime('%Y-%m-%d %H:%M:%S')}' AND '{f_fin.strftime('%Y-%m-%d %H:%M:%S')}'
-            ORDER BY h.FECHA ASC
-        """
-        
-        df_p = pd.read_sql(query, engine)
-
-        if not df_p.empty:
-            fig_p = go.Figure()
-            fig_p.add_trace(go.Scatter(
-                x=df_p['FECHA'], y=df_p['VALUE'],
-                fill='tozeroy',
-                fillcolor='rgba(0, 212, 255, 0.2)',
-                line=dict(color='#00d4ff', width=3),
-                name="Caudal (L/s)"
-            ))
-
-            fig_p.update_layout(
-                template="plotly_dark",
-                title=f"Tendencia de Caudal - Últimos 7 días",
-                xaxis_title="Tiempo",
-                yaxis_title="Litros por Segundo (L/s)",
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
-            )
-
-            st.plotly_chart(fig_p, use_container_width=True)
-            
-            # Métricas rápidas
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Máximo", f"{df_p['VALUE'].max():.2f} L/s")
-            c2.metric("Promedio", f"{df_p['VALUE'].mean():.2f} L/s")
-            c3.metric("Mínimo", f"{df_p['VALUE'].min():.2f} L/s")
-        else:
-            st.warning("No se encontraron datos históricos para este pozo en la última semana.")
-
-    except Exception as e:
-        st.error(f"Error al cargar histórico: {e}")
-    
-    st.stop() # Detiene el renderizado del resto de la app para mostrar solo el gráfico
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
@@ -1665,49 +1570,123 @@ if sectores_data:
 
     fg_sectores.add_to(m)
     
+# 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL  ---------------------------------------------------------------------------------------------
+    for id_p, info in mapa_pozos_dict.items():
+        if ver_pozos:  # Si el checkbox está activo, dibujamos todo
+            d = lambda tag: data_scada.get(tag, (0, "N/A"))
+            is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+            q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
+            p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+            sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
+            dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
+            tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
+            col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
+            h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
+            h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
+            h_arr_fmt = formato_hora(h_arr_val)
+            h_par_fmt = formato_hora(h_par_val)
+            v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
+            a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-# 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL -----------------------------------------------------------
-for id_p, info in mapa_pozos_dict.items():
-    if ver_pozos:
-        d = lambda tag: data_scada.get(tag, (0, "N/A"))
-        is_st = (info['status_label'] == 'SIN TELEMETRÍA')
-        
-        # Datos actuales
-        q, _ = d(info['caudal']) if not is_st else (0.0, "N/A")
-        p, _ = d(info['presion']) if not is_st else (0.0, "N/A")
-
-        # El botón redirige a la misma página pero activa la sección de gráficos
-        url_analisis = f"?graficar_pozo={info['caudal']}&nombre={id_p}"
-
-        html_popup = f"""
-            <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 280px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
-                <b style="color: #00d4ff; font-size: 14px;">POZO {id_p}</b><br>
-                <small style="color: {info['color_final']};">{info['status_label']}</small>
-                <hr style="border: 0.5px solid #333;">
-                <div style="font-size: 12px; margin-bottom: 10px;">
-                    💧 Caudal: <b>{q:.2f} L/s</b><br>
-                    🚀 Presión: <b>{p:.2f} kg</b>
-                </div>
-                <a href="{url_analisis}" target="_self" style="text-decoration: none;">
-                    <div style="background: #00d4ff; color: black; text-align: center; padding: 8px; border-radius: 5px; font-weight: bold; font-size: 11px;">
-                        📊 VER ANÁLISIS HISTÓRICO
+            html_popup = f"""
+                <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
+                        <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
+                        <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
                     </div>
-                </a>
-            </div>
-        """
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>🚀 Presión: <b>{p:.2f} kg</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>🔋 Nivel de Tanque:<b>{tanq:.2f} mts</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_t}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📉 Nivel Dinámico/Estatico: <b>{dinam:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_d}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_s}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <span>🏗️ Longitud de Columna: <b>{col:.2f} m</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_col}</span>
+                    </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
+                        <table style="width: 100%; font-size: 10px; border-collapse: collapse; margin-bottom: 8px;">
+                            <tr style="color: #00d4ff; border-bottom: 1px solid #333; text-align: left;">
+                                <th style="padding: 4px;">Fase</th>
+                                <th style="padding: 4px;">Voltaje / Act.</th>
+                                <th style="padding: 4px;">Amp / Act.</th>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #222;">
+                                <td style="padding: 6px 4px;">L1-L2</td>
+                                <td><b>{v[0][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[0][1]}</span></td>
+                                <td><b>{a[0][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[0][1]}</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #222;">
+                                <td style="padding: 6px 4px;">L2-L3</td>
+                                <td><b>{v[1][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[1][1]}</span></td>
+                                <td><b>{a[1][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[1][1]}</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 4px;">L1-L3</td>
+                                <td><b>{v[2][0]:.1f}V</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{v[2][1]}</span></td>
+                                <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
+                            </tr>
+                        </table>
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>▶️ Arranque: <b>{h_arr_fmt}</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_arr}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>⏹️ Paro: <b>{h_par_fmt}</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
+                        </div>
+                    </div>
+                </div>
+                """
 
-        # Marcador normal
-        folium.CircleMarker(
-            location=info['coord'],
-            radius=5,
-            color=info['color_final'],
-            fill=True,
-            fill_opacity=1,
-            popup=folium.Popup(html_popup, max_width=300)
-        ).add_to(m)
+            folium.Marker(
+                location=info['coord'],
+                icon=folium.DivIcon(
+                    icon_size=(150,36),
+                    icon_anchor=(-12, 10),
+                    html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]}; white-space: nowrap; text-shadow: 1px 1px #000; pointer-events: none;">{id_p}</div>'
+                )
+            ).add_to(m)
 
+            if info.get('blink'):
+                folium.Marker(
+                    location=info['coord'],
+                    icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
+                    popup=folium.Popup(html_popup, max_width=450)
+                ).add_to(m)
+            else:
+                folium.CircleMarker(
+                    location=info['coord'],
+                    radius=4,
+                    color=info['color_final'],
+                    fill=True,
+                    fill_color=info['color_final'],
+                    fill_opacity=1,
+                    popup=folium.Popup(html_popup, max_width=450)
+                ).add_to(m)
 
-            
 # 9.7. RENDERIZADO DE TANQUES EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------
     if ver_tanques:
         for id_tq, info in mapa_tanques_dict.items():
