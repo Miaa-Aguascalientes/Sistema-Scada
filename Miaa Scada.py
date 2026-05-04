@@ -1696,7 +1696,7 @@ if sectores_data:
             v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
             a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-            # URL para la nueva sección de gráficos de pozos
+            # URL codificada para abrir en PESTAÑA NUEVA
             url_pozo_graf = f"?graficar_pozo={id_p}&nombre={urllib.parse.quote(id_p)}"
 
             html_popup = f"""
@@ -1775,7 +1775,7 @@ if sectores_data:
                     </div>
 
                     <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
-                        <a href="{url_pozo_graf}" target="_self" style="text-decoration: none;">
+                        <a href="{url_pozo_graf}" target="_blank" style="text-decoration: none;">
                             <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);">
                                 📊 VER ANÁLISIS HISTÓRICO
                             </div>
@@ -1784,6 +1784,7 @@ if sectores_data:
                 </div>
                 """
 
+            # Renderizado del marcador en el mapa
             folium.Marker(
                 location=info['coord'],
                 icon=folium.DivIcon(
