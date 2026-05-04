@@ -602,100 +602,125 @@ if tag_a_graficar:
 
 # 4.6. SECCION -------------------------------------------------------------------------------- 5. GRAFICAR LOS POZOS --------------------------------------------------------------------
 
+# Capturamos parámetros de la URL
 params = st.query_params
 
 if "graficar_pozo" in params:
     id_pozo_graf = params["graficar_pozo"]
     nombre_pozo = params.get("nombre", id_pozo_graf)
     
-    # 1. CARGA SEGURA DEL DICCIONARIO
-    if 'cargar_mapa_pozos_desde_db' in globals():
-        try:
-            mapa_pozos_dict = cargar_mapa_pozos_desde_db()
-        except Exception as e:
-            st.error(f"❌ Error al cargar configuración: {e}")
-            st.stop()
-    else:
-        st.error("❌ Error de estructura: La función cargar_mapa_pozos_desde_db no es accesible.")
+    # --- CARGA SEGURA DEL DICCIONARIO ---
+    mapa_pozos_dict = cargar_mapa_pozos_desde_db()
+    pozo_info = mapa_pozos_dict.get(id_pozo_graf)
+
+    if not pozo_info:
+        st.error(f"❌ No se encontró configuración para el pozo: {id_pozo_graf}")
         st.stop()
 
-    st.markdown("""<style>.stApp { background-color: #050a10; } h1 { color: #00d4ff !important; }</style>""", unsafe_allow_html=True)
+    st.markdown("""<style>.stApp { background-color: #050a10; } h1 { color: #00d4ff !important; text-shadow: 0px 0px 10px #00d4ff; }</style>""", unsafe_allow_html=True)
     st.title(f"📈 Análisis Histórico: {nombre_pozo}")
     
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        periodo = st.selectbox("Seleccionar Periodo", ["Hoy", "Últimos 3 días", "Últimos 7 días"], index=1)
-        tipo_analisis = st.radio("Variable", ["Hidráulico (Q/P)", "Eléctrico (V/A)"])
+    # 5.1. FILTROS DE FECHA Y VARIABLE (Estilo Tanques) ---
+    col_f1, col_f2, col_f3 = st.columns([1.5, 1.5, 2])
+    with col_f1:
+        opcion_fecha = st.selectbox(
+            "Rango de tiempo:",
+            ["Hoy", "Últimos 3 días", "Últimos 7 días", "Personalizado"],
+            index=1,
+            key="fecha_pozo_v1"
+        )
+    with col_f2:
+        tipo_analisis = st.radio("Tipo de Análisis:", ["Hidráulico (Q/P)", "Eléctrico (V/A)"], horizontal=True)
 
-    ahora = datetime.now()
-    if periodo == "Hoy":
-        fecha_inicio = ahora.replace(hour=0, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
-    elif periodo == "Últimos 3 días":
-        fecha_inicio = (ahora - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')
+    # Lógica de fechas
+    hoy = datetime.now()
+    if opcion_fecha == "Hoy":
+        fecha_inicio = hoy.replace(hour=0, minute=0, second=0)
+    elif opcion_fecha == "Últimos 3 días":
+        fecha_inicio = hoy - timedelta(days=3)
+    elif opcion_fecha == "Últimos 7 días":
+        fecha_inicio = hoy - timedelta(days=7)
     else:
-        fecha_inicio = (ahora - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
-    fecha_fin = ahora.strftime('%Y-%m-%d %H:%M:%S')
+        with col_f3:
+            rango = st.date_input("Periodo:", value=(hoy.date() - timedelta(days=7), hoy.date()), max_value=hoy.date())
+            fecha_inicio = datetime.combine(rango[0], datetime.min.time()) if len(rango)==2 else hoy
+            hoy = datetime.combine(rango[1], datetime.max.time()) if len(rango)==2 else hoy
 
-    pozo_info = mapa_pozos_dict.get(id_pozo_graf)
+    # 5.2. OBTENER TAGS SEGÚN EL ANÁLISIS
+    tags_validos = []
+    nombres_trazas = []
     
-    if pozo_info:
-        tags_validos = []
-        nombres_trazas = []
-        
-        if tipo_analisis == "Hidráulico (Q/P)":
-            for k, n in [('caudal', "Caudal (Lps)"), ('presion', "Presión (Kg/cm²)")]:
-                t = pozo_info.get(k)
-                if t and t != 'N/A':
-                    tags_validos.append(t)
-                    nombres_trazas.append(n)
-        else:
-            for i, t in enumerate(pozo_info.get('voltajes_l', [])):
-                if t and t != 'N/A':
-                    tags_validos.append(t)
-                    nombres_trazas.append(f"Voltaje L{i+1}")
-            for i, t in enumerate(pozo_info.get('amperajes_l', [])):
-                if t and t != 'N/A':
-                    tags_validos.append(t)
-                    nombres_trazas.append(f"Amp L{i+1}")
-
-        if tags_validos:
-            try:
-                # --- CORRECCIÓN CRÍTICA AQUÍ ---
-                # Usamos los secretos de mysql_scada que ya tienes en st.secrets
-                c = st.secrets["mysql_scada"]
-                pwd = urllib.parse.quote_plus(c["password"])
-                engine_h = create_engine(f"mysql+mysqlconnector://{c['user']}:{pwd}@{c['host']}/{c['database']}")
-                
-                tags_str = "', '".join(tags_validos)
-                q_sql = f"""
-                    SELECT TagName, VariableValue, Timestamp 
-                    FROM vfitagnumhistory 
-                    WHERE TagName IN ('{tags_str}') 
-                    AND Timestamp BETWEEN '{fecha_inicio}' AND '{fecha_fin}' 
-                    ORDER BY Timestamp ASC
-                """
-                df = pd.read_sql(q_sql, engine_h)
-                
-                if not df.empty:
-                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-                    fig = go.Figure()
-                    colores = ['#00d4ff', '#00ff00', '#ffff00', '#ff00ff', '#ff8000', '#ff0000']
-                    
-                    for i, (t_id, lab) in enumerate(zip(tags_validos, nombres_trazas)):
-                        d_t = df[df['TagName'] == t_id]
-                        if not d_t.empty:
-                            fig.add_trace(go.Scatter(x=d_t['Timestamp'], y=d_t['VariableValue'], name=lab, line=dict(color=colores[i%6])))
-
-                    fig.update_layout(template="plotly_dark", height=600, hovermode="x unified", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.warning("No hay datos históricos para el rango seleccionado.")
-            except Exception as e:
-                st.error(f"Error de conexión SQL: {e}")
-        else:
-            st.warning("Este pozo no tiene tags configurados para esta variable.")
+    if tipo_analisis == "Hidráulico (Q/P)":
+        config_h = [('caudal', "Caudal (Lps)"), ('presion', "Presión (Kg/cm²)"), ('nivel_tanque', "Nivel Tanque")]
+        for key, label in config_h:
+            t = pozo_info.get(key)
+            if t and t != 'N/A':
+                tags_validos.append(t)
+                nombres_trazas.append(label)
     else:
-        st.error(f"No se encontró información para el pozo: {id_pozo_graf}")
+        # Eléctricos
+        for i, t in enumerate(pozo_info.get('voltajes_l', [])):
+            if t and t != 'N/A':
+                tags_validos.append(t)
+                nombres_trazas.append(f"Voltaje L{i+1}")
+        for i, t in enumerate(pozo_info.get('amperajes_l', [])):
+            if t and t != 'N/A':
+                tags_validos.append(t)
+                nombres_trazas.append(f"Amp L{i+1}")
+
+    # 5.3. CONSULTA Y GRÁFICO
+    if tags_validos:
+        try:
+            engine_scada = get_mysql_scada_engine() # Usamos la conexión que ya tienes definida
+            tags_str = "', '".join(tags_validos)
+            query = f"""
+                SELECT r.NAME as TagName, h.VALUE as VariableValue, h.FECHA as Timestamp 
+                FROM vfitagnumhistory h
+                JOIN VfiTagRef r ON h.GATEID = r.GATEID
+                WHERE r.NAME IN ('{tags_str}') 
+                AND h.FECHA BETWEEN '{fecha_inicio}' AND '{hoy}' 
+                ORDER BY h.FECHA ASC
+            """
+            df = pd.read_sql(query, engine_scada)
+            
+            if not df.empty:
+                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                fig = go.Figure()
+                # Paleta de colores Neón
+                colores = ['#00d4ff', '#00ff00', '#ffff00', '#ff00ff', '#ff8000', '#ff0000']
+                
+                # Graficar cada Tag como una traza independiente
+                for i, tag_nombre in enumerate(tags_validos):
+                    # Buscamos el nombre amigable que le toca
+                    label_amigable = nombres_trazas[i]
+                    df_tag = df[df['TagName'] == tag_nombre]
+                    
+                    if not df_tag.empty:
+                        fig.add_trace(go.Scatter(
+                            x=df_tag['Timestamp'], 
+                            y=df_tag['VariableValue'], 
+                            name=label_amigable,
+                            line=dict(color=colores[i % len(colores)], width=2),
+                            mode='lines'
+                        ))
+
+                fig.update_layout(
+                    template="plotly_dark",
+                    height=600,
+                    hovermode="x unified",
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(showgrid=False, showspikes=True, spikecolor="gray", spikedash="dash"),
+                    yaxis=dict(showgrid=True, gridcolor='#333'),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("No hay datos históricos para estos sensores en el periodo seleccionado.")
+        except Exception as e:
+            st.error(f"Error en la consulta SQL: {e}")
+    else:
+        st.info("Este pozo no tiene tags configurados para las variables seleccionadas.")
     
     st.stop()
     
