@@ -598,26 +598,27 @@ if tag_a_graficar:
 
 # 4.6. SECCION -------------------------------------------------------------------------------- 5. GRAFICAR LOS POZOS --------------------------------------------------------------------
 
+import urllib.parse # Aseguramos el import local por si acaso
+
 params = st.query_params
 if "graficar_pozo" in params:
     id_pozo_graf = params["graficar_pozo"]
     nombre_pozo = params.get("nombre", id_pozo_graf)
     
-    # Estilo de fondo para la sección de gráficos
-    st.markdown("""
-        <style>
-            .stApp { background-color: #050a10; }
-            .stSelectbox label, .stRadio label { color: #00d4ff !important; font-weight: bold; }
-        </style>
-    """, unsafe_allow_html=True)
+    # 5.1. VERIFICACIÓN DE DATOS (IMPORTANTE PARA EVITAR EL NAMEERROR)
+    # Si el diccionario aún no existe en este punto, necesitamos cargarlo o usar session_state
+    if 'mapa_pozos_dict' not in globals() and 'mapa_pozos_dict' not in locals():
+        st.error("Error crítico: El diccionario de pozos no ha sido cargado. Mueve la definición de 'mapa_pozos_dict' arriba de esta sección.")
+        st.stop()
 
     st.title(f"📈 Análisis Histórico: {nombre_pozo}")
     
-    if st.button("⬅️ VOLVER AL MONITOR PRINCIPAL"):
-        st.query_params.clear()
-        st.rerun()
+    # Botón para cerrar la pestaña (opcional, ya que abre en nueva)
+    if st.button("❌ CERRAR ANÁLISIS"):
+        st.write("Puedes cerrar esta pestaña del navegador.")
+        st.stop()
 
-    # 5.1. Configuración de parámetros
+    # 5.2. Configuración de parámetros
     col1, col2 = st.columns([1, 2])
     with col1:
         periodo = st.selectbox("Seleccionar Periodo", ["Hoy", "Últimos 3 días", "Últimos 7 días"], index=1)
@@ -634,7 +635,7 @@ if "graficar_pozo" in params:
     
     fecha_fin = ahora.strftime('%Y-%m-%d %H:%M:%S')
 
-    # 5.2. Identificación de Tags
+    # Acceder al pozo desde el diccionario global
     pozo_data = mapa_pozos_dict.get(id_pozo_graf)
     
     if pozo_data:
@@ -645,15 +646,14 @@ if "graficar_pozo" in params:
             tags_a_consultar = [pozo_data['caudal'], pozo_data['presion']]
             nombres_trazas = ["Caudal (Lps)", "Presión (Kg/cm²)"]
         else:
-            # Combinar voltajes y amperajes de las listas del diccionario
             tags_a_consultar = pozo_data['voltajes_l'] + pozo_data['amperajes_l']
             nombres_trazas = ["Voltaje L1", "Voltaje L2", "Voltaje L3", "Amp L1", "Amp L2", "Amp L3"]
 
-        # 5.3. Consulta a Base de Datos
+        # 5.3. Consulta a Base de Datos (Usa tu engine configurado arriba)
         try:
+            # Asegúrate de usar las variables DB_HOST, DB_USER, etc., definidas al inicio
             conn = create_engine(f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}")
             
-            # Construir consulta para múltiples tags
             tags_str = "', '".join(tags_a_consultar)
             query = f"""
                 SELECT TagName, VariableValue, Timestamp 
@@ -666,8 +666,6 @@ if "graficar_pozo" in params:
             
             if not df_hist.empty:
                 df_hist['Timestamp'] = pd.to_datetime(df_hist['Timestamp'])
-                
-                # 5.4. Creación del Gráfico con Plotly
                 fig = go.Figure()
                 
                 for tag, nombre in zip(tags_a_consultar, nombres_trazas):
@@ -677,32 +675,17 @@ if "graficar_pozo" in params:
                             x=df_tag['Timestamp'], 
                             y=df_tag['VariableValue'],
                             name=nombre,
-                            mode='lines',
-                            line=dict(width=2),
-                            hovertemplate='%{y:.2f}'
+                            mode='lines'
                         ))
 
-                fig.update_layout(
-                    template="plotly_dark",
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(showgrid=True, gridcolor='#1f4068', title="Fecha/Hora"),
-                    yaxis=dict(showgrid=True, gridcolor='#1f4068', title="Valor Medido"),
-                    hovermode="x unified",
-                    height=600,
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                )
-                
+                fig.update_layout(template="plotly_dark", height=600, hovermode="x unified")
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("No se encontraron datos históricos en el periodo seleccionado.")
-                
+                st.warning("No hay datos históricos para este periodo.")
         except Exception as e:
-            st.error(f"Error al conectar con el histórico: {e}")
-    else:
-        st.error("Pozo no encontrado en el diccionario de configuración.")
-
-    st.stop() # Bloquea el resto de la app para mostrar solo el gráfico
+            st.error(f"Error en base de datos: {e}")
+    
+    st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
