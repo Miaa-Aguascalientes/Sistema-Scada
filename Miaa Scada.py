@@ -726,7 +726,13 @@ if "graficar_pozo" in params:
                     height=700,
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
-                    legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center")
+                    # LEYENDA A LA IZQUIERDA
+                    legend=dict(
+                        orientation="h", 
+                        y=1.05, 
+                        x=0,          # Alineado al inicio (izquierda)
+                        xanchor="left" # El punto de anclaje es la izquierda de la leyenda
+                    )
                 )
                 
                 fig.update_yaxes(title_text="<b>Caudal (Lps)</b>", secondary_y=False, color='#00d4ff')
