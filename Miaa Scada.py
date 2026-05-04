@@ -602,42 +602,42 @@ if tag_a_graficar:
 
 # 4.6. SECCION -------------------------------------------------------------------------------- 5. GRAFICAR LOS POZOS --------------------------------------------------------------------
 
-# Capturamos los parámetros de la URL
+# Capturamos parámetros de la URL
 params = st.query_params
 
 if "graficar_pozo" in params:
     id_pozo_graf = params["graficar_pozo"]
     nombre_pozo = params.get("nombre", id_pozo_graf)
     
-    # --- CARGA DE DATOS PARA LA PESTAÑA NUEVA ---
-    try:
-        # Forzamos la carga del diccionario para que esté disponible en esta sesión
-        mapa_pozos_dict = cargar_mapa_pozos_desde_db()
-    except NameError:
-        st.error("❌ ERROR TÉCNICO: La función 'cargar_mapa_pozos_desde_db' no se encuentra. Muévela al inicio del archivo (debajo de los imports).")
-        st.stop()
-    except Exception as e:
-        st.error(f"❌ ERROR AL CARGAR DICCIONARIO: {e}")
+    # --- CARGA SEGURA DEL DICCIONARIO ---
+    # Verificamos si la función ya fue definida antes de llamarla
+    if 'cargar_mapa_pozos_desde_db' in globals():
+        try:
+            mapa_pozos_dict = cargar_mapa_pozos_desde_db()
+        except Exception as e:
+            st.error(f"❌ Error al ejecutar la carga de datos: {e}")
+            st.stop()
+    else:
+        st.error("❌ ERROR DE ORDEN: La función 'cargar_mapa_pozos_desde_db' debe estar escrita ARRIBA de este bloque en tu archivo .py")
         st.stop()
 
-    # Estilo HUD para la página de gráficos
+    # Estilo visual HUD
     st.markdown("""
         <style>
             .stApp { background-color: #050a10; }
             h1 { color: #00d4ff !important; text-shadow: 0px 0px 10px #00d4ff; }
-            .stSelectbox label, .stRadio label { color: #888 !important; font-weight: bold; }
         </style>
     """, unsafe_allow_html=True)
 
     st.title(f"📈 Análisis Histórico: {nombre_pozo}")
     
-    # 5.1. Selectores de visualización
+    # Selectores
     col1, col2 = st.columns([1, 2])
     with col1:
         periodo = st.selectbox("Seleccionar Periodo", ["Hoy", "Últimos 3 días", "Últimos 7 días"], index=1)
-        tipo_analisis = st.radio("Variable a Graficar", ["Hidráulico (Q/P)", "Eléctrico (V/A)"])
+        tipo_analisis = st.radio("Variable", ["Hidráulico (Q/P)", "Eléctrico (V/A)"])
 
-    # Lógica de fechas
+    # Lógica de tiempo
     ahora = datetime.now()
     if periodo == "Hoy":
         fecha_inicio = ahora.replace(hour=0, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
@@ -648,7 +648,7 @@ if "graficar_pozo" in params:
     
     fecha_fin = ahora.strftime('%Y-%m-%d %H:%M:%S')
 
-    # 5.2. Extraer Tags del Pozo
+    # Obtener tags del pozo
     pozo_info = mapa_pozos_dict.get(id_pozo_graf)
     
     if pozo_info:
@@ -656,76 +656,46 @@ if "graficar_pozo" in params:
         nombres_trazas = []
         
         if tipo_analisis == "Hidráulico (Q/P)":
-            tags_potenciales = [('caudal', "Caudal (Lps)"), ('presion', "Presión (Kg/cm²)")]
-            for clave, nombre in tags_potenciales:
-                tag = pozo_info.get(clave)
-                if tag and tag != 'N/A':
-                    tags_validos.append(tag)
-                    nombres_trazas.append(nombre)
+            for k, n in [('caudal', "Caudal (Lps)"), ('presion', "Presión (Kg/cm²)"), ('nivel_tanque', "Nivel Tanque")]:
+                t = pozo_info.get(k)
+                if t and t != 'N/A':
+                    tags_validos.append(t)
+                    nombres_trazas.append(n)
         else:
-            # Voltajes y Amperajes
-            vs = pozo_info.get('voltajes_l', [])
-            as_ = pozo_info.get('amperajes_l', [])
-            for i, tag in enumerate(vs):
-                if tag and tag != 'N/A':
-                    tags_validos.append(tag)
+            for i, t in enumerate(pozo_info.get('voltajes_l', [])):
+                if t and t != 'N/A':
+                    tags_validos.append(t)
                     nombres_trazas.append(f"Voltaje L{i+1}")
-            for i, tag in enumerate(as_):
-                if tag and tag != 'N/A':
-                    tags_validos.append(tag)
+            for i, t in enumerate(pozo_info.get('amperajes_l', [])):
+                if t and t != 'N/A':
+                    tags_validos.append(t)
                     nombres_trazas.append(f"Amp L{i+1}")
 
-        # 5.3. Ejecutar Consulta SQL
         if tags_validos:
             try:
-                # Usamos el engine que ya tienes configurado en tu Sección 1
-                engine_hist = create_engine(f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}")
+                engine_h = create_engine(f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}")
+                q_sql = f"SELECT TagName, VariableValue, Timestamp FROM vfitagnumhistory WHERE TagName IN ('{ "','".join(tags_validos) }') AND Timestamp BETWEEN '{fecha_inicio}' AND '{fecha_fin}' ORDER BY Timestamp ASC"
+                df = pd.read_sql(q_sql, engine_h)
                 
-                tags_query = "', '".join(tags_validos)
-                query = f"""
-                    SELECT TagName, VariableValue, Timestamp 
-                    FROM vfitagnumhistory 
-                    WHERE TagName IN ('{tags_query}') 
-                    AND Timestamp BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
-                    ORDER BY Timestamp ASC
-                """
-                df_graf = pd.read_sql(query, engine_hist)
-                
-                if not df_graf.empty:
-                    df_graf['Timestamp'] = pd.to_datetime(df_graf['Timestamp'])
+                if not df.empty:
+                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
                     fig = go.Figure()
+                    colores = ['#00d4ff', '#00ff00', '#ffff00', '#ff00ff', '#ff8000', '#ff0000']
                     
-                    colores_hud = ['#00d4ff', '#00ff00', '#ffff00', '#ff00ff', '#ff8000', '#00ffff']
-                    
-                    for i, (tag_id, label) in enumerate(zip(tags_validos, nombres_trazas)):
-                        df_tag = df_graf[df_graf['TagName'] == tag_id]
-                        if not df_tag.empty:
-                            fig.add_trace(go.Scatter(
-                                x=df_tag['Timestamp'], 
-                                y=df_tag['VariableValue'],
-                                name=label,
-                                line=dict(width=2, color=colores_hud[i % len(colores_hud)])
-                            ))
+                    for i, (t_id, lab) in enumerate(zip(tags_validos, nombres_trazas)):
+                        d_t = df[df['TagName'] == t_id]
+                        if not d_t.empty:
+                            fig.add_trace(go.Scatter(x=d_t['Timestamp'], y=d_t['VariableValue'], name=lab, line=dict(color=colores[i%6])))
 
-                    fig.update_layout(
-                        template="plotly_dark",
-                        height=600,
-                        hovermode="x unified",
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
+                    fig.update_layout(template="plotly_dark", height=600, hovermode="x unified", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("No se encontraron registros históricos para este pozo en el periodo seleccionado.")
+                    st.warning("No hay datos para este periodo.")
             except Exception as e:
-                st.error(f"Error al conectar con la base de datos histórica: {e}")
-        else:
-            st.warning("Este pozo no tiene tags configurados para esta variable.")
+                st.error(f"Error SQL: {e}")
     else:
-        st.error(f"No se encontró el pozo '{id_pozo_graf}' en la configuración.")
-
-    st.stop() # Esto evita que se cargue el mapa debajo del gráfico
+        st.error("Pozo no encontrado.")
+    st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
 st.markdown("""
