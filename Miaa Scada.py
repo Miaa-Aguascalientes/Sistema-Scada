@@ -1767,111 +1767,89 @@ if sectores_data:
 
     fg_sectores.add_to(m)
     
-# 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------------
-import base64
-from io import BytesIO
+# 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL (OPTIMIZADO Y COMPLETO) -----------------------------------------------------------------------
 
 for id_p, info in mapa_pozos_dict.items():
-    if ver_pozos:  # Si el checkbox está activo, dibujamos todo
+    if ver_pozos:
         d = lambda tag: data_scada.get(tag, (0, "N/A"))
         is_st = (info['status_label'] == 'SIN TELEMETRÍA')
         
-        # Extracción de datos actuales
+        # Datos Hidráulicos
         q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
         p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+        
+        # Datos de Niveles (Recuperados)
         sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
         dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
         tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
         col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
+        
+        # Datos Eléctricos
         v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
         a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
-        # --- GENERACIÓN DE MINI-GRÁFICO (ÚLTIMOS 7 DÍAS) ---
-        html_mini_grafico = ""
-        if not is_st:
-            try:
-                # Usamos la conexión ya existente para traer los últimos 7 días
-                f_fin_p = datetime.now()
-                f_ini_p = f_fin_p - timedelta(days=7)
-                
-                # Query optimizada solo para Caudal y Presión del pozo actual
-                query_p = f"""
-                    SELECT r.NAME as TagName, h.VALUE, h.FECHA 
-                    FROM vfitagnumhistory h
-                    JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                    WHERE r.NAME IN ('{info['caudal']}', '{info['presion']}') 
-                    AND h.FECHA BETWEEN '{f_ini_p}' AND '{f_fin_p}' 
-                    ORDER BY h.FECHA ASC
-                """
-                df_p = pd.read_sql(query_p, get_mysql_scada_engine())
-                
-                if not df_p.empty:
-                    fig_p = px.line(df_p, x='FECHA', y='VALUE', color='TagName', 
-                                   color_discrete_map={info['caudal']: '#00d4ff', info['presion']: '#00ff00'},
-                                   template="plotly_dark")
-                    fig_p.update_layout(
-                        margin=dict(l=0, r=0, t=0, b=0), height=100, showlegend=False,
-                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                        xaxis=dict(visible=False), yaxis=dict(visible=False)
-                    )
-                    # Convertir a HTML para el popup
-                    html_mini_grafico = fig_p.to_html(full_html=False, include_plotlyjs='cdn', config={'displayModeBar': False})
-                else:
-                    html_mini_grafico = "<div style='color:#666; font-size:9px; text-align:center;'>Sin histórico reciente</div>"
-            except:
-                html_mini_grafico = ""
-
-        # Configuración de URL y acceso
+        # URL de Análisis
         rol_actual = st.session_state.get('rol', 'usuario')
         nombre_codificado = urllib.parse.quote(id_p)
         url_pozo_graf = f"?graficar_pozo={id_p}&nombre={nombre_codificado}&access=granted&role={rol_actual}"
 
+        # HTML del Popup - Volvemos al diseño robusto que sí te servía
         html_popup = f"""
-            <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 320px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
+            <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
                     <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
                     <span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span>
                 </div>
                 
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA ACTUAL</div>
-                    <div style="display: flex; font-size: 11px;">
-                        <span>💧 Q: <b>{q:.2f} L/s</b></span>
-                        <span style="margin-left: 15px;">🚀 P: <b>{p:.2f} kg</b></span>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>💧 Caudal: <b>{q:.2f} L/s</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <span>🚀 Presión: <b>{p:.2f} kg</b></span>
+                        <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span>
                     </div>
                 </div>
 
-                <!-- SECCIÓN DEL MINI GRÁFICO (7 DÍAS) -->
-                <div style="background: #111; border-radius: 6px; padding: 5px; margin-bottom: 12px; border: 1px solid #222;">
-                    <div style="font-size: 9px; color: #555; text-align: center; margin-bottom: 2px;">TENDENCIA 7 DÍAS (Q & P)</div>
-                    {html_mini_grafico}
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 10px; color: #888; margin-bottom: 4px;">NIVELES</div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>🔋 Tanque: <b>{tanq:.2f} m</b></span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                        <span>📉 Dinámico: <b>{dinam:.2f} m</b></span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; font-size: 11px;">
+                        <span>📏 Sumergencia: <b>{sumer:.2f} m</b></span>
+                    </div>
                 </div>
 
                 <div style="margin-bottom: 12px;">
                     <div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div>
                     <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
-                        <tr style="border-bottom: 1px solid #222;">
-                            <td style="padding: 4px 0;">L1-L2: <b>{v[0][0]:.1f}V</b></td>
-                            <td style="padding: 4px 0; text-align: right;"><b>{a[0][0]:.1f}A</b></td>
+                        <tr style="color: #00d4ff; border-bottom: 1px solid #333;">
+                            <th style="text-align:left;">Fase</th><th>Voltaje</th><th>Amp</th>
                         </tr>
-                        <tr style="border-bottom: 1px solid #222;">
-                            <td style="padding: 4px 0;">L2-L3: <b>{v[1][0]:.1f}V</b></td>
-                            <td style="padding: 4px 0; text-align: right;"><b>{a[1][0]:.1f}A</b></td>
-                        </tr>
+                        <tr><td>L1-L2</td><td><b>{v[0][0]:.1f}V</b></td><td><b>{a[0][0]:.1f}A</b></td></tr>
+                        <tr><td>L2-L3</td><td><b>{v[1][0]:.1f}V</b></td><td><b>{a[1][0]:.1f}A</b></td></tr>
+                        <tr><td>L1-L3</td><td><b>{v[2][0]:.1f}V</b></td><td><b>{a[2][0]:.1f}A</b></td></tr>
                     </table>
                 </div>
 
                 <div style="border-top: 1px solid #333; padding-top: 10px;">
-                    <a href="{url_pozo_graf}" target="_blank" style="text-decoration: none;">
-                        <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 11px;">
-                            📊 VER ANÁLISIS HISTÓRICO COMPLETO
+                    <p style="color:#555; font-size:9px; text-align:center;">Para ver tendencias de 7 días, haz clic abajo:</p>
+                    <a href="{url_pozo_graf}" target="_self" style="text-decoration: none;">
+                        <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px;">
+                            📊 VER ANÁLISIS HISTÓRICO
                         </div>
                     </a>
                 </div>
             </div>
         """
 
-        # Renderizado de Marcadores y Etiquetas
+        # Dibujar marcador de texto (ID del pozo)
         folium.Marker(
             location=info['coord'],
             icon=folium.DivIcon(
@@ -1881,6 +1859,7 @@ for id_p, info in mapa_pozos_dict.items():
             )
         ).add_to(m)
 
+        # Dibujar punto o icono parpadeante
         if info.get('blink'):
             folium.Marker(
                 location=info['coord'],
@@ -1897,7 +1876,6 @@ for id_p, info in mapa_pozos_dict.items():
                 fill_opacity=1,
                 popup=folium.Popup(html_popup, max_width=450)
             ).add_to(m)
-
 # 9.7. RENDERIZADO DE TANQUES EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------
     if ver_tanques:
         for id_tq, info in mapa_tanques_dict.items():
