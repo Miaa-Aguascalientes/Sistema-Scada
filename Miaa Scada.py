@@ -603,6 +603,8 @@ if tag_a_graficar:
 # 4.6. SECCION -------------------------------------------------------------------------------- 5. GRAFICAR LOS POZOS --------------------------------------------------------------------
 
 from plotly.subplots import make_subplots
+from datetime import datetime, timedelta
+import pandas as pd
 
 params = st.query_params
 
@@ -619,39 +621,65 @@ if "graficar_pozo" in params:
 
     st.title(f"📈 Análisis Histórico: {nombre_pozo}")
     
-    col_f1, col_f2 = st.columns([1.5, 2.5])
+    # 5.1. FILTROS DE TIEMPO AMPLIADOS
+    col_f1, col_f2 = st.columns([2, 3])
     with col_f1:
-        opcion_fecha = st.selectbox("Rango:", ["Hoy", "Últimos 3 días", "Últimos 7 días", "Personalizado"], index=1, key="fecha_pozo_v2")
+        opcion_fecha = st.selectbox(
+            "Rango de tiempo:", 
+            ["Hoy", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
+            index=2, 
+            key="fecha_pozo_v4"
+        )
     with col_f2:
         tipo_analisis = st.radio("Tipo de Análisis:", ["Hidráulico (Q/P)", "Eléctrico (V/A)"], horizontal=True)
 
-    # Lógica de fechas (Simplificada para el ejemplo)
+    # --- LÓGICA DE CÁLCULO DE FECHAS ---
     hoy_dt = datetime.now()
-    fecha_inicio = hoy_dt - timedelta(days=3) if opcion_fecha == "Últimos 3 días" else hoy_dt - timedelta(days=7)
-    if opcion_fecha == "Hoy": fecha_inicio = hoy_dt.replace(hour=0, minute=0)
+    f_fin = hoy_dt
+    
+    if opcion_fecha == "Hoy":
+        f_ini = hoy_dt.replace(hour=0, minute=0, second=0)
+    elif opcion_fecha == "Últimos 7 días":
+        f_ini = hoy_dt - timedelta(days=7)
+    elif opcion_fecha == "Últimos 14 días":
+        f_ini = hoy_dt - timedelta(days=14)
+    elif opcion_fecha == "Este Mes":
+        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0)
+    elif opcion_fecha == "Último Mes":
+        # Primer día del mes pasado al último día del mes pasado
+        primero_este_mes = hoy_dt.replace(day=1)
+        f_fin = primero_este_mes - timedelta(seconds=1)
+        f_ini = (primero_este_mes - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0)
+    elif opcion_fecha == "Últimos 6 meses":
+        f_ini = hoy_dt - timedelta(days=180)
+    else: # Personalizado
+        rango = st.date_input("Periodo:", value=(hoy_dt.date() - timedelta(days=7), hoy_dt.date()))
+        if isinstance(rango, tuple) and len(rango) == 2:
+            f_ini = datetime.combine(rango[0], datetime.min.time())
+            f_fin = datetime.combine(rango[1], datetime.max.time())
+        else:
+            f_ini, f_fin = hoy_dt, hoy_dt
 
-    # 5.2. CONFIGURACIÓN DE EJES Y TAGS
+    # 5.2. CONFIGURACIÓN DE EJES (Doble Eje)
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    tags_query = []
+    config_visual = []
     
     if tipo_analisis == "Hidráulico (Q/P)":
-        # Izquierda: Caudal | Derecha: Presión
-        config = [
+        config_visual = [
             ('caudal', "Caudal (Lps)", False, '#00d4ff'), 
             ('presion', "Presión (Kg/cm²)", True, '#00ff00')
         ]
         titulo_izq, titulo_der = "Caudal (Lps)", "Presión (Kg/cm²)"
     else:
-        # Izquierda: Voltajes | Derecha: Amperajes
-        config = []
+        # Voltajes y Amperajes AMBOS a la derecha (True)
         for i, t in enumerate(pozo_info.get('voltajes_l', [])):
-            if t and t != 'N/A': config.append((t, f"Voltaje L{i+1}", False, '#00d4ff'))
+            if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", True, '#00d4ff'))
         for i, t in enumerate(pozo_info.get('amperajes_l', [])):
-            if t and t != 'N/A': config.append((t, f"Amp L{i+1}", True, '#ff8000'))
-        titulo_izq, titulo_der = "Voltaje (V)", "Corriente (A)"
+            if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", True, '#ff8000'))
+        titulo_izq, titulo_der = "", "Parámetros Eléctricos (V / A)"
 
-    # 5.3. CONSULTA Y RENDERIZADO
-    tags_a_buscar = [c[0] if isinstance(c[0], str) else pozo_info.get(c[0]) for c in config if c[0]]
+    # 5.3. EJECUCIÓN
+    tags_a_buscar = [c[0] if isinstance(c[0], str) else pozo_info.get(c[0]) for c in config_visual if c[0]]
     tags_a_buscar = [t for t in tags_a_buscar if t and t != 'N/A']
 
     if tags_a_buscar:
@@ -662,21 +690,22 @@ if "graficar_pozo" in params:
                 FROM vfitagnumhistory h
                 JOIN VfiTagRef r ON h.GATEID = r.GATEID
                 WHERE r.NAME IN ('{"', '".join(tags_a_buscar)}') 
-                AND h.FECHA BETWEEN '{fecha_inicio}' AND '{hoy_dt}' 
+                AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}' 
                 ORDER BY h.FECHA ASC
             """
             df = pd.read_sql(query, engine_scada)
             
             if not df.empty:
-                for tag_id, label, es_secundario, color in config:
-                    # Resolver el tag real si venía del diccionario
+                for tag_id, label, es_secundario, color in config_visual:
                     tag_real = pozo_info.get(tag_id) if tag_id in pozo_info else tag_id
                     df_tag = df[df['TagName'] == tag_real]
                     
                     if not df_tag.empty:
                         fig.add_trace(
                             go.Scatter(x=df_tag['FECHA'], y=df_tag['VALUE'], name=label,
-                                       line=dict(color=color, width=2), mode='lines'),
+                                       line=dict(color=color, width=2, 
+                                                 dash='solid' if "V " in label or "Caudal" in label else 'dot'),
+                                       mode='lines'),
                             secondary_y=es_secundario
                         )
 
@@ -685,16 +714,15 @@ if "graficar_pozo" in params:
                     hovermode="x unified",
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
-                    legend=dict(orientation="h", y=1.1)
+                    legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
                 )
                 
-                # Nombres de los ejes
-                fig.update_yaxes(title_text=f"<b>{titulo_izq}</b>", secondary_y=False, color='#00d4ff')
-                fig.update_yaxes(title_text=f"<b>{titulo_der}</b>", secondary_y=True, color='#00ff00' if tipo_analisis == "Hidráulico (Q/P)" else '#ff8000')
+                fig.update_yaxes(title_text=titulo_izq, secondary_y=False)
+                fig.update_yaxes(title_text=f"<b>{titulo_der}</b>", secondary_y=True, showgrid=True, gridcolor='#333')
                 
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("No hay datos en este periodo.")
+                st.warning(f"No hay datos desde {f_ini.strftime('%d/%m/%Y')} hasta {f_fin.strftime('%d/%m/%Y')}")
         except Exception as e:
             st.error(f"Error: {e}")
     
