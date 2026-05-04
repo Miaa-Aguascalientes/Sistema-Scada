@@ -1600,10 +1600,6 @@ if sectores_data:
 
     fg_sectores.add_to(m)
     
-Entendido, he ajustado el código para que sea una integración quirúrgica. He mantenido exactamente toda tu estructura original (divs de Hidráulica, Niveles, la tabla de Eléctrico completa con sus flags de actualización y la sección de Horarios), simplemente insertando el gráfico de Plotly justo debajo del encabezado.
-
-Aquí tienes el bloque completo de la sección 9.6:
-
 
 # 9.6. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL ---------------------------------------------------------------------------------------------
 for id_p, info in mapa_pozos_dict.items():
