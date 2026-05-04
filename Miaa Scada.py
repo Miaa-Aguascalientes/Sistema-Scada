@@ -18,13 +18,7 @@ import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
 from streamlit_folium import st_folium
 
-st.set_page_config(
-    page_title="Sistema Scada", 
-    page_icon="https://www.miaa.mx/favicon.ico", 
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
+# 3.1 Funcion para optener la base de datos Diccionario_de_pozos
 @st.cache_data(ttl=3600) 
 def cargar_mapa_pozos_desde_db():
     engine = get_mysql_telemetria_engine()
@@ -58,6 +52,15 @@ def cargar_mapa_pozos_desde_db():
         return nuevo_mapa
     except:
         return {}
+
+st.set_page_config(
+    page_title="Sistema Scada", 
+    page_icon="https://www.miaa.mx/favicon.ico", 
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+
 
 # 0. SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
@@ -358,40 +361,7 @@ def get_blink_icon(color):
 
 # 3. SECCION -------------------------------------------------------------------------------- 3. CARGA DE DATOS DE DICCIONARIOS -------------------------------------------------------------------------------------------
 
-# 3.1 Funcion para optener la base de datos Diccionario_de_pozos
-@st.cache_data(ttl=3600) 
-def cargar_mapa_pozos_desde_db():
-    engine = get_mysql_telemetria_engine()
-    if not engine: return {}
-    try:
-        query = "SELECT * FROM Diccionario_de_pozos"
-        df_pozos = pd.read_sql(query, engine)
-        
-        nuevo_mapa = {}
-        for _, row in df_pozos.iterrows():
-            try:
-                coords_str = str(row['coord']).strip().replace('(', '').replace(')', '')
-                lat, lon = map(float, coords_str.split(','))
-                coords = (lat, lon)
-            except: continue
 
-            nuevo_mapa[row['Pozos']] = {
-                "coord": coords,
-                "bomba": row['bomba'],
-                "caudal": row['caudal'],
-                "presion": row['presion'],
-                "sumergencia": row['sumergencia'],
-                "nivel_dinamico": row['nivel_dinamico'],
-                "nivel_tanque": row['nivel_tanque'],
-                "columna": row['columna'],
-                "h_arranque": row['H_arranque'],
-                "h_paro": row['H_paro'],
-                "voltajes_l": [row['voltaje_L1'], row['voltaje_L2'], row['voltaje_L3']],
-                "amperajes_l": [row['amperaje_L1'], row['amperaje_L2'], row['amperaje_L3']]
-            }
-        return nuevo_mapa
-    except:
-        return {}
 
 # 3.2. Funcion para optener la base de datos Diccionario_de_tanques
 @st.cache_data(ttl=3600)
