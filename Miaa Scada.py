@@ -1473,6 +1473,21 @@ st.markdown("""
             display: none !important;
             pointer-events: none !important;
         }
+        
+        /* 2. FORZAR ANCHO ESTÁTICO E INAMOVIBLE */
+        section[data-testid="stSidebar"] {
+            width: 350px !important;
+            min-width: 350px !important;
+            max-width: 350px !important;
+            /* Evita que el usuario seleccione texto o interactúe con el borde */
+            user-select: none; 
+        }
+
+        /* 3. BLOQUEAR EL CURSOR DE REDIMENSIÓN */
+        /* A veces el cursor cambia a flechas laterales; esto lo devuelve a la normalidad */
+        html, body {
+            cursor: default !important;
+        }
 
     
         /* 1. AJUSTE DINÁMICO DEL MAPA AL MARGEN DERECHO */
@@ -1603,7 +1618,7 @@ with st.sidebar:
             st.write(f"🔴 {p}")
 
     if pozos_falla_com:
-        with st.expander(f"⚠️ Falla de Comu. ({len(pozos_falla_com)})", expanded=False):
+        with st.expander(f"⚠️ Falla de Com. ({len(pozos_falla_com)})", expanded=False):
             for p in sorted(pozos_falla_com):
                 st.write(f"🟠 {p}")
     
