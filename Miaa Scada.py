@@ -1471,7 +1471,7 @@ st.markdown("""
         [data-testid="stMain"] {
             margin-left: 10px !important;
             /* Restamos el ancho de la barra para que el contenido no desborde */
-            width: calc(100% - 200px) !important; 
+            width: calc(100% - 10px) !important; 
             padding-right: 2rem !important; /* Espacio de seguridad a la derecha */
         }
 
