@@ -1469,9 +1469,9 @@ st.markdown("""
     <style>
         /* 1. AJUSTE DINÁMICO DEL MAPA AL MARGEN DERECHO */
         [data-testid="stMain"] {
-            margin-left: 10px !important;
+            margin-left: 0px !important;
             /* Restamos el ancho de la barra para que el contenido no desborde */
-            width: calc(100% - 10px) !important; 
+            width: calc(100% - 0px) !important; 
             padding-right: 2rem !important; /* Espacio de seguridad a la derecha */
         }
 
