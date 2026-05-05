@@ -1464,36 +1464,41 @@ if sector_seleccionado:
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. Sidebar Fija y con ancho controlado */
+        /* 1. Forzamos que la Sidebar ocupe su lugar pase lo que pase */
         [data-testid="stSidebar"] {
             left: 0 !important;
             visibility: visible !important;
             transform: translateX(0%) !important;
-            min-width: 330px !important; 
-            max-width: 330px !important;
+            min-width: 350px !important;
+            max-width: 350px !important;
+            position: fixed !important;
+            z-index: 999999 !important;
         }
 
-        /* 2. Quitar el botón de cerrar */
+        /* 2. Eliminamos físicamente el botón que permite cerrarla */
         [data-testid="stSidebarCollapseButton"] {
             display: none !important;
+            visibility: hidden !important;
         }
 
-        /* 3. ELIMINAR EL HUECO NEGRO: Ajustamos el contenedor principal */
-        /* Quitamos el margen excesivo y dejamos que Streamlit gestione el padding */
+        /* 3. Ajuste Dinámico del Cuerpo Principal */
+        /* Esto hace que el mapa 'sepa' que hay 350px ocupados a su izquierda */
         [data-testid="stMain"] {
-            margin-left: 0px !important; 
+            margin-left: 350px !important;
         }
 
-        /* Ajustamos la caja que contiene el mapa para que no se desplace a la derecha */
+        /* 4. Eliminamos los márgenes internos que Streamlit pone por defecto */
+        /* Esto evita el hueco negro/blanco a los lados del mapa */
         .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
+            padding: 1rem !important;
             max-width: 100% !important;
         }
-        
-        /* 4. Forzar que el mapa use el ancho disponible real */
-        iframe {
-            width: 100% !important;
+
+        /* 5. Corrección para pantallas pequeñas o Laptops con mucho Zoom */
+        @media (max-width: 1000px) {
+            [data-testid="stMain"] {
+                margin-left: 350px !important;
+            }
         }
     </style>
 """, unsafe_allow_html=True)
