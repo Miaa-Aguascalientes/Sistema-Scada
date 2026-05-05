@@ -1467,6 +1467,14 @@ if sector_seleccionado:
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
+        /* 1. ELIMINAR EL TIRADOR DE REDIMENSIÓN */
+        /* Buscamos el elemento que permite arrastrar la barra y lo desactivamos */
+        [data-testid="stSidebarResizer"] {
+            display: none !important;
+            pointer-events: none !important;
+        }
+
+    
         /* 1. AJUSTE DINÁMICO DEL MAPA AL MARGEN DERECHO */
         [data-testid="stMain"] {
             margin-left: 0px !important;
