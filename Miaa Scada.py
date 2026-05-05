@@ -18,16 +18,12 @@ import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
 from streamlit_folium import st_folium
 
-
-
 st.set_page_config(
     page_title="Sistema Scada", 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
-
 
 # 0. SECCION -------------------------------------------------------------------------------- 0. SISTEMA DE AUTENTICACIÓN HUD DEFINITIVO --------------------------------------------------------------------
 
@@ -1466,6 +1462,24 @@ if sector_seleccionado:
     st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
+st.markdown("""
+    <style>
+        /* Elimina el botón de cerrar/abrir la sidebar */
+        [data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
+        /* Bloquea la sidebar para que siempre esté expandida */
+        [data-testid="stSidebar"] {
+            min-width: 300px !important;
+            max-width: 300px !important;
+        }
+        /* Ajusta el margen del contenido principal para que no se encime */
+        .main .block-container {
+            margin-left: 20px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 with st.sidebar:
     # 8.1. Contenedor del logo
     st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg"></div>', unsafe_allow_html=True)
@@ -1545,7 +1559,7 @@ with st.sidebar:
         ver_tanques = st.checkbox("Mostrar Tanques", value=False)
         ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=False)
     
-    # 8.9, LISTADO DE ESTADOS ---
+    # 8.9. LISTADO DE ESTADOS ---
     with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
         for p in sorted(pozos_on): 
             st.write(f"🟢 {p}")
@@ -1807,9 +1821,17 @@ if sectores_data:
                                 <td><b>{a[2][0]:.1f}A</b> <span style="color:#FFFF00; font-size:8px; margin-left:4px;">{a[2][1]}</span></td>
                             </tr>
                         </table>
-                    </div>
+                        <div style="font-size: 10px; color: #888; margin-bottom: 4px; border-top: 1px solid #222; padding-top: 5px;">HORARIOS</div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;">
+                            <span>▶️ Arranque: <b>{h_arr_fmt}</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_arr}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; font-size: 11px;">
+                            <span>⏹️ Paro: <b>{h_par_fmt}</b></span>
+                            <span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_h_par}</span>
+                        </div>
 
-                    <div style="border-top: 1px solid #333; padding-top: 10px;">
+                        <div style="border-top: 1px solid #333; padding-top: 10px;">
                         <a href="{url_pozo_graf}" target="_blank" style="text-decoration: none;">
                             <div style="background: #00d4ff; color: #050a10; text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px;">
                                 📊 VER ANÁLISIS HISTÓRICO
