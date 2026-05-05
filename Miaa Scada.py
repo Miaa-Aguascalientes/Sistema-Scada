@@ -1473,7 +1473,7 @@ st.markdown("""
             visibility: visible !important;
             display: block !important;
             transform: none !important; /* Evita que se desplace a la izquierda */
-            width: 350px !important;
+            width: 300px !important;
             position: fixed !important;
         }
 
@@ -1485,7 +1485,7 @@ st.markdown("""
         /* 3. AJUSTE DE CUERPO PRINCIPAL */
         /* Obligamos al mapa a empezar después de los 350px de la barra */
         [data-testid="stMain"] {
-            margin-left: 350px !important;
+            margin-left: 300px !important;
         }
 
         /* 4. REGLA PARA PANTALLAS CHICAS O ZOOM ALTO */
