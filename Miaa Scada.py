@@ -1597,7 +1597,7 @@ with st.sidebar:
             st.write(f"🔴 {p}")
 
     if pozos_falla_com:
-        with st.expander(f"⚠️ Falla de Com. ({len(pozos_falla_com)})", expanded=False):
+        with st.expander(f"⚠️ Falla de Comu. ({len(pozos_falla_com)})", expanded=False):
             for p in sorted(pozos_falla_com):
                 st.write(f"🟠 {p}")
     
