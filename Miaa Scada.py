@@ -1466,41 +1466,43 @@ if sector_seleccionado:
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
-        /* 1. Forzamos que la Sidebar ocupe su lugar pase lo que pase */
-        [data-testid="stSidebar"] {
+        /* 1. FORZAR VISIBILIDAD SIEMPRE (Anula el auto-hide de Streamlit) */
+        section[data-testid="stSidebar"] {
             left: 0 !important;
             visibility: visible !important;
-            transform: translateX(0%) !important;
-            min-width: 350px !important;
-            max-width: 350px !important;
+            display: block !important;
+            transform: none !important; /* Evita que se desplace a la izquierda */
+            width: 350px !important;
             position: fixed !important;
-            z-index: 999999 !important;
         }
 
-        /* 2. Eliminamos físicamente el botón que permite cerrarla */
+        /* 2. MATAR EL BOTÓN DE COLAPSAR */
         [data-testid="stSidebarCollapseButton"] {
             display: none !important;
-            visibility: hidden !important;
         }
 
-        /* 3. Ajuste Dinámico del Cuerpo Principal */
-        /* Esto hace que el mapa 'sepa' que hay 350px ocupados a su izquierda */
+        /* 3. AJUSTE DE CUERPO PRINCIPAL */
+        /* Obligamos al mapa a empezar después de los 350px de la barra */
         [data-testid="stMain"] {
             margin-left: 350px !important;
         }
 
-        /* 4. Eliminamos los márgenes internos que Streamlit pone por defecto */
-        /* Esto evita el hueco negro/blanco a los lados del mapa */
-        .block-container {
-            padding: 1rem !important;
-            max-width: 100% !important;
-        }
-
-        /* 5. Corrección para pantallas pequeñas o Laptops con mucho Zoom */
-        @media (max-width: 1000px) {
+        /* 4. REGLA PARA PANTALLAS CHICAS O ZOOM ALTO */
+        /* Esto anula la configuración de Streamlit para móviles/laptops */
+        @media (max-width: 991px) {
+            section[data-testid="stSidebar"] {
+                left: 0 !important;
+                min-width: 350px !important;
+            }
             [data-testid="stMain"] {
                 margin-left: 350px !important;
             }
+        }
+        
+        /* 5. ELIMINAR EL ESPACIO SUPERIOR (Para que el header azul pegue arriba) */
+        .block-container {
+            padding-top: 1rem !important;
+            max-width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
