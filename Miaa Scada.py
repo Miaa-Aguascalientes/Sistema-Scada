@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
 from streamlit_folium import st_folium
 
-st.set_page_config(layout="wide", initial_sidebar_state="expanded")
+
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -1464,6 +1464,7 @@ if sector_seleccionado:
     st.stop()
     
 # 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
+st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
         /* 1. FORZAR VISIBILIDAD SIEMPRE (Anula el auto-hide de Streamlit) */
