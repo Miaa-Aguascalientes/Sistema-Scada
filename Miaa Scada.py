@@ -1558,12 +1558,30 @@ with st.sidebar:
         render_status_line("BD-Diccionarios:", status_mysql_tele)
         render_status_line("BD-PostgreSQL:", status_postgres)
     
+    # --- BUSCADORES ---
+    
     # 8.4. Buscador de Pozos
     lista_pozos_nombres = sorted(list(mapa_pozos_dict.keys()))
     pozo_buscado = st.selectbox(
-        "🔍 Localizar Sitio",
+        "🔍 Localizar Pozo",
         options=[""] + lista_pozos_nombres,
-        format_func=lambda x: "Seleccionar Sitio..." if x == "" else f" {x}"
+        format_func=lambda x: "Seleccionar Pozo..." if x == "" else f"📍 {x}"
+    )
+
+    # 8.4.1 Buscador de Tanques
+    lista_tanques_nombres = sorted(list(mapa_tanques_dict.keys()))
+    tanque_buscado = st.selectbox(
+        "💧 Localizar Tanque",
+        options=[""] + lista_tanques_nombres,
+        format_func=lambda x: "Seleccionar Tanque..." if x == "" else f"📦 {x} - {mapa_tanques_dict[x]['nombre']}"
+    )
+
+    # 8.4.2 Buscador de Rebombeos
+    lista_rebombeos_nombres = sorted(list(mapa_rebombeos_dict.keys()))
+    rebombeo_buscado = st.selectbox(
+        "🚀 Localizar Rebombeo",
+        options=[""] + lista_rebombeos_nombres,
+        format_func=lambda x: "Seleccionar Rebombeo..." if x == "" else f"🔄 {x}"
     )
 
     # 8.5. Buscador de Sectores
@@ -1577,8 +1595,15 @@ with st.sidebar:
 
     # 8.6. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
     datos_sector_resaltado = None
+    
     if pozo_buscado:
         st.session_state.centro_mapa = mapa_pozos_dict[pozo_buscado]['coord']
+        st.session_state.zoom_inicial = 18
+    elif tanque_buscado:
+        st.session_state.centro_mapa = mapa_tanques_dict[tanque_buscado]['coord']
+        st.session_state.zoom_inicial = 18
+    elif rebombeo_buscado:
+        st.session_state.centro_mapa = mapa_rebombeos_dict[rebombeo_buscado]['coord']
         st.session_state.zoom_inicial = 18
     elif sector_buscado:
         datos_s = next((s for s in sectores if s['sector'] == sector_buscado), None)
@@ -1592,6 +1617,7 @@ with st.sidebar:
             except:
                 pass
     else:
+        # Si no hay nada seleccionado, mantener vista general
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
         
@@ -1605,8 +1631,8 @@ with st.sidebar:
     with st.expander("🗺️ Control de Capas", expanded=False):
         ver_sectores = st.checkbox("Mostrar Sectores", value=True)
         ver_pozos = st.checkbox("Mostrar Pozos", value=True)
-        ver_tanques = st.checkbox("Mostrar Tanques", value=False)
-        ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=False)
+        ver_tanques = st.checkbox("Mostrar Tanques", value=True)
+        ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=True) # Activado por defecto para facilitar localización
     
     # 8.9. LISTADO DE ESTADOS ---
     with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
