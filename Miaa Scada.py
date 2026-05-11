@@ -231,10 +231,11 @@ def get_mysql_telemetria_engine():
 @st.cache_resource
 def get_postgres_conn():
     try: 
+        # Simplemente crea y retorna el objeto de conexión
         conn = psycopg2.connect(**st.secrets["postgres"])
-        conn.close() 
-        return psycopg2.connect(**st.secrets["postgres"])
-    except: 
+        return conn
+    except Exception as e: 
+        st.error(f"Error de conexión Postgres: {e}")
         return None
         
  # 2.4. Funcion para cargar el ultimo dato de SCADA
@@ -279,7 +280,8 @@ def obtener_historia_7_dias(tag_name):
 # 2.6. Funcion para optener los poligonos de los sectores y sus demas campos
 @st.cache_data(ttl=3600)
 def cargar_sectores_poligonos():
-    conn = get_postgres_conn()
+    # Obtenemos una conexión fresca
+    conn = psycopg2.connect(**st.secrets["postgres"])
     if not conn: return []
     try:
         query = """
@@ -292,12 +294,17 @@ def cargar_sectores_poligonos():
                    ST_AsGeoJSON(ST_Transform(geom, 4326)) as geo 
             FROM "Sectorizacion"."Sectores_hidr"
         """
+        # Leemos los datos
         df = pd.read_sql(query, conn)
-        conn.close()
         return df.to_dict('records')
     except Exception as e:
         st.error(f"Error al cargar sectores: {e}")
         return []
+    finally:
+        # El bloque finally asegura que la conexión se cierre SIEMPRE
+        # al terminar la función, exitosa o fallida.
+        if conn:
+            conn.close()
 
 # 2.7. Funcion para cambiar el formato de horas
 def formato_hora(decimal):
@@ -604,6 +611,7 @@ if tag_a_graficar:
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import pandas as pd
+import plotly.graph_objects as go
 
 params = st.query_params
 
@@ -620,7 +628,7 @@ if "graficar_pozo" in params:
 
     cabecera_placeholder = st.empty()
     
-    # 5.1. FILTRO DE TIEMPO
+    # --- 5.1. FILTRO DE TIEMPO ---
     col_f1, col_f2 = st.columns([2, 2])
     with col_f1:
         opcion_fecha = st.selectbox(
@@ -645,9 +653,8 @@ if "graficar_pozo" in params:
     elif opcion_fecha == "Este Mes":
         f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0)
     elif opcion_fecha == "Último Mes":
-        primero_este_mes = hoy_dt.replace(day=1, hour=0, minute=0, second=0)
-        f_fin = primero_este_mes - timedelta(seconds=1)
-        f_ini = (primero_este_mes - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0)
+        f_ini = (hoy_dt.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0)
+        f_fin = hoy_dt.replace(day=1, hour=0, minute=0, second=0) - timedelta(seconds=1)
     elif opcion_fecha == "Últimos 6 meses":
         f_ini = hoy_dt - timedelta(days=180)
     elif opcion_fecha == "Personalizado":
@@ -657,12 +664,10 @@ if "graficar_pozo" in params:
             f_ini = datetime.combine(rango[0], datetime.min.time())
             f_fin = datetime.combine(rango[1], datetime.max.time())
         else:
-            st.info("Selecciona el rango en el calendario.")
+            st.info("Selecciona el rango.")
             st.stop()
-    else:
-        f_ini = hoy_dt - timedelta(days=7) 
 
-    # 5.2. CONFIGURACIÓN Y CONSULTA
+    # --- 5.2. CONFIGURACIÓN DE TAGS Y CONSULTA ---
     tag_totalizado = str(pozo_info.get('totalizado', '')).strip()
     tag_caudal_real = pozo_info.get('caudal', '')
     tag_presion_real = pozo_info.get('presion', '')
@@ -679,7 +684,7 @@ if "graficar_pozo" in params:
     for item in config_visual:
         real_t = pozo_info.get(item[0], item[0])
         if real_t and real_t != 'N/A': tags_grafico.append({'tag': real_t, 'label': item[1], 'side': item[2], 'color': item[3]})
-
+    
     tags_query = [t['tag'] for t in tags_grafico]
     if tag_totalizado and tag_totalizado != 'N/A': tags_query.append(tag_totalizado)
 
@@ -690,7 +695,7 @@ if "graficar_pozo" in params:
             q = f"SELECT r.NAME as TagName, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{lista_tags_str}') AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}' ORDER BY h.FECHA ASC"
             df = pd.read_sql(q, engine)
             
-            # --- LÓGICA DE INDICADORES ---
+            # --- 5.3. LÓGICA DE INDICADORES ---
             val_vol, val_cau_prom, val_pre_prom = "0.00", "0.00", "0.00"
             val_v_prom, val_a_prom = "0.00", "0.00"
 
@@ -698,7 +703,9 @@ if "graficar_pozo" in params:
                 if tag_totalizado in df['TagName'].values:
                     df_tot = df[df['TagName'] == tag_totalizado].sort_values('FECHA')
                     if len(df_tot) >= 2:
-                        val_vol = f"{(float(df_tot['VALUE'].iloc[-1]) - float(df_tot['VALUE'].iloc[0])):,.2f}"
+                        consumo_neta = float(df_tot['VALUE'].iloc[-1]) - float(df_tot['VALUE'].iloc[0])
+                        val_vol = f"{consumo_neta:,.2f}"
+                
                 if tag_caudal_real in df['TagName'].values:
                     val_cau_prom = f"{df[df['TagName'] == tag_caudal_real]['VALUE'].mean():,.2f}"
                 if tag_presion_real in df['TagName'].values:
@@ -708,7 +715,7 @@ if "graficar_pozo" in params:
                 if tags_amperaje:
                     val_a_prom = f"{df[df['TagName'].isin(tags_amperaje)]['VALUE'].mean():,.1f}"
 
-            # RENDER CABECERA CORREGIDO
+            # --- 5.4. RENDER CABECERA (CON ELÉCTRICOS RESTAURADOS) ---
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
     <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">📈 Análisis Integral: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
@@ -737,35 +744,64 @@ if "graficar_pozo" in params:
 </div>
 """, unsafe_allow_html=True)
 
-            # --- GRÁFICO PLOTLY ---
+            # --- 5.5. PESTAÑA DE VOLÚMENES ---
+            with st.expander("📅 Análisis de volumen real", expanded=False):
+                if tag_totalizado and tag_totalizado != 'N/A':
+                    curr_year = datetime.now().year
+                    q_hist = f"SELECT YEAR(h.FECHA) as anio, MONTH(h.FECHA) as mes, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{tag_totalizado}' AND YEAR(h.FECHA) IN ({curr_year}, {curr_year - 1}) ORDER BY h.FECHA ASC"
+                    df_h = pd.read_sql(q_hist, engine)
+
+                    if not df_h.empty:
+                        res_meses = df_h.groupby(['anio', 'mes'])['VALUE'].last().reset_index()
+                        res_meses['produccion_neta'] = res_meses['VALUE'].diff()
+                        idx0 = res_meses.index[0]
+                        v0 = df_h[(df_h['anio']==res_meses.loc[idx0,'anio']) & (df_h['mes']==res_meses.loc[idx0,'mes'])]['VALUE'].iloc[0]
+                        res_meses.loc[idx0, 'produccion_neta'] = res_meses.loc[idx0, 'VALUE'] - v0
+                        
+                        nombres_meses = {1:'Ene', 2:'Feb', 3:'Mar', 4:'Abr', 5:'May', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dic'}
+                        res_meses['Mes_Txt'] = res_meses['mes'].map(nombres_meses)
+
+                        col_g, col_t = st.columns([2, 1])
+                        with col_g:
+                            fig_hist = go.Figure()
+                            for an in sorted(res_meses['anio'].unique()):
+                                df_a = res_meses[res_meses['anio'] == an].sort_values('mes')
+                                fig_hist.add_trace(go.Bar(x=df_a['Mes_Txt'], y=df_a['produccion_neta'], name=f'Año {an}', marker_color='#00d4ff' if an == curr_year else 'rgba(150,150,150,0.4)'))
+                            fig_hist.update_layout(template="plotly_dark", barmode='group', height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                            st.plotly_chart(fig_hist, use_container_width=True)
+
+                        with col_t:
+                            pivot = res_meses.pivot(index='mes', columns='anio', values='produccion_neta').sort_index(ascending=True)
+                            pivot.index = [nombres_meses[m] for m in pivot.index]
+                            st.dataframe(pivot.style.format("{:,.2f}"), use_container_width=True)
+                    else: st.info("Sin datos.")
+
+            # --- 5.6. GRÁFICO DE LÍNEAS (EJES FIX CON DICCIONARIOS) ---
             if not df.empty:
-                fig = make_subplots(specs=[[{"secondary_y": True}]])
+                fig_line = make_subplots(specs=[[{"secondary_y": True}]])
                 for t in tags_grafico:
-                    dft = df[df['TagName'] == t['tag']]
-                    if not dft.empty:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=dft['FECHA'], y=dft['VALUE'], name=t['label'], 
-                                mode='lines+markers' if "Amp" in t['label'] else 'lines',
-                                line=dict(color=t['color'], width=2.5)
-                            ), 
-                            secondary_y=t['side']
-                        )
+                    dft_l = df[df['TagName'] == t['tag']]
+                    if not dft_l.empty:
+                        fig_line.add_trace(go.Scatter(x=dft_l['FECHA'], y=dft_l['VALUE'], name=t['label'], mode='lines', line=dict(color=t['color'], width=2.5)), secondary_y=t['side'])
                 
-                fig.update_layout(
-                    template="plotly_dark", height=650, paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)', hovermode="x unified",
-                    legend=dict(orientation="h", y=1.08, x=0, xanchor="left"),
-                    margin=dict(l=60, r=60, t=100, b=50)
+                fig_line.update_layout(
+                    template="plotly_dark", height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                    hovermode="x unified", legend=dict(orientation="h", y=1.05),
+                    yaxis=dict(
+                        title=dict(text="<b>Caudal (Lps)</b>", font=dict(color="#00d4ff")), 
+                        tickfont=dict(color="#00d4ff")
+                    ),
+                    yaxis2=dict(
+                        title=dict(text="<b>Presión / Eléctricos</b>", font=dict(color="#00ff00")), 
+                        tickfont=dict(color="#00ff00"), 
+                        anchor="x", overlaying="y", side="right"
+                    ),
+                    xaxis=dict(title=dict(text="<b>Línea de Tiempo</b>"))
                 )
-                
-                fig.update_yaxes(title_text="<b>Caudal (Lps)</b>", secondary_y=False, color='#00d4ff', showgrid=True, gridcolor='#333')
-                fig.update_yaxes(title_text="<b>Presión / Eléctricos</b>", secondary_y=True, color='#00ff00', showgrid=False)
-                fig.update_xaxes(title_text="Tiempo", showgrid=True, gridcolor='#333')
-                
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig_line, use_container_width=True)
 
         except Exception as e: st.error(f"Error: {e}")
+            
     st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
