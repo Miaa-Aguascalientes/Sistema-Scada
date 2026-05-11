@@ -355,7 +355,8 @@ def cargar_mapa_pozos_desde_db():
                 "h_arranque": row['H_arranque'],
                 "h_paro": row['H_paro'],
                 "voltajes_l": [row['voltaje_L1'], row['voltaje_L2'], row['voltaje_L3']],
-                "amperajes_l": [row['amperaje_L1'], row['amperaje_L2'], row['amperaje_L3']]
+                "amperajes_l": [row['amperaje_L1'], row['amperaje_L2'], row['amperaje_L3']],
+                "totalizado": row['totalizado']
             }
         return nuevo_mapa
     except:
@@ -617,24 +618,26 @@ if "graficar_pozo" in params:
         st.error(f"❌ No se encontró configuración para el pozo: {id_pozo_graf}")
         st.stop()
 
-    st.title(f"📈 Análisis Integral: {nombre_pozo}")
+    cabecera_placeholder = st.empty()
     
     # 5.1. FILTRO DE TIEMPO
     col_f1, col_f2 = st.columns([2, 2])
     with col_f1:
         opcion_fecha = st.selectbox(
             "Rango de tiempo:", 
-            ["Hoy", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
-            index=1, 
+            ["Hoy", "Ayer", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
+            index=2, 
             key="fecha_pozo_v8"
         )
 
-    # --- LÓGICA DE FECHAS REFORZADA ---
     hoy_dt = datetime.now()
     f_fin = hoy_dt
     
     if opcion_fecha == "Hoy":
         f_ini = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif opcion_fecha == "Ayer":
+        f_ini = (hoy_dt - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        f_fin = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
     elif opcion_fecha == "Últimos 7 días":
         f_ini = hoy_dt - timedelta(days=7)
     elif opcion_fecha == "Últimos 14 días":
@@ -649,99 +652,120 @@ if "graficar_pozo" in params:
         f_ini = hoy_dt - timedelta(days=180)
     elif opcion_fecha == "Personalizado":
         with col_f2:
-            rango = st.date_input("Selecciona el periodo:", 
-                                 value=(hoy_dt.date() - timedelta(days=7), hoy_dt.date()),
-                                 max_value=hoy_dt.date())
-        # Validación crítica para el selector personalizado
+            rango = st.date_input("Selecciona el periodo:", value=(hoy_dt.date() - timedelta(days=7), hoy_dt.date()), max_value=hoy_dt.date())
         if isinstance(rango, (list, tuple)) and len(rango) == 2:
             f_ini = datetime.combine(rango[0], datetime.min.time())
             f_fin = datetime.combine(rango[1], datetime.max.time())
         else:
-            # Mientras el usuario elige la segunda fecha, evitamos que el código truene
-            st.info("Selecciona la fecha de inicio y fin en el calendario.")
+            st.info("Selecciona el rango en el calendario.")
             st.stop()
     else:
-        f_ini = hoy_dt - timedelta(days=7)
+        f_ini = hoy_dt - timedelta(days=7) 
 
-    # 5.2. CONFIGURACIÓN DE VARIABLES
-    config_visual = [
-        ('caudal', "Caudal (Lps)", False, '#00d4ff'),
-        ('presion', "Presión (Kg/cm²)", True, '#00ff00')
-    ]
+    # 5.2. CONFIGURACIÓN Y CONSULTA
+    tag_totalizado = str(pozo_info.get('totalizado', '')).strip()
+    tag_caudal_real = pozo_info.get('caudal', '')
+    tag_presion_real = pozo_info.get('presion', '')
+    tags_voltaje = [t for t in pozo_info.get('voltajes_l', []) if t and t != 'N/A']
+    tags_amperaje = [t for t in pozo_info.get('amperajes_l', []) if t and t != 'N/A']
     
+    config_visual = [('caudal', "Caudal (Lps)", False, '#00d4ff'), ('presion', "Presión (Kg/cm²)", True, '#00ff00')]
     for i, t in enumerate(pozo_info.get('voltajes_l', [])):
         if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", True, '#fffb00'))
     for i, t in enumerate(pozo_info.get('amperajes_l', [])):
         if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", True, '#ff8000'))
 
-    # 5.3. PROCESAMIENTO Y GRÁFICO
-    tags_finales = []
+    tags_grafico = []
     for item in config_visual:
-        tag_key, label, side, color = item
-        real_tag = pozo_info.get(tag_key, tag_key)
-        if real_tag and real_tag != 'N/A':
-            tags_finales.append({'tag': real_tag, 'label': label, 'side': side, 'color': color})
+        real_t = pozo_info.get(item[0], item[0])
+        if real_t and real_t != 'N/A': tags_grafico.append({'tag': real_t, 'label': item[1], 'side': item[2], 'color': item[3]})
 
-    if tags_finales:
+    tags_query = [t['tag'] for t in tags_grafico]
+    if tag_totalizado and tag_totalizado != 'N/A': tags_query.append(tag_totalizado)
+
+    if tags_query:
         try:
-            engine_scada = get_mysql_scada_engine()
-            lista_tags_sql = "', '".join([t['tag'] for t in tags_finales])
+            engine = get_mysql_scada_engine()
+            lista_tags_str = f"','".join(list(set(tags_query)))
+            q = f"SELECT r.NAME as TagName, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{lista_tags_str}') AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}' ORDER BY h.FECHA ASC"
+            df = pd.read_sql(q, engine)
             
-            query = f"""
-                SELECT r.NAME as TagName, h.VALUE, h.FECHA 
-                FROM vfitagnumhistory h
-                JOIN VfiTagRef r ON h.GATEID = r.GATEID
-                WHERE r.NAME IN ('{lista_tags_sql}') 
-                AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}' 
-                ORDER BY h.FECHA ASC
-            """
-            df = pd.read_sql(query, engine_scada)
-            
+            # --- LÓGICA DE INDICADORES ---
+            val_vol, val_cau_prom, val_pre_prom = "0.00", "0.00", "0.00"
+            val_v_prom, val_a_prom = "0.00", "0.00"
+
+            if not df.empty:
+                if tag_totalizado in df['TagName'].values:
+                    df_tot = df[df['TagName'] == tag_totalizado].sort_values('FECHA')
+                    if len(df_tot) >= 2:
+                        val_vol = f"{(float(df_tot['VALUE'].iloc[-1]) - float(df_tot['VALUE'].iloc[0])):,.2f}"
+                if tag_caudal_real in df['TagName'].values:
+                    val_cau_prom = f"{df[df['TagName'] == tag_caudal_real]['VALUE'].mean():,.2f}"
+                if tag_presion_real in df['TagName'].values:
+                    val_pre_prom = f"{df[df['TagName'] == tag_presion_real]['VALUE'].mean():,.2f}"
+                if tags_voltaje:
+                    val_v_prom = f"{df[df['TagName'].isin(tags_voltaje)]['VALUE'].mean():,.1f}"
+                if tags_amperaje:
+                    val_a_prom = f"{df[df['TagName'].isin(tags_amperaje)]['VALUE'].mean():,.1f}"
+
+            # RENDER CABECERA CORREGIDO
+            cabecera_placeholder.markdown(f"""
+<div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
+    <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">📈 Análisis Integral: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 150px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Volumen</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_vol} <small style="font-size: 12px; color: #00d4ff;">m³</small></span>
+        </div>
+        <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 150px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Caudal Promedio</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_cau_prom} <small style="font-size: 12px; color: #00d4ff;">Lps</small></span>
+        </div>
+        <div style="padding: 12px 18px; background: rgba(0, 255, 0, 0.05); border: 2px solid #00ff00; border-radius: 12px; min-width: 150px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Presión Promedio</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_pre_prom} <small style="font-size: 12px; color: #00ff00;">Kg</small></span>
+        </div>
+        <div style="padding: 12px 18px; background: rgba(255, 251, 0, 0.05); border: 2px solid #fffb00; border-radius: 12px; min-width: 150px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Voltaje Prom</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_v_prom} <small style="font-size: 12px; color: #fffb00;">V</small></span>
+        </div>
+        <div style="padding: 12px 18px; background: rgba(255, 128, 0, 0.05); border: 2px solid #ff8000; border-radius: 12px; min-width: 150px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Amperaje Prom</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_a_prom} <small style="font-size: 12px; color: #ff8000;">A</small></span>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+            # --- GRÁFICO PLOTLY ---
             if not df.empty:
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
-                
-                for t_info in tags_finales:
-                    df_tag = df[df['TagName'] == t_info['tag']]
-                    if not df_tag.empty:
-                        # Estilos diferenciados
-                        is_amp = "Amp" in t_info['label']
-                        
+                for t in tags_grafico:
+                    dft = df[df['TagName'] == t['tag']]
+                    if not dft.empty:
                         fig.add_trace(
                             go.Scatter(
-                                x=df_tag['FECHA'], 
-                                y=df_tag['VALUE'], 
-                                name=t_info['label'],
-                                line=dict(color=t_info['color'], width=1.5 if is_amp else 2),
-                                mode='lines+markers' if is_amp else 'lines', # Amperajes con puntos
-                                marker=dict(size=4) if is_amp else None
-                            ),
-                            secondary_y=t_info['side']
+                                x=dft['FECHA'], y=dft['VALUE'], name=t['label'], 
+                                mode='lines+markers' if "Amp" in t['label'] else 'lines',
+                                line=dict(color=t['color'], width=2.5)
+                            ), 
+                            secondary_y=t['side']
                         )
-
+                
                 fig.update_layout(
-                    template="plotly_dark",
-                    hovermode="x unified",
-                    height=700,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    # LEYENDA A LA IZQUIERDA
-                    legend=dict(
-                        orientation="h", 
-                        y=1.05, 
-                        x=0,          # Alineado al inicio (izquierda)
-                        xanchor="left" # El punto de anclaje es la izquierda de la leyenda
-                    )
+                    template="plotly_dark", height=650, paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)', hovermode="x unified",
+                    legend=dict(orientation="h", y=1.08, x=0, xanchor="left"),
+                    margin=dict(l=60, r=60, t=100, b=50)
                 )
                 
-                fig.update_yaxes(title_text="<b>Caudal (Lps)</b>", secondary_y=False, color='#00d4ff')
-                fig.update_yaxes(title_text="<b>Presión / Parámetros Eléctricos</b>", secondary_y=True, gridcolor='#333')
+                fig.update_yaxes(title_text="<b>Caudal (Lps)</b>", secondary_y=False, color='#00d4ff', showgrid=True, gridcolor='#333')
+                fig.update_yaxes(title_text="<b>Presión / Eléctricos</b>", secondary_y=True, color='#00ff00', showgrid=False)
+                fig.update_xaxes(title_text="Tiempo", showgrid=True, gridcolor='#333')
                 
                 st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning(f"Sin datos en el rango: {f_ini.strftime('%d/%m %H:%M')} - {f_fin.strftime('%d/%m %H:%M')}")
-        except Exception as e:
-            st.error(f"Error en consulta SQL: {e}")
-    
+
+        except Exception as e: st.error(f"Error: {e}")
     st.stop()
     
 # 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
@@ -1539,7 +1563,7 @@ with st.sidebar:
         st.session_state.zoom_inicial = 12.5
     
     # 8.3. ESTADO DE LAS CONEXIONES
-    with st.expander("🔌 Estado de las Conexiones", expanded=False):
+    with st.expander("🔌 Estado de las Conexiones", expanded=True):
         status_mysql_scada = "OK" if get_mysql_scada_engine() else "ERROR"
         status_mysql_tele = "OK" if get_mysql_telemetria_engine() else "ERROR"
         status_postgres = "OK" if get_postgres_conn() else "ERROR"
