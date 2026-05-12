@@ -898,7 +898,7 @@ st.markdown("""
 
         /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
         [data-testid="stSidebarContent"] {
-            padding-top: 30px !important; 
+            padding-top: 3px !important; 
         }
 
         [data-testid="stSidebar"] { 
@@ -911,8 +911,8 @@ st.markdown("""
            position: fixed; 
            top: 20px; 
            left: 40px; 
-           width: 250px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
-           height: 80px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
+           width: 170px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
+           height: 50px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
            z-index: 999999; 
            display: flex; 
            justify-content: center; 
@@ -1536,9 +1536,9 @@ st.markdown("""
         
         /* 2. FORZAR ANCHO ESTÁTICO E INAMOVIBLE */
         section[data-testid="stSidebar"] {
-            width: 300px !important;
-            min-width: 300px !important;
-            max-width: 300px !important;
+            width: 250px !important;
+            min-width: 250px !important;
+            max-width: 250px !important;
             /* Evita que el usuario seleccione texto o interactúe con el borde */
             user-select: none; 
         }
@@ -1599,7 +1599,7 @@ with st.sidebar:
         st.session_state.zoom_inicial = 12.5
     
     # 8.3. ESTADO DE LAS CONEXIONES
-    with st.expander("🔌 Estado de las Conexiones", expanded=True):
+    with st.expander("🔌 Conexiones BD", expanded=False):
         status_mysql_scada = "OK" if get_mysql_scada_engine() else "ERROR"
         status_mysql_tele = "OK" if get_mysql_telemetria_engine() else "ERROR"
         status_postgres = "OK" if get_postgres_conn() else "ERROR"
@@ -1625,23 +1625,23 @@ with st.sidebar:
     pozo_buscado = st.selectbox(
         "🔍 Localizar Pozo",
         options=[""] + lista_pozos_nombres,
-        format_func=lambda x: "Seleccionar Pozo..." if x == "" else f"📍 {x}"
+        format_func=lambda x: "Seleccionar" if x == "" else f"📍 {x}"
     )
 
     # 8.4.1 Buscador de Tanques
     lista_tanques_nombres = sorted(list(mapa_tanques_dict.keys()))
     tanque_buscado = st.selectbox(
-        "💧 Localizar Tanque",
+        "🛢️ Localizar Tanque",
         options=[""] + lista_tanques_nombres,
-        format_func=lambda x: "Seleccionar Tanque..." if x == "" else f"📦 {x} - {mapa_tanques_dict[x]['nombre']}"
+        format_func=lambda x: "Seleccionar" if x == "" else f"📦 {x} - {mapa_tanques_dict[x]['nombre']}"
     )
 
     # 8.4.2 Buscador de Rebombeos
     lista_rebombeos_nombres = sorted(list(mapa_rebombeos_dict.keys()))
     rebombeo_buscado = st.selectbox(
-        "🚀 Localizar Rebombeo",
+        "🧊 Localizar Rebombeo",
         options=[""] + lista_rebombeos_nombres,
-        format_func=lambda x: "Seleccionar Rebombeo..." if x == "" else f"🔄 {x}"
+        format_func=lambda x: "Seleccionar" if x == "" else f"🔄 {x}"
     )
 
     # 8.5. Buscador de Sectores
@@ -1649,7 +1649,7 @@ with st.sidebar:
     sector_buscado = st.selectbox(
         "🏘️ Localizar Sector",
         options=[""] + lista_sectores,
-        format_func=lambda x: "Seleccionar Sector..." if x == "" else f" {x}",
+        format_func=lambda x: "Seleccionar" if x == "" else f" {x}",
         key="busqueda_sectores"
     )
 
@@ -1727,8 +1727,8 @@ st.markdown(f"""
         <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">📉 Presión promedio</p><p style="color:#ffff00; font-size:1.1rem; font-weight:bold; margin:0;">{p_prom:.2f} kg</p></div>
         <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">🟢 Sitios encendidos</p><p style="color:#00ff00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_on)}</p></div>
         <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">🔴 Sitios apagados</p><p style="color:#ff0000; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_off)}</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">⚠️ Sitios con falla de comunicación</p><p style="color:#ffaa00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_falla_com)}</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">⚪ Sitios sin telemetria</p><p style="color:#ffffff; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_sin_telemetria)}</p></div>
+        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">⚠️ fallas de comunicación</p><p style="color:#ffaa00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_falla_com)}</p></div>
+        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">⚪ Sin telemetria</p><p style="color:#ffffff; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_sin_telemetria)}</p></div>
     </div>
 """, unsafe_allow_html=True)
 
