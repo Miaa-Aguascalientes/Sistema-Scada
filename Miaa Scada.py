@@ -1617,6 +1617,9 @@ if sector_seleccionado:
                             df_tag = df_h[df_h['TAG'] == tag_name]
                             if not df_tag.empty:
                                 cfg = mapeo_config[tag_name]
+                                
+                                es_caudal = not cfg['sec']
+                                
                                 fig.add_trace(go.Scatter(
                                     x=df_tag['FECHA'], 
                                     y=df_tag['VALUE'], 
@@ -1625,6 +1628,8 @@ if sector_seleccionado:
                                     mode='lines+markers',
                                     line=dict(width=1.5, color=cfg['color']),
                                     marker=dict(size=4, symbol='circle'),
+                                    fill='tozeroy' if es_caudal else None,
+                                    fillcolor=f"rgba{tuple(int(cfg['color'].lstrip('#')[i:i+2], 16) for i in (0, 2, 4)) + (0.05,)}" if es_caudal else None,
                                     hovertemplate='<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>'
                                 ))
                         
@@ -1656,7 +1661,7 @@ if sector_seleccionado:
                     df_v = pd.read_sql(f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_in_v}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
                     
                     if not df_v.empty:
-                        st.markdown(f"<h3 style='color:#00ffcc; font-size:16px; margin-bottom:10px; text-align: center;'>Válvulas reductoras de presión:</h3>", unsafe_allow_html=True)
+                        st.markdown(f"<h3 style='color:#00ffcc; font-size:18px; margin-bottom:10px; text-align: center;'>Válvulas reductoras de presión:</h3>", unsafe_allow_html=True)
                         fig_v = go.Figure()
 
                         # Caudal
@@ -1704,7 +1709,7 @@ if sector_seleccionado:
                         df_pc_h = pd.read_sql(f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_pc_in}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC", engine_h)
 
                         if not df_pc_h.empty:
-                            st.markdown(f"<h3 style='color:#ff0000; font-size:16px; margin-bottom:10px; text-align: center;'>Puntos críticos del sector:</h3>", unsafe_allow_html=True)
+                            st.markdown(f"<h3 style='color:#ff0000; font-size:18px; margin-bottom:10px; text-align: center;'>Puntos críticos del sector:</h3>", unsafe_allow_html=True)
                             fig_pc = go.Figure()
                             
                             # CAMBIO 1: Usar 'Domicilio' en lugar de 'nombre' (Colonia) para el mapeo
