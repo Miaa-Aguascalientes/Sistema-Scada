@@ -648,6 +648,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 
 params = st.query_params
 
@@ -702,18 +703,18 @@ if "graficar_pozo" in params:
             st.info("Selecciona el rango.")
             st.stop()
 
-    
     tag_totalizado = str(pozo_info.get('totalizado', '')).strip()
     tag_caudal_real = pozo_info.get('caudal', '')
+    tag_nivel_tanque = pozo_info.get('nivel_tanque', '')
     tag_presion_real = pozo_info.get('presion', '')
     tag_nivel_dinamico = pozo_info.get('nivel_dinamico', '')
     tag_sumergencia = pozo_info.get('sumergencia', '')
     tags_voltaje = [t for t in pozo_info.get('voltajes_l', []) if t and t != 'N/A']
     tags_amperaje = [t for t in pozo_info.get('amperajes_l', []) if t and t != 'N/A']
     
-    # Asignación de ejes correlacionada con la nueva distribución compacta
     config_visual = [
         ('caudal', "Caudal (Lps)", 'y', '#00d4ff'), 
+        ('nivel_tanque', "Nivel Tanque (m)", 'y5', '#00ffcc'),
         ('presion', "Presión (Kg/cm²)", 'y2', '#00ff00'),
         ('nivel_dinamico', "Nivel Dinámico (m)", 'y3', '#ff00b4'),
         ('sumergencia', "Sumergencia (m)", 'y3', '#a800ff')
@@ -736,13 +737,14 @@ if "graficar_pozo" in params:
         try:
             engine = get_mysql_scada_engine()
             lista_tags_str = f"','".join(list(set(tags_query)))
+            
             q = f"SELECT r.NAME as TagName, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{lista_tags_str}') AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}' ORDER BY h.FECHA ASC"
             df = pd.read_sql(q, engine)
             
-            # ---  LÓGICA DE INDICADORES ---
+            # --- LÓGICA DE INDICADORES ---
             val_vol, val_cau_prom, val_pre_prom = "0.00", "0.00", "0.00"
             val_v_prom, val_a_prom = "0.00", "0.00"
-            val_nd_prom, val_sum_prom = "0.00", "0.00"
+            val_nd_prom, val_sum_prom, val_nt_prom = "0.00", "0.00", "0.00"
 
             if not df.empty:
                 if tag_totalizado in df['TagName'].values:
@@ -753,6 +755,8 @@ if "graficar_pozo" in params:
                 
                 if tag_caudal_real in df['TagName'].values:
                     val_cau_prom = f"{df[df['TagName'] == tag_caudal_real]['VALUE'].mean():,.2f}"
+                if tag_nivel_tanque in df['TagName'].values:
+                    val_nt_prom = f"{df[df['TagName'] == tag_nivel_tanque]['VALUE'].mean():,.2f}"
                 if tag_presion_real in df['TagName'].values:
                     val_pre_prom = f"{df[df['TagName'] == tag_presion_real]['VALUE'].mean():,.2f}"
                 if tag_nivel_dinamico in df['TagName'].values:
@@ -767,7 +771,7 @@ if "graficar_pozo" in params:
             # --- RENDER CABECERA ---
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
-    <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">📈 Análisis Integral: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
+    <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">📈 Análisis: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Volumen</span>
@@ -777,17 +781,21 @@ if "graficar_pozo" in params:
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Caudal Promedio</span>
             <span style="color: white; font-size: 24px; font-weight: bold;">{val_cau_prom} <small style="font-size: 12px; color: #00d4ff;">Lps</small></span>
         </div>
+        <div style="padding: 12px 18px; background: rgba(0, 255, 204, 0.05); border: 2px solid #00ffcc; border-radius: 12px; min-width: 130px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Nivel Tanque</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nt_prom} <small style="font-size: 12px; color: #00ffcc;">m</small></span>
+        </div>
         <div style="padding: 12px 18px; background: rgba(0, 255, 0, 0.05); border: 2px solid #00ff00; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Presión Promedio</span>
             <span style="color: white; font-size: 24px; font-weight: bold;">{val_pre_prom} <small style="font-size: 12px; color: #00ff00;">Kg/cm²</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(255, 0, 180, 0.05); border: 2px solid #ff00b4; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Nivel Dinámico</span>
-            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nd_prom} <small style="font-size: 12px; color: #ff00b4;">Mts</small></span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nd_prom} <small style="font-size: 12px; color: #ff00b4;">m</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(168, 0, 255, 0.05); border: 2px solid #a800ff; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Sumergencia</span>
-            <span style="color: white; font-size: 24px; font-weight: bold;">{val_sum_prom} <small style="font-size: 12px; color: #a800ff;">Mts</small></span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_sum_prom} <small style="font-size: 12px; color: #a800ff;">m</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(255, 251, 0, 0.05); border: 2px solid #fffb00; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Voltaje Prom</span>
@@ -801,7 +809,7 @@ if "graficar_pozo" in params:
 </div>
 """, unsafe_allow_html=True)
 
-            # ---  PESTAÑA DE VOLÚMENES ---
+            # --- PESTAÑA DE VOLÚMENES ---
             with st.expander("📅 Análisis de volumen real", expanded=False):
                 if tag_totalizado and tag_totalizado != 'N/A':
                     curr_year = datetime.now().year
@@ -833,66 +841,122 @@ if "graficar_pozo" in params:
                             st.dataframe(pivot.style.format("{:,.2f}"), use_container_width=True)
                     else: st.info("Sin datos.")
 
-            # ---  GRÁFICO CON REDISTRIBUCIÓN OPTIMIZADA DE EJES ---
+            # --- PROCESAMIENTO CRÍTICO DE HOVER CON COLORES ---
             if not df.empty:
+                df['FECHA'] = pd.to_datetime(df['FECHA'])
+                
+                eje_tiempo_global = sorted(df['FECHA'].unique())
+                df_interactivo = pd.DataFrame({'FECHA_INDEX': eje_tiempo_global})
+                
                 fig_line = go.Figure()
                 
                 for t in tags_grafico:
-                    dft_l = df[df['TagName'] == t['tag']]
-                    if not dft_l.empty:
-                        fig_line.add_trace(
-                            go.Scatter(
-                                x=dft_l['FECHA'], 
-                                y=dft_l['VALUE'], 
-                                name=t['label'], 
-                                mode='lines+markers',
-                                line=dict(color=t['color'], width=2.2),
-                                marker=dict(size=4, symbol='circle'),
-                                yaxis=t['axis']
+                    dft_l = df[df['TagName'] == t['tag']].sort_values('FECHA').copy()
+                    
+                    if dft_l.empty:
+                        q_ultimo = f"SELECT r.NAME as TagName, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{t['tag']}' AND h.FECHA < '{f_ini}' ORDER BY h.FECHA DESC LIMIT 1"
+                        df_ultimo_reg = pd.read_sql(q_ultimo, engine)
+                        
+                        if not df_ultimo_reg.empty:
+                            df_ultimo_reg['FECHA'] = pd.to_datetime(df_ultimo_reg['FECHA'])
+                            dft_l = df_ultimo_reg
+                        else:
+                            dft_l = pd.DataFrame([{ 'TagName': t['tag'], 'VALUE': 0.0, 'FECHA': pd.to_datetime(f_ini) }])
+
+                    # 1. GEOMETRÍA VISUAL REAL
+                    fig_line.add_trace(
+                        go.Scatter(
+                            x=dft_l['FECHA'], 
+                            y=dft_l['VALUE'], 
+                            name=t['label'], 
+                            mode='lines+markers',
+                            line=dict(color=t['color'], width=2.2),
+                            marker=dict(size=4, symbol='circle'),
+                            yaxis=t['axis'],
+                            showlegend=True,
+                            hoverinfo="skip"
+                        )
+                    )
+                    
+                    dft_l['HORA_REAL'] = dft_l['FECHA'].dt.strftime('%m-%d %H:%M:%S')
+                    
+                    df_tag_maestro = pd.merge_asof(
+                        df_interactivo, 
+                        dft_l, 
+                        left_on='FECHA_INDEX', 
+                        right_on='FECHA', 
+                        direction='backward'
+                    )
+                    df_tag_maestro['VALUE'] = df_tag_maestro['VALUE'].bfill()
+                    df_tag_maestro['HORA_REAL'] = df_tag_maestro['HORA_REAL'].bfill()
+                    
+                    # 2. TRAZA DE HOVER BLINDADA CON FORZADO EN COLOR DE MARCADORES Y BORDES
+                    fig_line.add_trace(
+                        go.Scatter(
+                            x=df_interactivo['FECHA_INDEX'],
+                            y=df_tag_maestro['VALUE'],
+                            name=t['label'],
+                            mode='lines',
+                            # Ponemos un ancho minúsculo (0.01) para obligar a Plotly a reconocer el color en el hover
+                            line=dict(color=t['color'], width=0.01), 
+                            yaxis=t['axis'],
+                            showlegend=False,
+                            customdata=df_tag_maestro['HORA_REAL'].tolist(),
+                            hovertext=df_tag_maestro['VALUE'].tolist(),
+                            # Estructuramos el texto inyectándole etiquetas HTML con el color hexadecimal exacto
+                            hovertemplate=f"<span style='color:{t['color']};'>■</span> <b>{t['label']}</b>: %{{hovertext:,.2f}} <span style='color:#888; font-size:11px;'>(%{{customdata}})</span><extra></extra>",
+                            hoverlabel=dict(
+                                bordercolor=t['color']
                             )
                         )
+                    )
                 
                 fig_line.update_layout(
                     template="plotly_dark", 
                     height=650, 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)', 
+                    
                     hovermode="x unified", 
                     legend=dict(orientation="h", y=1.08),
                     
-                    # Se extiende la cuadrícula central al 90% del ancho disponible
                     xaxis=dict(
                         title=dict(text="<b>Línea de Tiempo</b>"),
-                        domain=[0, 0.90]
+                        domain=[0.07, 0.91]
                     ),
                     
-                    # EJE IZQUIERDO: Caudal
+                    # --- CONFIGURACIÓN DE EJES MÚLTIPLES ---
+                    yaxis5=dict(
+                        title=dict(text="<b>Nivel Tanque (m)</b>", font=dict(color="#00ffcc")), 
+                        tickfont=dict(color="#00ffcc"), 
+                        side="left",
+                        overlaying="y",
+                        anchor="free",
+                        position=0.00
+                    ),
                     yaxis=dict(
                         title=dict(text="<b>Caudal (Lps)</b>", font=dict(color="#00d4ff")), 
-                        tickfont=dict(color="#00d4ff")
+                        tickfont=dict(color="#00d4ff"),
+                        side="left",
+                        anchor="free",
+                        position=0.04
                     ),
-                    
-                    # EJE DERECHO 1: Presión (Desplazado a la derecha, al nuevo borde de la gráfica)
                     yaxis2=dict(
                         title=dict(text="<b>Presión (Kg/cm²)</b>", font=dict(color="#00ff00")), 
                         tickfont=dict(color="#00ff00"), 
                         side="right",
                         overlaying="y",
-                        anchor="x",
-                        position=0.90
+                        anchor="free",
+                        position=0.92
                     ),
-                    
-                    # EJE DERECHO 2: Niveles (Compactado al centro del grupo derecho)
                     yaxis3=dict(
-                        title=dict(text="<b>Niveles (m)</b>", font=dict(color="#ff00b4")), 
+                        title=dict(text="<b>Niveles Pozo (m)</b>", font=dict(color="#ff00b4")), 
                         tickfont=dict(color="#ff00b4"), 
                         side="right",
                         overlaying="y",
                         anchor="free",
-                        position=0.95
+                        position=0.955
                     ),
-                    
-                    # EJE DERECHO 3: Eléctricos (Fijo en el extremo exterior derecho)
                     yaxis4=dict(
                         title=dict(text="<b>Eléctricos (V / A)</b>", font=dict(color="#ff8000")), 
                         tickfont=dict(color="#ff8000"), 
