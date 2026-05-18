@@ -123,7 +123,7 @@ if not st.session_state.autenticado:
         <div class="visual-core">
             <div class="ring r1"></div><div class="ring r2"></div>
             <div class="center-logo">
-                <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg" class="logo-miaa">
+                <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Sistema-Scada/77573406f536a08b28e9e40f64ff2b368b3df1ad/LogoMIAA.svg" class="logo-miaa">
                 <h2 style="color:#00d4ff; font-family:Orbitron; font-size:-400px; letter-spacing:5px; margin-top:-35px;"></h2>
             </div>
         </div>
@@ -1213,25 +1213,44 @@ if sector_seleccionado:
         vrp_nombres = {v['nombre']: k for k, v in dict_vrp_sec.items()}
         opciones_vrp = list(vrp_nombres.keys())
 
-        c_sel_f, c_sel_reg, c_sel_vrp = st.columns([1.2, 1.2, 1.2])
+        c_sel_f, c_fecha_ext = st.columns([1, 1])
         with c_sel_f:
-            opcion_fecha = st.selectbox("Rango de fechas:", ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"], index=2, key="f_sector_full")
-        
-        with c_sel_reg:
-            if not opciones_equipo:
-                sel_r = None
-                st.selectbox("Equipo punto de control:", ["Sin equipos"], key="sel_reg_full", disabled=True)
-            else:
-                sel_r = st.selectbox("Equipo punto de control:", opciones_equipo, key="sel_reg_full")
-                sel_r_id = reg_nombres.get(sel_r)
+            opcion_fecha = st.selectbox(
+                "Rango de fechas:",
+                ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"],
+                index=2,
+                key="f_sector_full",
+                label_visibility="collapsed" # Colapsamos el label para que queden alineados
+        )
+        # Inicialización de fechas
+        hoy = datetime.now().date()
+        f_ini_h, f_fin_h = hoy, hoy
 
-        with c_sel_vrp:
-            if not opciones_vrp:
-                sel_v = None
-                st.selectbox("Válvula VRP (Domicilio):", ["Sin VRP"], key="sel_vrp_full", disabled=True)
-            else:
-                sel_v = st.selectbox("Válvula VRP (Domicilio):", opciones_vrp, key="sel_vrp_full")
-                sel_v_id = vrp_nombres.get(sel_v)
+        # Lógica de asignación de periodos
+        if opcion_fecha == "Hoy":
+            f_ini_h, f_fin_h = hoy, hoy
+        elif opcion_fecha == "Esta Semana":
+            f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
+        elif opcion_fecha == "Últimos 14 días":
+            f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
+        elif opcion_fecha == "Este Mes":
+            f_ini_h, f_fin_h = hoy.replace(day=1), hoy
+        elif opcion_fecha == "Personalizado":
+            with c_fecha_ext:
+                # El calendario aparece a la derecha y nivelado al pixel
+                rango_p = st.date_input(
+                    "Periodo:",
+                    value=(hoy - timedelta(days=7), hoy),
+                    max_value=hoy,
+                    key="f_sector_custom_global",
+                    label_visibility="collapsed"
+                )
+                if isinstance(rango_p, tuple) and len(rango_p) == 2:
+                    f_ini_h, f_fin_h = rango_p
+                else:
+                    f_ini_h, f_fin_h = hoy, hoy    
+        
+
 
         # 7.4. Layout Superior: Mapa e Histórico Puntos de Control
         col_izq, col_der = st.columns([1.0, 1.0])
@@ -1557,20 +1576,6 @@ if sector_seleccionado:
         with col_der:
             st.markdown(f"<h3 style='color:#00d4ff; font-size:18px; text-align: center; margin-bottom:0px;'>Histórico Puntos de control</h3>", unsafe_allow_html=True)
             
-            hoy = datetime.now().date()
-            # Usamos la variable opcion_fecha que mencionaste en tu snippet
-            if opcion_fecha == "Hoy": 
-                f_ini_h, f_fin_h = hoy, hoy
-            elif opcion_fecha == "Esta Semana": 
-                f_ini_h, f_fin_h = hoy - timedelta(days=hoy.weekday()), hoy
-            elif opcion_fecha == "Últimos 14 días": 
-                f_ini_h, f_fin_h = hoy - timedelta(days=14), hoy
-            elif opcion_fecha == "Este Mes": 
-                f_ini_h, f_fin_h = hoy.replace(day=1), hoy
-            else:
-                rango = st.date_input("Periodo:", value=(hoy - timedelta(days=7), hoy), max_value=hoy, key="date_hist_integral_p")
-                f_ini_h, f_fin_h = rango if isinstance(rango, tuple) and len(rango)==2 else (hoy, hoy)
-
             tags_visualizar = []
             mapeo_config = {}
 
@@ -1652,9 +1657,10 @@ if sector_seleccionado:
                                     y=df_tag['VALUE'], 
                                     name=cfg['label'], 
                                     yaxis="y2" if cfg['sec'] else "y1", 
-                                    mode='lines' if es_caudal else 'lines+markers',
+                                    mode='lines+markers',
                                     line=dict(width=2, color=color_base),
-                                    marker=dict(size=4) if cfg['sec'] else None,
+                                    
+                                    marker=dict(size=3 if es_caudal else 3, symbol='circle'),
                                     
                                     # Configuración de Área para Caudales
                                     fill='tozeroy' if es_caudal else None,
@@ -1745,11 +1751,12 @@ if sector_seleccionado:
                                 fig_v.add_trace(go.Scatter(
                                     x=df_t['FECHA'], 
                                     y=df_t['VALUE'], 
-                                    name=c_vrp['label'], # Ahora mostrará "VRP [ID] - Q"
+                                    name=c_vrp['label'], 
                                     yaxis="y2" if c_vrp['sec'] else "y1", 
-                                    mode='lines' if es_caudal_v else 'lines+markers',
+                                    mode='lines+markers',
                                     line=dict(width=1.8, color=color_v),
-                                    marker=dict(size=3) if c_vrp['sec'] else None,
+                                    # CORRECCIÓN AQUÍ: Sintaxis de marcador limpia
+                                    marker=dict(size=3 if es_caudal_v else 4, symbol='circle'),
                                     fill='tozeroy' if es_caudal_v else None,
                                     fillcolor=color_v.replace("hsl", "hsla").replace(")", ", 0.12)"),
                                     hovertemplate=f'<b>%{{fullData.name}}</b>: %{{y:.2f}} {unidad_final}<extra></extra>'
@@ -1893,7 +1900,7 @@ st.markdown("""
 
 with st.sidebar:
     # 8.1. Contenedor del logo
-    st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/c45d926ef0e34215c237cd3c7f71f7b97bf9a784/LogoMIAA-BpcVaQaq.svg"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Sistema-Scada/77573406f536a08b28e9e40f64ff2b368b3df1ad/LogoMIAA.svg"></div>', unsafe_allow_html=True)
 
     # 8.2. Inicializamos variables de estado (Solo si no existen)
     if 'centro_mapa' not in st.session_state:
