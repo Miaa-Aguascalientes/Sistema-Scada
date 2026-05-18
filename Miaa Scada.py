@@ -926,7 +926,12 @@ if "graficar_pozo" in params:
                         title=dict(text="<b>Línea de Tiempo</b>"),
                         domain=[0.07, 0.91],
                         showline=False,       # Sin recuadros externos
-                        mirror=False
+                        mirror=False,
+                        showspikes=True,
+                        spikethickness=0.05, 
+                        spikedash="dash",
+                        spikemode="across",
+                        spikecolor="rgba(255, 255, 255, 0.6)"          
                     ),
                     
                     # --- CONFIGURACIÓN DE EJES Y (LÍNEAS DIVISORIAS INTERNAS COMPLETAS) ---
