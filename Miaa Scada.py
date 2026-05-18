@@ -711,6 +711,7 @@ if "graficar_pozo" in params:
     tags_voltaje = [t for t in pozo_info.get('voltajes_l', []) if t and t != 'N/A']
     tags_amperaje = [t for t in pozo_info.get('amperajes_l', []) if t and t != 'N/A']
     
+    # Configuración visual base incluyendo las nuevas variables de niveles (lado secundario Y - Derecho)
     config_visual = [
         ('caudal', "Caudal (Lps)", False, '#00d4ff'), 
         ('presion', "Presión (Kg/cm²)", True, '#00ff00'),
@@ -757,13 +758,13 @@ if "graficar_pozo" in params:
                 if tag_nivel_dinamico in df['TagName'].values:
                     val_nd_prom = f"{df[df['TagName'] == tag_nivel_dinamico]['VALUE'].mean():,.2f}"
                 if tag_sumergencia in df['TagName'].values:
-                    val_sum_prom = f"{df[df['TagName'] == tag_sumergencia]['VALUE'].mean():,.2f}"    
+                    val_sum_prom = f"{df[df['TagName'] == tag_sumergencia]['VALUE'].mean():,.2f}"
                 if tags_voltaje:
                     val_v_prom = f"{df[df['TagName'].isin(tags_voltaje)]['VALUE'].mean():,.1f}"
                 if tags_amperaje:
                     val_a_prom = f"{df[df['TagName'].isin(tags_amperaje)]['VALUE'].mean():,.1f}"
 
-            # --- RENDER CABECERA (CON ELÉCTRICOS RESTAURADOS) ---
+            # --- RENDER CABECERA (CON ELÉCTRICOS Y NUEVOS NIVELES INTEGRADOS) ---
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
     <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">📈 Análisis Integral: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
