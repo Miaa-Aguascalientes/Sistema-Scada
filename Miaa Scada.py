@@ -769,26 +769,26 @@ if "graficar_pozo" in params:
                 if tags_amperaje:
                     val_a_prom = f"{df[df['TagName'].isin(tags_amperaje)]['VALUE'].mean():,.1f}"
 
-            # --- RENDER CABECERA ---
+# --- RENDER CABECERA ---
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
     <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">Análisis: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 130px; text-align: center;">
-            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Volumen</span>
-            <span style="color: white; font-size: 24px; font-weight: bold;">{val_vol} <small style="font-size: 12px; color: #00d4ff;">m³</small></span>
-        </div>
-        <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Caudal Promedio</span>
             <span style="color: white; font-size: 24px; font-weight: bold;">{val_cau_prom} <small style="font-size: 12px; color: #00d4ff;">Lps</small></span>
         </div>
-        <div style="padding: 12px 18px; background: rgba(0, 255, 204, 0.05); border: 2px solid #00ffcc; border-radius: 12px; min-width: 130px; text-align: center;">
-            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Nivel Tanque</span>
-            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nt_ultimo} <small style="font-size: 12px; color: #00ffcc;">m</small></span>
+        <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 130px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Volumen</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_vol} <small style="font-size: 12px; color: #00d4ff;">m³</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(0, 255, 0, 0.05); border: 2px solid #00ff00; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Presión Promedio</span>
             <span style="color: white; font-size: 24px; font-weight: bold;">{val_pre_prom} <small style="font-size: 12px; color: #00ff00;">Kg/cm²</small></span>
+        </div>
+        <div style="padding: 12px 18px; background: rgba(0, 255, 204, 0.05); border: 2px solid #00ffcc; border-radius: 12px; min-width: 130px; text-align: center;">
+            <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Nivel Tanque</span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nt_ultimo} <small style="font-size: 12px; color: #00ffcc;">m</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(255, 0, 180, 0.05); border: 2px solid #ff00b4; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Nivel Dinámico</span>
@@ -879,7 +879,7 @@ if "graficar_pozo" in params:
                         )
                     )
                     
-                    dft_l['HORA_REAL'] = dft_l['FECHA'].dt.strftime('%m-%d %H:%M:%S')
+                    dft_l['HORA_REAL'] = dft_l['FECHA'].dt.strftime('%d-%m-%Y %H:%M:%S')
                     
                     df_tag_maestro = pd.merge_asof(
                         df_interactivo, 
@@ -921,26 +921,35 @@ if "graficar_pozo" in params:
                     hovermode="x unified", 
                     legend=dict(orientation="h", y=1.08),
                     
+                    # --- CONFIGURACIÓN DEL EJE X ---
                     xaxis=dict(
                         title=dict(text="<b>Línea de Tiempo</b>"),
-                        domain=[0.07, 0.91]
+                        domain=[0.07, 0.91],
+                        showline=False,       # Sin recuadros externos
+                        mirror=False
                     ),
                     
-                    # --- CONFIGURACIÓN DE EJES MÚLTIPLES ---
+                    # --- CONFIGURACIÓN DE EJES Y (LÍNEAS DIVISORIAS INTERNAS COMPLETAS) ---
                     yaxis5=dict(
                         title=dict(text="<b>Nivel Tanque (m)</b>", font=dict(color="#00ffcc")), 
                         tickfont=dict(color="#00ffcc"), 
                         side="left",
                         overlaying="y",
                         anchor="free",
-                        position=0.00
+                        position=0.00,
+                        showline=True,        # Línea activa: Divide Nivel Tanque de Caudal
+                        linecolor='white',
+                        linewidth=1.5
                     ),
                     yaxis=dict(
                         title=dict(text="<b>Caudal (Lps)</b>", font=dict(color="#00d4ff")), 
                         tickfont=dict(color="#00d4ff"),
                         side="left",
                         anchor="free",
-                        position=0.04
+                        position=0.07,
+                        showline=True,        # Línea activa: Cierre del área de gráfica izquierda
+                        linecolor='white',
+                        linewidth=1.5
                     ),
                     yaxis2=dict(
                         title=dict(text="<b>Presión (Kg/cm²)</b>", font=dict(color="#00ff00")), 
@@ -948,7 +957,10 @@ if "graficar_pozo" in params:
                         side="right",
                         overlaying="y",
                         anchor="free",
-                        position=0.92
+                        position=0.92,
+                        showline=True,        # Línea activa: Cierre del área de gráfica derecha
+                        linecolor='white',
+                        linewidth=1.5
                     ),
                     yaxis3=dict(
                         title=dict(text="<b>Niveles Pozo (m)</b>", font=dict(color="#ff00b4")), 
@@ -956,7 +968,10 @@ if "graficar_pozo" in params:
                         side="right",
                         overlaying="y",
                         anchor="free",
-                        position=0.955
+                        position=0.955,
+                        showline=True,        # Línea activa: Divide Presión de Niveles Pozo
+                        linecolor='white',
+                        linewidth=1.5
                     ),
                     yaxis4=dict(
                         title=dict(text="<b>Eléctricos (V / A)</b>", font=dict(color="#ff8000")), 
@@ -964,7 +979,10 @@ if "graficar_pozo" in params:
                         side="right",
                         overlaying="y",
                         anchor="free",
-                        position=1.00
+                        position=1.00,
+                        showline=True,        # Línea activa: Divide Niveles Pozo de Eléctricos
+                        linecolor='white',
+                        linewidth=1.5
                     )
                 )
                 st.plotly_chart(fig_line, use_container_width=True)
