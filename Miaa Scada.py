@@ -123,7 +123,7 @@ if not st.session_state.autenticado:
         <div class="visual-core">
             <div class="ring r1"></div><div class="ring r2"></div>
             <div class="center-logo">
-                <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Sistema-Scada/6e854dd38ce32e1e9dd83ffe2acc399985582d06/LogoMIAA.svg?token=BLAUM5IOP7BT2N6O6K3C6HLKBNAT6" class="logo-miaa">
+                <img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" class="logo-miaa">
                 <h2 style="color:#00d4ff; font-family:Orbitron; font-size:-400px; letter-spacing:5px; margin-top:-35px;"></h2>
             </div>
         </div>
@@ -711,23 +711,23 @@ if "graficar_pozo" in params:
     tags_voltaje = [t for t in pozo_info.get('voltajes_l', []) if t and t != 'N/A']
     tags_amperaje = [t for t in pozo_info.get('amperajes_l', []) if t and t != 'N/A']
     
-    # Configuración visual base incluyendo las nuevas variables de niveles (lado secundario Y - Derecho)
+    # Asignación de ejes correlacionada con la nueva distribución compacta
     config_visual = [
-        ('caudal', "Caudal (Lps)", False, '#00d4ff'), 
-        ('presion', "Presión (Kg/cm²)", True, '#00ff00'),
-        ('nivel_dinamico', "Nivel Dinámico (m)", True, '#ff00b4'),
-        ('sumergencia', "Sumergencia (m)", True, '#a800ff')
+        ('caudal', "Caudal (Lps)", 'y', '#00d4ff'), 
+        ('presion', "Presión (Kg/cm²)", 'y2', '#00ff00'),
+        ('nivel_dinamico', "Nivel Dinámico (m)", 'y3', '#ff00b4'),
+        ('sumergencia', "Sumergencia (m)", 'y3', '#a800ff')
     ]
     
     for i, t in enumerate(pozo_info.get('voltajes_l', [])):
-        if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", True, '#fffb00'))
+        if t and t != 'N/A': config_visual.append((t, f"V L{i+1}", 'y4', '#fffb00'))
     for i, t in enumerate(pozo_info.get('amperajes_l', [])):
-        if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", True, '#ff8000'))
+        if t and t != 'N/A': config_visual.append((t, f"Amp L{i+1}", 'y4', '#ff8000'))
 
     tags_grafico = []
     for item in config_visual:
         real_t = pozo_info.get(item[0], item[0])
-        if real_t and real_t != 'N/A': tags_grafico.append({'tag': real_t, 'label': item[1], 'side': item[2], 'color': item[3]})
+        if real_t and real_t != 'N/A': tags_grafico.append({'tag': real_t, 'label': item[1], 'axis': item[2], 'color': item[3]})
     
     tags_query = [t['tag'] for t in tags_grafico]
     if tag_totalizado and tag_totalizado != 'N/A': tags_query.append(tag_totalizado)
@@ -764,7 +764,7 @@ if "graficar_pozo" in params:
                 if tags_amperaje:
                     val_a_prom = f"{df[df['TagName'].isin(tags_amperaje)]['VALUE'].mean():,.1f}"
 
-            # --- RENDER CABECERA (CON ELÉCTRICOS Y NUEVOS NIVELES INTEGRADOS) ---
+            # --- RENDER CABECERA ---
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
     <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">📈 Análisis Integral: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
@@ -783,11 +783,11 @@ if "graficar_pozo" in params:
         </div>
         <div style="padding: 12px 18px; background: rgba(255, 0, 180, 0.05); border: 2px solid #ff00b4; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Nivel Dinámico</span>
-            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nd_prom} <small style="font-size: 12px; color: #ff00b4;">m</small></span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_nd_prom} <small style="font-size: 12px; color: #ff00b4;">Mts</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(168, 0, 255, 0.05); border: 2px solid #a800ff; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Sumergencia</span>
-            <span style="color: white; font-size: 24px; font-weight: bold;">{val_sum_prom} <small style="font-size: 12px; color: #a800ff;">m</small></span>
+            <span style="color: white; font-size: 24px; font-weight: bold;">{val_sum_prom} <small style="font-size: 12px; color: #a800ff;">Mts</small></span>
         </div>
         <div style="padding: 12px 18px; background: rgba(255, 251, 0, 0.05); border: 2px solid #fffb00; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Voltaje Prom</span>
@@ -833,27 +833,74 @@ if "graficar_pozo" in params:
                             st.dataframe(pivot.style.format("{:,.2f}"), use_container_width=True)
                     else: st.info("Sin datos.")
 
-            # ---  GRÁFICO DE LÍNEAS (EJES FIX CON DICCIONARIOS) ---
+            # ---  GRÁFICO CON REDISTRIBUCIÓN OPTIMIZADA DE EJES ---
             if not df.empty:
-                fig_line = make_subplots(specs=[[{"secondary_y": True}]])
+                fig_line = go.Figure()
+                
                 for t in tags_grafico:
                     dft_l = df[df['TagName'] == t['tag']]
                     if not dft_l.empty:
-                        fig_line.add_trace(go.Scatter(x=dft_l['FECHA'], y=dft_l['VALUE'], name=t['label'], mode='lines', line=dict(color=t['color'], width=2.5)), secondary_y=t['side'])
+                        fig_line.add_trace(
+                            go.Scatter(
+                                x=dft_l['FECHA'], 
+                                y=dft_l['VALUE'], 
+                                name=t['label'], 
+                                mode='lines+markers',
+                                line=dict(color=t['color'], width=2.2),
+                                marker=dict(size=4, symbol='circle'),
+                                yaxis=t['axis']
+                            )
+                        )
                 
                 fig_line.update_layout(
-                    template="plotly_dark", height=600, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                    hovermode="x unified", legend=dict(orientation="h", y=1.05),
+                    template="plotly_dark", 
+                    height=650, 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    hovermode="x unified", 
+                    legend=dict(orientation="h", y=1.08),
+                    
+                    # Se extiende la cuadrícula central al 90% del ancho disponible
+                    xaxis=dict(
+                        title=dict(text="<b>Línea de Tiempo</b>"),
+                        domain=[0, 0.90]
+                    ),
+                    
+                    # EJE IZQUIERDO: Caudal
                     yaxis=dict(
                         title=dict(text="<b>Caudal (Lps)</b>", font=dict(color="#00d4ff")), 
                         tickfont=dict(color="#00d4ff")
                     ),
+                    
+                    # EJE DERECHO 1: Presión (Desplazado a la derecha, al nuevo borde de la gráfica)
                     yaxis2=dict(
-                        title=dict(text="<b>Presión / Niveles / Eléctricos</b>", font=dict(color="#00ff00")), 
+                        title=dict(text="<b>Presión (Kg/cm²)</b>", font=dict(color="#00ff00")), 
                         tickfont=dict(color="#00ff00"), 
-                        anchor="x", overlaying="y", side="right"
+                        side="right",
+                        overlaying="y",
+                        anchor="x",
+                        position=0.90
                     ),
-                    xaxis=dict(title=dict(text="<b>Línea de Tiempo</b>"))
+                    
+                    # EJE DERECHO 2: Niveles (Compactado al centro del grupo derecho)
+                    yaxis3=dict(
+                        title=dict(text="<b>Niveles (m)</b>", font=dict(color="#ff00b4")), 
+                        tickfont=dict(color="#ff00b4"), 
+                        side="right",
+                        overlaying="y",
+                        anchor="free",
+                        position=0.95
+                    ),
+                    
+                    # EJE DERECHO 3: Eléctricos (Fijo en el extremo exterior derecho)
+                    yaxis4=dict(
+                        title=dict(text="<b>Eléctricos (V / A)</b>", font=dict(color="#ff8000")), 
+                        tickfont=dict(color="#ff8000"), 
+                        side="right",
+                        overlaying="y",
+                        anchor="free",
+                        position=1.00
+                    )
                 )
                 st.plotly_chart(fig_line, use_container_width=True)
 
@@ -1921,7 +1968,7 @@ st.markdown("""
 
 with st.sidebar:
     # 8.1. Contenedor del logo
-    st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Sistema-Scada/6e854dd38ce32e1e9dd83ffe2acc399985582d06/LogoMIAA.svg?token=BLAUM5IOP7BT2N6O6K3C6HLKBNAT6"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"></div>', unsafe_allow_html=True)
 
     # 8.2. Inicializamos variables de estado (Solo si no existen)
     if 'centro_mapa' not in st.session_state:
