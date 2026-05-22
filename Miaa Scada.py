@@ -670,29 +670,31 @@ if "graficar_pozo" in params:
         opcion_fecha = st.selectbox(
             "Rango de tiempo:", 
             ["Hoy", "Ayer", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
-            index=2, 
+            index=3, 
             key="fecha_pozo_v8"
         )
 
     hoy_dt = datetime.now()
-    f_fin = hoy_dt
-    
+# Definimos medianoche como base para todas las comparaciones
+    medianoche = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    f_fin = hoy_dt # Por defecto hasta el momento actual
+
     if opcion_fecha == "Hoy":
-        f_ini = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        f_ini = medianoche
     elif opcion_fecha == "Ayer":
-        f_ini = (hoy_dt - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        f_fin = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+        f_ini = (medianoche - timedelta(days=1))
+        f_fin = medianoche - timedelta(seconds=1)
     elif opcion_fecha == "Últimos 7 días":
-        f_ini = hoy_dt - timedelta(days=7)
+        f_ini = (medianoche - timedelta(days=7))
     elif opcion_fecha == "Últimos 14 días":
-        f_ini = hoy_dt - timedelta(days=14)
+        f_ini = (medianoche - timedelta(days=14))
     elif opcion_fecha == "Este Mes":
-        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0)
+        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     elif opcion_fecha == "Último Mes":
-        f_ini = (hoy_dt.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0)
-        f_fin = hoy_dt.replace(day=1, hour=0, minute=0, second=0) - timedelta(seconds=1)
+        f_ini = (hoy_dt.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        f_fin = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
     elif opcion_fecha == "Últimos 6 meses":
-        f_ini = hoy_dt - timedelta(days=180)
+        f_ini = (medianoche - timedelta(days=180))
     elif opcion_fecha == "Personalizado":
         with col_f2:
             rango = st.date_input("Selecciona el periodo:", value=(hoy_dt.date() - timedelta(days=7), hoy_dt.date()), max_value=hoy_dt.date())
@@ -738,16 +740,29 @@ if "graficar_pozo" in params:
             engine = get_mysql_scada_engine()
             lista_tags_str = f"','".join(list(set(tags_query)))
             
-            q = f"SELECT r.NAME as TagName, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{lista_tags_str}') AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}' ORDER BY h.FECHA ASC"
+            q = f"""
+                SELECT r.NAME as TagName, h.VALUE, h.FECHA 
+                FROM vfitagnumhistory h 
+                JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                WHERE r.NAME IN ('{lista_tags_str}') 
+                AND h.FECHA BETWEEN '{f_ini}' AND '{f_fin}'
+            """
             df = pd.read_sql(q, engine)
-            
-            # --- LÓGICA DE INDICADORES ---
-            val_vol, val_cau_prom, val_pre_prom = "0.00", "0.00", "0.00"
-            val_v_prom, val_a_prom = "0.00", "0.00"
-            val_nd_prom, val_sum_prom, val_nt_prom = "0.00", "0.00", "0.00"
-            val_nt_ultimo = "0.00"
+            df['FECHA'] = pd.to_datetime(df['FECHA'])
+            df = df.sort_values('FECHA', ascending=True)
 
-            if not df.empty:
+            # --- CORRECCIÓN LÓGICA AQUÍ ---
+            if df.empty:
+                # Si está vacío, mostramos el aviso y salimos de esta parte
+                st.warning(f"⚠️ No hay registros disponibles para el rango seleccionado.")
+                
+            else:
+                # --- LÓGICA DE INDICADORES (Solo se ejecuta si hay datos) ---
+                val_vol, val_cau_prom, val_pre_prom = "0.00", "0.00", "0.00"
+                val_v_prom, val_a_prom = "0.00", "0.00"
+                val_nd_prom, val_sum_prom, val_nt_prom = "0.00", "0.00", "0.00"
+                val_nt_ultimo = "0.00"
+
                 if tag_totalizado in df['TagName'].values:
                     df_tot = df[df['TagName'] == tag_totalizado].sort_values('FECHA')
                     if len(df_tot) >= 2:
@@ -815,25 +830,45 @@ if "graficar_pozo" in params:
             with st.expander("📅 Análisis de volumen real", expanded=False):
                 if tag_totalizado and tag_totalizado != 'N/A':
                     curr_year = datetime.now().year
-                    q_hist = f"SELECT YEAR(h.FECHA) as anio, MONTH(h.FECHA) as mes, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{tag_totalizado}' AND YEAR(h.FECHA) IN ({curr_year}, {curr_year - 1}) ORDER BY h.FECHA ASC"
+                    q_hist = f"""
+                        SELECT YEAR(h.FECHA) as anio, MONTH(h.FECHA) as mes, h.VALUE, h.FECHA 
+                        FROM vfitagnumhistory h 
+                        JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                        WHERE r.NAME = '{tag_totalizado}' 
+                        AND h.FECHA >= DATE_SUB(NOW(), INTERVAL 24 MONTH)
+                        ORDER BY h.FECHA ASC
+                    """
                     df_h = pd.read_sql(q_hist, engine)
 
                     if not df_h.empty:
-                        res_meses = df_h.groupby(['anio', 'mes'])['VALUE'].last().reset_index()
-                        res_meses['produccion_neta'] = res_meses['VALUE'].diff()
-                        idx0 = res_meses.index[0]
-                        v0 = df_h[(df_h['anio']==res_meses.loc[idx0,'anio']) & (df_h['mes']==res_meses.loc[idx0,'mes'])]['VALUE'].iloc[0]
-                        res_meses.loc[idx0, 'produccion_neta'] = res_meses.loc[idx0, 'VALUE'] - v0
+                        res_meses = df_h.groupby(['anio', 'mes'])['VALUE'].first().reset_index()
+                        res_meses = res_meses.sort_values(['anio', 'mes'])
+                        
+                        # Calculamos la diferencia entre el valor del mes actual y el mes siguiente
+                        res_meses['produccion_neta'] = res_meses['VALUE'].shift(-1) - res_meses['VALUE']
                         
                         nombres_meses = {1:'Ene', 2:'Feb', 3:'Mar', 4:'Abr', 5:'May', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dic'}
                         res_meses['Mes_Txt'] = res_meses['mes'].map(nombres_meses)
+
+                        curr_year = datetime.now().year
+                        res_meses = res_meses[res_meses['anio'].isin([curr_year, curr_year - 1])]
+                        
+                        # Eliminamos el último registro (el mes actual) que no tiene producción cerrada
+                        res_meses = res_meses.dropna(subset=['produccion_neta'])
+
+                        
 
                         col_g, col_t = st.columns([2, 1])
                         with col_g:
                             fig_hist = go.Figure()
                             for an in sorted(res_meses['anio'].unique()):
                                 df_a = res_meses[res_meses['anio'] == an].sort_values('mes')
-                                fig_hist.add_trace(go.Bar(x=df_a['Mes_Txt'], y=df_a['produccion_neta'], name=f'Año {an}', marker_color='#00d4ff' if an == curr_year else 'rgba(150,150,150,0.4)'))
+                                fig_hist.add_trace(go.Bar(
+                                    x=df_a['Mes_Txt'], 
+                                    y=df_a['produccion_neta'], 
+                                    name=f'Año {an}', 
+                                    marker_color='#00d4ff' if an == curr_year else 'rgba(150,150,150,0.4)'
+                                ))
                             fig_hist.update_layout(template="plotly_dark", barmode='group', height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                             st.plotly_chart(fig_hist, use_container_width=True)
 
@@ -856,14 +891,27 @@ if "graficar_pozo" in params:
                     dft_l = df[df['TagName'] == t['tag']].sort_values('FECHA').copy()
                     
                     if dft_l.empty:
-                        q_ultimo = f"SELECT r.NAME as TagName, h.VALUE, h.FECHA FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME = '{t['tag']}' AND h.FECHA < '{f_ini}' ORDER BY h.FECHA DESC LIMIT 1"
+                        fecha_limite = f_ini - timedelta(days=30)
+                        q_ultimo = f"""
+                            SELECT r.NAME as TagName, h.VALUE, h.FECHA 
+                            FROM vfitagnumhistory h 
+                            JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                            WHERE r.NAME = '{t['tag']}' 
+                            AND h.FECHA BETWEEN '{fecha_limite}' AND '{f_ini}'
+                            ORDER BY h.FECHA DESC 
+                            LIMIT 1
+                        """
                         df_ultimo_reg = pd.read_sql(q_ultimo, engine)
                         
                         if not df_ultimo_reg.empty:
                             df_ultimo_reg['FECHA'] = pd.to_datetime(df_ultimo_reg['FECHA'])
                             dft_l = df_ultimo_reg
                         else:
-                            dft_l = pd.DataFrame([{ 'TagName': t['tag'], 'VALUE': 0.0, 'FECHA': pd.to_datetime(f_ini) }])
+                            dft_l = pd.DataFrame([{
+                                'TagName': t['tag'],
+                                'VALUE': 0.0,
+                                'FECHA': pd.to_datetime(f_ini)
+                            }])
 
                     # 1. GEOMETRÍA VISUAL REAL
                     fig_line.add_trace(
@@ -927,7 +975,8 @@ if "graficar_pozo" in params:
                         title=dict(text="<b>Línea de Tiempo</b>"),
                         domain=[0.07, 0.91],
                         showline=False,       # Sin recuadros externos
-                        mirror=False,
+                        range=[df['FECHA'].min(), df['FECHA'].max()],
+                        autorange=True,
                         showspikes=True,
                         spikethickness=0.05, 
                         spikedash="dash",
