@@ -1514,6 +1514,15 @@ st.markdown("""
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
 
+        .pulsante {
+            animation: parpadeo 1.2s infinite;
+        }
+        @keyframes parpadeo {
+            0% { opacity: 1; }
+            50% { opacity: 0.1; }
+            100% { opacity: 1; }
+        }
+
     </style>
 """, unsafe_allow_html=True)
 # 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
@@ -2978,15 +2987,16 @@ if sectores_data:
             if str(id_mm) == '1000' or info.get('nombre') == 'Sin instalar':
                 continue
 
-            # --- LÓGICA DE COLOR ---
-            # Si ultima_fecha es anterior a la fecha límite, es Falla (Rojo)
+            # --- LÓGICA DE ESTADO Y COLOR ---
             es_falla = info['ultima_fecha'] < fecha_limite
             
             color_borde = '#FF0000' if es_falla else '#B19CD9'
             color_relleno = '#8B0000' if es_falla else '#800080'
             color_popup = '#FF0000' if es_falla else '#800080'
+            clase_animacion = "pulsante" if es_falla else ""
 
             try:
+                # Recuperamos la lógica completa del botón de gráfico
                 url_pestaña = f"?ver_grafico={id_mm}&nombre={info.get('nombre', 'Medidor').replace(' ', '%20')}&access=granted&role={st.session_state.get('rol', 'usuario')}"
                 
                 html_popup_mm = f"""
@@ -3003,26 +3013,33 @@ if sectores_data:
                 </div>
                 """
                 
-                folium.CircleMarker(
+                # SVG con la clase de parpadeo (pulsante)
+                html_svg = f"""
+                <svg width="20" height="20" class="{clase_animacion}">
+                    <circle cx="10" cy="10" r="6" stroke="{color_borde}" stroke-width="2" fill="{color_relleno}" fill-opacity="0.9" />
+                </svg>
+                """
+                
+                # Punto principal
+                folium.Marker(
                     location=info['coord'],
-                    number_of_sides=3,
-                    radius=5,
-                    color=color_borde,
-                    fill=True,
-                    fill_color=color_relleno,
-                    fill_opacity=0.9,
+                    icon=folium.DivIcon(icon_size=(20, 20), icon_anchor=(10, 10), html=html_svg),
                     popup=folium.Popup(html_popup_mm, max_width=300)
                 ).add_to(m)
                 
-                # Opcional: Cambiar también el color del texto si es falla
+                # Texto combinado: ID y Nombre
                 color_texto = "#FF4C4C" if es_falla else "#FFFFFF"
+                html_etiqueta = f"""
+                <div style="font-size: 11px; font-weight: bold; color: {color_texto}; text-shadow: 1px 1px #000; white-space: nowrap;">
+                    {id_mm} - {info.get('nombre', 'N/A')}
+                </div>
+                """
+                
                 folium.Marker(
                     location=info['coord'], 
-                    icon=folium.DivIcon(
-                        icon_anchor=(-15, 10), 
-                        html=f'<div style="font-size: 11px; font-weight: bold; color: {color_texto}; text-shadow: 1px 1px #000;">{id_mm}</div>'
-                    )
+                    icon=folium.DivIcon(icon_anchor=(-15, 10), html=html_etiqueta)
                 ).add_to(m)
+                
             except Exception as e:
                 continue
            
