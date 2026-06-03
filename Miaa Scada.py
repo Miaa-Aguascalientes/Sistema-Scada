@@ -2371,6 +2371,12 @@ if sector_seleccionado:
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
+
+        /* Modificar tamaño de fuente general en la sidebar */
+        section[data-testid="stSidebar"] {
+            font-size: 12px !important; /* Ajusta este valor a tu gusto */
+        }
+    
         /* 1. ELIMINAR EL TIRADOR DE REDIMENSIÓN */
         /* Buscamos el elemento que permite arrastrar la barra y lo desactivamos */
         [data-testid="stSidebarResizer"] {
@@ -2430,10 +2436,7 @@ st.markdown("""
                 width: calc(100% - 350px) !important;
             }
         }
-        /* Modificar tamaño de fuente general en la sidebar */
-        section[data-testid="stSidebar"] {
-            font-size: 14px !important; /* Ajusta este valor a tu gusto */
-        }
+
     </style>
 """, unsafe_allow_html=True)
 
