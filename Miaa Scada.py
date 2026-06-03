@@ -2372,9 +2372,10 @@ st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
 
-        /* Modificar tamaño de fuente general en la sidebar */
-        section[data-testid="stSidebar"] {
-            font-size: 12px !important; /* Ajusta este valor a tu gusto */
+        /* Modificar tamaño de texto en los encabezados de los expanders */
+        section[data-testid="stSidebar"] [data-testid="stExpander"] button p {
+            font-size: 12px !important; /* Ajusta el valor según prefieras */
+            font-weight: 500 !important;
         }
     
         /* 1. ELIMINAR EL TIRADOR DE REDIMENSIÓN */
