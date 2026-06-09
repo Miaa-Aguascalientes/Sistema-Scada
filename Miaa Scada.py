@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
 from streamlit_folium import st_folium
-
+import locale
 
 
 st.set_page_config(
@@ -629,17 +629,47 @@ if tag_a_graficar:
                 fillcolor='rgba(0, 212, 255, 0.2)', # Efecto desvanecido
                 hovertemplate="<b>%{y:.2f} m</b><extra></extra>"
             ))
+
+            # 1. Definimos las fechas de tus líneas y el diccionario de traducción
+            dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+            meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
+                        7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+            fechas_lineas = pd.date_range(start=fecha_inicio, end=fecha_fin, freq='D')
+
+            # 2. Lógica de filtrado dinámico para evitar amontonamiento
+            # Si seleccionas muchos días, mostramos solo una etiqueta cada X días
+            num_dias = len(fechas_lineas)
+            if num_dias > 15:
+                paso = 2 if num_dias <= 30 else 5  # Muestra cada 2 días o cada 5
+            else:
+                paso = 1
             
-            # 4.5. CONFIGURACIÓN DE LA LÍNEA GUÍA (PUNTEADA GRIS)
+            # Aplicamos el filtro al rango
+            ticks_filtrados = fechas_lineas[::paso]
+
+            # 3. Construimos etiquetas solo para los ticks filtrados
+            etiquetas_filtradas = [
+                f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                for d in ticks_filtrados
+            ]
+
+            # 4. CONFIGURACIÓN DEL EJE X
             fig.update_xaxes(
-                showspikes=True, 
-                spikecolor="gray", 
-                spikethickness=1, 
-                spikemode="across", 
+                tickvals=ticks_filtrados,
+                ticktext=etiquetas_filtradas,
+                tickangle=0,
+                automargin=True,
+                showspikes=True,
+                spikecolor="gray",
+                spikethickness=1,
+                spikemode="across",
                 spikesnap="cursor",
-                spikedash="dash", 
-                showgrid=False
+                spikedash="dash",
+                showgrid=True,
+                gridcolor='#333'
             )
+
+
             
             fig.update_layout(
                 template="plotly_dark",
@@ -648,6 +678,17 @@ if tag_a_graficar:
                 yaxis_title="Nivel (m)",
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
+                height=600,
+                # --- CONFIGURACIÓN DEL EJE X CON RANGE SLIDER ---
+                xaxis=dict(
+                    rangeslider=dict(
+                        visible=True,
+                        thickness=0.08
+                    ),
+                    type="date",
+                    showgrid=True,
+                    gridcolor='#333'
+                ),
                 yaxis=dict(
                     tickformat=".2f",
                     showgrid=True,
@@ -658,7 +699,34 @@ if tag_a_graficar:
                     font_size=12
                 )
             )
+
+            dias_intermedios = pd.date_range(start=fecha_inicio, end=fecha_fin, freq='D')
             
+            for dia in dias_intermedios:
+                es_lunes = dia.weekday() == 0
+                
+                # 1. El sombreado gris (la "sombra" detrás de la línea)
+                # Usamos un ancho fijo (delta) para que sea una franja pequeña
+                delta = pd.Timedelta(hours=1) # Ajusta este valor para hacer la sombra más ancha o angosta
+                
+                fig.add_vrect(
+                    x0=dia - delta,
+                    x1=dia + delta,
+                    fillcolor="gray",
+                    opacity=0.2, # Ajusta esta opacidad para que sea más clara o más oscura
+                    layer="below",
+                    line_width=0
+                )
+                
+                # 2. La línea punteada encima
+                fig.add_vline(
+                    x=dia, 
+                    line_width=1.5,
+                    line_dash="dash",
+                    line_color="yellow" if es_lunes else "white", 
+                    layer="above"
+                )
+                
             st.plotly_chart(fig, use_container_width=True)
             
             with st.expander("Ver tabla de datos detallada"):
@@ -1001,7 +1069,47 @@ if "graficar_pozo" in params:
                             )
                         )
                     )
-                
+
+                # 1. GENERACIÓN DE ETIQUETAS Y FECHAS (BLOQUE DE APOYO)
+                dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
+                            7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+
+                fechas_lineas = pd.date_range(start=f_ini, end=f_fin, freq='D')
+                num_dias = len(fechas_lineas)
+                paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
+                ticks_filtrados = fechas_lineas[::paso]
+
+                etiquetas_filtradas = [
+                    f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                    for d in ticks_filtrados
+                ]
+
+                # 2. DIBUJO DE LÍNEAS CON SOMBRA (VRECT + VLINE)
+                delta = pd.Timedelta(hours=1) # Ancho del halo detrás de la línea
+                for d in fechas_lineas:
+                    es_lunes = (d.dayofweek == 0)
+                    
+                    # Sombra (vrect)
+                    fig_line.add_vrect(
+                        x0=d - delta,
+                        x1=d + delta,
+                        fillcolor="gray",
+                        opacity=0.2,
+                        layer="below",
+                        line_width=0
+                    )
+                    
+                    # Línea punteada principal (vline)
+                    fig_line.add_vline(
+                        x=d, 
+                        line_width=1.5, 
+                        line_dash="dash", 
+                        line_color="#fffb00" if es_lunes else "white",
+                        layer="above"
+                    )
+
+                # 3. CONFIGURACIÓN DEL EJE X
                 fig_line.update_layout(
                     template="plotly_dark", 
                     height=650, 
@@ -1015,15 +1123,21 @@ if "graficar_pozo" in params:
                     xaxis=dict(
                         title=dict(text="<b>Línea de Tiempo</b>"),
                         domain=[0.07, 0.91],
-                        showline=False,       # Sin recuadros externos
+                        
+                        tickvals=ticks_filtrados,
+                        ticktext=etiquetas_filtradas,
+                        tickangle=0,
+                        
+                        showline=False,
                         range=[df['FECHA'].min(), df['FECHA'].max()],
                         autorange=True,
                         showspikes=True,
-                        spikethickness=0.05, 
+                        spikethickness=1, 
                         spikedash="dash",
                         spikemode="across",
-                        spikecolor="rgba(255, 255, 255, 0.6)"          
+                        spikecolor="rgba(255, 255, 255, 0.6)"    
                     ),
+                
                     
                     # --- CONFIGURACIÓN DE EJES Y (LÍNEAS DIVISORIAS INTERNAS COMPLETAS) ---
                     yaxis5=dict(
@@ -1112,11 +1226,24 @@ if "ver_grafico" in st.query_params:
     hoy_dt = dt.datetime.now()
     medianoche = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     
-    df_info = pd.read_sql(
-        f"SELECT Nombre, Domicilio, Colonia FROM MACROMEDIDORES WHERE Medidor = '{tag_a_graficar}' AND Medidor != '1000' LIMIT 1", 
-        engine
-    )
-    info = df_info.iloc[0] if not df_info.empty else {"Nombre": "N/A", "Domicilio": "N/A", "Colonia": "N/A"}
+    # Consulta con JOIN para traer el Diámetro desde la otra tabla
+    query = f"""
+        SELECT 
+            m.Nombre, 
+            m.Domicilio, 
+            m.Colonia, 
+            b.Diametro 
+        FROM MACROMEDIDORES m
+        LEFT JOIN Base_macromedidores b ON m.Medidor = b.Medidor
+        WHERE m.Medidor = '{tag_a_graficar}' 
+        AND m.Medidor != '1000' 
+        LIMIT 1
+    """
+    
+    df_info = pd.read_sql(query, engine)
+    
+    # Asignación segura de variables
+    info = df_info.iloc[0] if not df_info.empty else {"Nombre": "N/A", "Domicilio": "N/A", "Colonia": "N/A", "Diametro": "N/A"}
 
     # --- Cabecera y CSS ---
     st.markdown(f"""
@@ -1134,12 +1261,16 @@ if "ver_grafico" in st.query_params:
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
             </svg>
-            <h3 style="margin: 0; color: #ffffff; margin-right: 20px; font-size: 1.2rem; white-space: nowrap;"> {nombre_mm}</h3>
-            <div style="display: flex; gap: 15px; font-size: 12px; color: #c9d1d9; border-left: 2px solid #00FFFF; padding-left: 15px; align-items: center;">
+            <h3 style="margin: 0; color: #ffffff; margin-right: 20px; font-size: 1.2rem; white-space: nowrap;"> Macro medidor</h3>
+            <div style="display: flex; gap: 20px; font-size: 12px; color: #c9d1d9; border-left: 2px solid #00FFFF; padding-left: 15px; align-items: center; text-transform: none !important;">
                 <div><b>ID:</b> <span style="color:#ffffff;">{tag_a_graficar}</span></div>
                 <div><b>Nombre:</b> <span style="color:#ffffff;">{info['Nombre']}</span></div>
                 <div><b>Domicilio:</b> {info['Domicilio']}</div>
                 <div><b>Colonia:</b> {info['Colonia']}</div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                    <b style="color: #c9d1d9;">Diámetro:</b> 
+                    <span style="color:#00FFFF; font-size: 16px; font-weight: bold;">{info['Diametro']} Ø</span>
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -1196,31 +1327,7 @@ if "ver_grafico" in st.query_params:
             with c_b1: st.button("📥", disabled=True)
             with c_b2: st.button("📊", disabled=True)
 
-    # --- Lógica de fechas ---
-    f_fin = hoy_dt
-    if opcion_fecha == "Hoy": 
-        f_ini = medianoche
-    elif opcion_fecha == "Ayer": 
-        f_ini, f_fin = medianoche - dt.timedelta(days=1), medianoche - dt.timedelta(seconds=1)
-    elif opcion_fecha == "Últimos 7 días": 
-        f_ini = medianoche - dt.timedelta(days=7)
-    elif opcion_fecha == "Últimos 14 días": 
-        f_ini = medianoche - dt.timedelta(days=14)
-    elif opcion_fecha == "Este Mes": 
-        f_ini = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    elif opcion_fecha == "Último Mes":
-        primer_dia = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        f_fin = primer_dia - dt.timedelta(seconds=1)
-        f_ini = (primer_dia.replace(day=1) - dt.timedelta(days=1)).replace(day=1)
-    elif opcion_fecha == "Últimos 6 meses": 
-        f_ini = medianoche - dt.timedelta(days=180)
-    else: 
-        rango = st.date_input("Periodo:", value=(hoy_dt.date() - dt.timedelta(days=7), hoy_dt.date()))
-        f_ini, f_fin = dt.datetime.combine(rango[0], dt.time.min), dt.datetime.combine(rango[1], dt.time.max)
-    
-    # --- Consulta y Gráficos ---
-    df = pd.read_sql(f"SELECT FECHA, Flujo, Presion, Consumo FROM MACROMEDIDORES WHERE Medidor = '{tag_a_graficar}' AND Medidor != '1000' AND FECHA BETWEEN '{f_ini}' AND '{f_fin}' ORDER BY FECHA ASC", engine)
-
+   
     # Creamos el placeholder para indicadores
     placeholder_indicadores = st.empty()
 
