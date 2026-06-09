@@ -669,8 +669,6 @@ if tag_a_graficar:
                 gridcolor='#333'
             )
 
-
-            
             fig.update_layout(
                 template="plotly_dark",
                 hovermode="x unified",
@@ -723,7 +721,8 @@ if tag_a_graficar:
                     x=dia, 
                     line_width=1.5,
                     line_dash="dash",
-                    line_color="yellow" if es_lunes else "white", 
+                    line_color="yellow" if es_lunes else "white",
+                    opacity=0.5,
                     layer="above"
                 )
                 
@@ -889,7 +888,7 @@ if "graficar_pozo" in params:
 # --- RENDER CABECERA ---
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
-    <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">Análisis: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
+    <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">Sitio: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div style="padding: 12px 18px; background: rgba(0, 212, 255, 0.05); border: 2px solid #00d4ff; border-radius: 12px; min-width: 130px; text-align: center;">
             <span style="color: #888; font-size: 13px; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px;">Caudal Promedio</span>
@@ -1106,24 +1105,26 @@ if "graficar_pozo" in params:
                         line_width=1.5, 
                         line_dash="dash", 
                         line_color="#fffb00" if es_lunes else "white",
+                        opacity=0.5,
                         layer="above"
                     )
 
                 # 3. CONFIGURACIÓN DEL EJE X
                 fig_line.update_layout(
                     template="plotly_dark", 
-                    height=650, 
+                    height=580, 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)', 
                     
+                    # Mantiene el estado del gráfico al interactuar
+                    uirevision='constant', 
                     hovermode="x unified", 
                     legend=dict(orientation="h", y=1.08),
                     
-                    # --- CONFIGURACIÓN DEL EJE X ---
                     xaxis=dict(
                         title=dict(text="<b>Línea de Tiempo</b>"),
                         domain=[0.07, 0.91],
-                        
+                                                
                         tickvals=ticks_filtrados,
                         ticktext=etiquetas_filtradas,
                         tickangle=0,
@@ -1135,7 +1136,7 @@ if "graficar_pozo" in params:
                         spikethickness=1, 
                         spikedash="dash",
                         spikemode="across",
-                        spikecolor="rgba(255, 255, 255, 0.6)"    
+                        spikecolor="rgba(255, 255, 255, 0.6)"   
                     ),
                 
                     
@@ -1360,55 +1361,110 @@ if "ver_grafico" in st.query_params:
             with col_m3:
                 st.markdown(f'<div style="{estilo_div}"><div style="{estilo_titulo}">Consumo total</div><div style="{estilo_valor}">{consumo_fmt} <span style="font-size: 0.8rem; color: #00FFFF;">m³</span></div></div>', unsafe_allow_html=True)
                         
-        # 3--. Gráfico de Flujo y Presión (una sola vez)
+        # --- Gráfico de Flujo y Presión ---
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         
         fig.add_trace(go.Scatter(
             x=df['FECHA'], y=df['Flujo'],
             name="Caudal (Lps)",
-            mode='lines+markers',
-            marker=dict(size=4),
+            mode='lines+markers',                # <--- MODO LÍNEAS Y PUNTOS
+            marker=dict(size=5),                 # Tamaño de los puntos
             line=dict(color='#00FFFF', width=2),
             fill='tozeroy',
             fillcolor='rgba(0, 255, 255, 0.2)',
             hovertemplate="%{y:.2f} Lps<extra></extra>"
         ), secondary_y=False)
         
+        # Presión: líneas + puntos
         fig.add_trace(go.Scatter(
             x=df['FECHA'], y=df['Presion'],
             name="Presión (Kg/cm²)",
-            mode='lines+markers',
-            marker=dict(size=4),
+            mode='lines+markers',                # <--- MODO LÍNEAS Y PUNTOS
+            marker=dict(size=5),                 # Tamaño de los puntos
             line=dict(color='#00FF00', width=2),
             hovertemplate="%{y:.2f} Kg/cm²<extra></extra>"
         ), secondary_y=True)
+
+        # 1. GENERACIÓN DE ETIQUETAS Y FECHAS (ESTÁNDAR)
+        dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
+                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+
+        fechas_lineas = pd.date_range(start=df['FECHA'].min().floor('D'), 
+                                      end=df['FECHA'].max().ceil('D'), freq='D')
         
+        ticks_filtrados = fechas_lineas
+        etiquetas_filtradas = [
+            f"00:00<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+            for d in ticks_filtrados
+        ]
+
+        # 2. DIBUJO DE LÍNEAS CON SOMBRA
+        delta = pd.Timedelta(hours=1)
+        for d in fechas_lineas:
+            es_lunes = (d.dayofweek == 0)
+
+            # Sombra gris detrás
+            fig.add_vrect(
+                x0=d - delta,
+                x1=d + delta,
+                fillcolor="gray",
+                opacity=0.2,
+                layer="below",
+                line_width=0)
+
+            # Línea punteada nítida
+            fig.add_vline(
+                x=d, line_width=1.5,
+                line_dash="dash", 
+                line_color="#fffb00" if es_lunes else "white", 
+                opacity=0.5, 
+                layer="above")
+
+        # 3. CONFIGURACIÓN FINAL
         fig.update_layout(
-            height=400, template="plotly_dark", hovermode="x unified",
+            height=400, 
+            template="plotly_dark",
+            hovermode="x unified",
+            xaxis=dict(
+                rangeslider=dict(visible=True,
+                thickness=0.10),
+                tickvals=ticks_filtrados,
+                ticktext=etiquetas_filtradas,
+                tickangle=0, showline=False),
+            
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            uirevision='constant'
         )
+        
         fig.update_yaxes(title_text="Caudal (Lps)", secondary_y=False)
         fig.update_yaxes(title_text="Presión (Kg/cm²)", secondary_y=True)
         st.plotly_chart(fig, use_container_width=True)
         
-        # 4. Gráfico de Barras (Consumo)
+        # 4. Gráfico de Barras (Consumo) --------------------------------------------------------------------------------------------------------------------
         df_diario = df.copy()
         df_diario['FECHA'] = pd.to_datetime(df_diario['FECHA']).dt.date
         df_diario = df_diario.groupby('FECHA')['Consumo'].sum().reset_index()
         rango_completo = pd.date_range(start=df_diario['FECHA'].min(), end=df_diario['FECHA'].max())
         df_diario = df_diario.set_index('FECHA').reindex(rango_completo, fill_value=0).reset_index()
         df_diario.columns = ['FECHA', 'Consumo']
-        df_diario['FECHA_STR'] = df_diario['FECHA'].dt.strftime('%b %d')
+        df_diario['FECHA'] = df_diario['FECHA'].dt.strftime('%d %b %Y')
         
-        fig_bar = px.bar(df_diario, x='FECHA_STR', y='Consumo', text='Consumo', color_discrete_sequence=['#00FFFF'])
+        fig_bar = px.bar(df_diario, x='FECHA', y='Consumo', text='Consumo', color_discrete_sequence=['#00FFFF'])
         fig_bar.update_layout(
             height=300, template="plotly_dark", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
             xaxis=dict(tickmode='linear', title=None), yaxis=dict(title="Consumo (m3)"),
             margin=dict(t=30, b=20, l=20, r=20), showlegend=True,
             legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="right", x=1)
         )
-        fig_bar.update_traces(texttemplate='%{text:.1f}', textposition='outside', name='Consumo (m³)')
+        fig_bar.update_traces(
+            texttemplate='%{text:.1f}',
+            textposition='outside',
+            name='Consumo (m³)',
+            hovertemplate="<b>Día:</b> %{x}<br><b>Consumo:</b> %{y:.2f} m³<extra></extra>"
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
 
     else:
@@ -1423,21 +1479,7 @@ if "ver_grafico" in st.query_params:
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         fig.add_trace(go.Scatter(x=df['FECHA'], y=df['Flujo'], name="Caudal (Lps)", line=dict(color='#00FFFF', width=2), fill='tozeroy', fillcolor='rgba(0, 255, 255, 0.2)'), secondary_y=False)
         fig.add_trace(go.Scatter(x=df['FECHA'], y=df['Presion'], name="Presión (Kg/cm²)", line=dict(color='#00FF00', width=2)), secondary_y=True)
-        
-        fig.update_layout(
-            height=400,
-            template="plotly_dark", 
-            hovermode="x unified",
-            legend=dict(
-                orientation="h", 
-                yanchor="bottom", 
-                y=1.02, 
-                xanchor="left", 
-                x=0
-            ),
-            paper_bgcolor='rgba(0,0,0,0)', 
-            plot_bgcolor='rgba(0,0,0,0)')
-        
+                
         fig.update_yaxes(title_text="Caudal (Lps)", secondary_y=False)
         fig.update_yaxes(title_text="Presión (Kg/cm²)", secondary_y=True)
         st.plotly_chart(fig, use_container_width=True)
@@ -1449,11 +1491,11 @@ if "ver_grafico" in st.query_params:
         rango_completo = pd.date_range(start=df_diario['FECHA'].min(), end=df_diario['FECHA'].max())
         df_diario = df_diario.set_index('FECHA').reindex(rango_completo, fill_value=0).reset_index()
         df_diario.columns = ['FECHA', 'Consumo']
-        df_diario['FECHA_STR'] = df_diario['FECHA'].dt.strftime('%b %d')
+        df_diario['FECHA'] = df_diario['FECHA'].dt.strftime('%b %d')
 
         fig_bar = px.bar(
             df_diario, 
-            x='FECHA_STR', 
+            x='FECHA', 
             y='Consumo', 
             text='Consumo', 
             color_discrete_sequence=['#00FFFF'],
@@ -2266,7 +2308,30 @@ if sector_seleccionado:
                     q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_unicos_query}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
                     df_h = pd.read_sql(q_hist, engine_h)
                     
+                    df_h = pd.read_sql(q_hist, engine_h)
+                    
                     if not df_h.empty:
+                        # --- INICIO DE LA LÓGICA DE FECHAS (Indentación ajustada) ---
+                        df_h['FECHA'] = pd.to_datetime(df_h['FECHA'])
+                        dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
+                                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+
+                        # Rango para las líneas divisorias
+                        fechas_lineas = pd.date_range(start=df_h['FECHA'].min().floor('D'), 
+                                                      end=df_h['FECHA'].max().ceil('D'), freq='D')
+                        
+                        # Cálculo del paso para evitar amontonamiento
+                        num_dias = len(fechas_lineas)
+                        paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
+                        ticks_filtrados = fechas_lineas[::paso]
+
+                        # Creación de etiquetas en español
+                        etiquetas_filtradas = [
+                            f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                            for d in ticks_filtrados
+                        ]
+                    
                         fig = go.Figure()
                         
                         # Contadores para variar la intensidad
@@ -2317,8 +2382,16 @@ if sector_seleccionado:
                                     # La opacidad se mantiene en 0.15 (15%)
                                     fillcolor=color_base.replace("hsl", "hsla").replace(")", ", 0.15)"),
                                     
-                                    hovertemplate=f'<b>%{{fullData.name}}</b>: %{{y:.2f}} {unidad_pc}<extra></extra>'
+                                    hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} ' + unidad_pc + '<extra></extra>'
+                                                 
                                 ))
+
+                        delta = pd.Timedelta(hours=1)
+                        for d in fechas_lineas:
+                            es_lunes = (d.dayofweek == 0)
+                            fig.add_vrect(x0=d - delta, x1=d + delta, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
+                            fig.add_vline(x=d, line_width=1.5, line_dash="dash", 
+                                          line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
                         
                         fig.update_layout(
                             paper_bgcolor='rgba(0,0,0,0)', 
@@ -2326,14 +2399,41 @@ if sector_seleccionado:
                             height=350, 
                             margin=dict(l=50, r=50, t=10, b=10), 
                             hovermode="x unified", 
-                            legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=10)),
-                            xaxis=dict(color="white", showgrid=False),
-                            yaxis=dict(title="Caudales (m³/h)", color="#00d4ff", tickformat=".2f"),
-                            yaxis2=dict(title="Presiones (kg)", side="right", overlaying="y", color="#00ff00", showgrid=False, tickformat=".2f")
+                            legend=dict(
+                                orientation="h", 
+                                yanchor="bottom", 
+                                y=1.05, 
+                                x=0.5, 
+                                xanchor="center", 
+                                font=dict(color="white", size=10)
+                            ),
+                            xaxis=dict(
+                                color="white", 
+                                showgrid=False,
+                                tickvals=ticks_filtrados,      # <--- Tu lista filtrada
+                                ticktext=etiquetas_filtradas,  # <--- Tus etiquetas con fecha/hora
+                                tickangle=0,
+                                tickformat="%d-%b-%Y %H:%M"
+                            ),
+                            yaxis=dict(
+                                title="Caudales (m³/h)", 
+                                color="#00d4ff", 
+                                tickformat=".2f"
+                            ),
+                            yaxis2=dict(
+                                title="Presiones (kg)", 
+                                side="right", 
+                                overlaying="y", 
+                                color="#00ff00", 
+                                showgrid=False, 
+                                tickformat=".2f"
+                            )
                         )
+                        
                         st.plotly_chart(fig, use_container_width=True)
                 except Exception as e:
                     st.error(f"Error Scada (Derecha): {e}")
+                        
 
 # 7.11. ------------------------------------------------------------------------- ZONA : VRP ----------------------------------------------
         col_vrp, col_pc = st.columns([1.0, 1.0])
@@ -2369,7 +2469,43 @@ if sector_seleccionado:
                     
                     if not df_v.empty:
                         st.markdown(f"<h3 style='color:#00ffcc; font-size:20px; margin-bottom:10px; text-align: center;'>Análisis Integral de VRPs del Sector</h3>", unsafe_allow_html=True)
+
+                        # --- 1. LÓGICA DE FECHAS (Estandarizada) ---
+                        df_v['FECHA'] = pd.to_datetime(df_v['FECHA'])
+                        dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
+                                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+                        
+                        fechas_lineas = pd.date_range(start=df_v['FECHA'].min().floor('D'), 
+                                                      end=df_v['FECHA'].max().ceil('D'), freq='D')
+                        num_dias = len(fechas_lineas)
+                        paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
+                        ticks_filtrados = fechas_lineas[::paso]
+                        etiquetas_filtradas = [
+                            f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                            for d in ticks_filtrados
+                        ]
+                        
                         fig_v = go.Figure()
+
+                        # --- 2. DIBUJO DE SOMBRAS Y LÍNEAS (Separador de días) ---
+                        delta = pd.Timedelta(hours=1) # Ajusta este ancho según necesites
+                        for d in fechas_lineas:
+                            es_lunes = (d.dayofweek == 0)
+                            
+                            # AÑADIR LA SOMBRA (El fondo gris para resaltar el día)
+                            fig_v.add_vrect(
+                                x0=d - delta, x1=d + delta, 
+                                fillcolor="gray", opacity=0.2, 
+                                layer="below", line_width=0
+                            )
+                            
+                            # AÑADIR LA LÍNEA (El separador)
+                            fig_v.add_vline(
+                                x=d, line_width=0.5, line_dash="dash", 
+                                line_color="#fffb00" if es_lunes else "white", 
+                                opacity=0.5, layer="above"
+                            )
                         
                         idx_vq = 0
                         idx_vp = 0
@@ -2412,6 +2548,11 @@ if sector_seleccionado:
                                     hovertemplate=f'<b>%{{fullData.name}}</b>: %{{y:.2f}} {unidad_final}<extra></extra>'
                                 ))
 
+                        for d in fechas_lineas:
+                            es_lunes = (d.dayofweek == 0)
+                            fig_v.add_vline(x=d, line_width=1.5, line_dash="dash", 
+                                          line_color="#fffb00" if es_lunes else "white", opacity=0.3)
+                                          
                         fig_v.update_layout(
                             paper_bgcolor='rgba(0,0,0,0)', 
                             plot_bgcolor='rgba(0,0,0,0)', 
@@ -2424,7 +2565,14 @@ if sector_seleccionado:
                             y=1.05,
                             x=0.5,
                             xanchor="center", font=dict(color="white", size=9)),
-                            xaxis=dict(color="white", showgrid=False),
+                            xaxis=dict(color="white", 
+                                showgrid=False,
+                                tickvals=ticks_filtrados,
+                                ticktext=etiquetas_filtradas,
+                                tickangle=0,
+                                tickformat="%d-%b-%Y %H:%M" # Encabezado del hover en orden
+                            ),
+                            
                             yaxis=dict(title="Caudal (Lps)", color="#00d4ff", tickformat=".2f"),
                             yaxis2=dict(title="Presión (kg)", side="right", overlaying="y", color="#00ff00", showgrid=False, tickformat=".2f")
                         )
@@ -2445,36 +2593,55 @@ if sector_seleccionado:
 
                         if not df_pc_h.empty:
                             st.markdown(f"<h3 style='color:#ff0000; font-size:18px; margin-bottom:10px; text-align: center;'>Puntos críticos del sector:</h3>", unsafe_allow_html=True)
+                            
+                            # --- 1. LÓGICA DE FECHAS (Estandarizada) ---
+                            df_pc_h['FECHA'] = pd.to_datetime(df_pc_h['FECHA'])
+                            dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                            meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+                            
+                            fechas_lineas = pd.date_range(start=df_pc_h['FECHA'].min().floor('D'), end=df_pc_h['FECHA'].max().ceil('D'), freq='D')
+                            num_dias = len(fechas_lineas)
+                            paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
+                            ticks_filtrados = fechas_lineas[::paso]
+                            etiquetas_filtradas = [f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}" for d in ticks_filtrados]
+
                             fig_pc = go.Figure()
                             
-                            # CAMBIO 1: Usar 'Domicilio' en lugar de 'nombre' (Colonia) para el mapeo
+                            # --- 2. DIBUJO DE SOMBRAS Y LÍNEAS (Separador de días) ---
+                            delta = pd.Timedelta(hours=1)
+                            for d in fechas_lineas:
+                                es_lunes = (d.dayofweek == 0)
+                                fig_pc.add_vrect(x0=d - delta, x1=d + delta, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
+                                fig_pc.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
+
                             tag_to_name = {v['tag_p1']: v.get('Domicilio', v.get('nombre', 'S/D')) for v in dict_pc_sec.values()}
 
+                            # --- 3. TRAZADO DE DATOS ---
                             for tag in tags_pc_list:
                                 df_temp = df_pc_h[df_pc_h['TAG'] == tag]
                                 if not df_temp.empty:
                                     fig_pc.add_trace(go.Scatter(
-                                        x=df_temp['FECHA'], 
-                                        y=df_temp['VALUE'], 
-                                        name=tag_to_name.get(tag, tag), 
-                                        mode='lines+markers',
-                                        marker=dict(size=4, symbol='circle'),
-                                        line=dict(width=2),
-                                        # CAMBIO 2: Formatear a dos decimales con :.2f
+                                        x=df_temp['FECHA'], y=df_temp['VALUE'], 
+                                        name=tag_to_name.get(tag, tag), mode='lines+markers',
+                                        marker=dict(size=4, symbol='circle'), line=dict(width=2),
                                         hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f} kg<extra></extra>'
                                     ))
 
+                            # --- 4. CONFIGURACIÓN DEL LAYOUT ---
                             fig_pc.update_layout(
-                                paper_bgcolor='rgba(0,0,0,0)', 
-                                plot_bgcolor='rgba(0,0,0,0)', 
-                                height=300, 
-                                margin=dict(l=50, r=50, t=40, b=10), 
-                                hovermode="x unified", 
-                                # CAMBIO 3: Asegurar que el eje Y también muestre dos decimales
-                                yaxis=dict(tickformat=".2f", color="white"),
-                                xaxis=dict(color="white"),
-                                legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, font=dict(color="white", size=12)))
-                            
+                                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300, 
+                                margin=dict(l=50, r=50, t=40, b=10), hovermode="x unified",
+                                xaxis=dict(
+                                    color="white", 
+                                    showgrid=False,
+                                    tickvals=ticks_filtrados, 
+                                    ticktext=etiquetas_filtradas, 
+                                    tickangle=0, 
+                                    tickformat="%d-%b-%Y %H:%M" # Encabezado formato Día-Mes-Año
+                                ),
+                                yaxis=dict(tickformat=".2f", color="white"), # Decimales eje Y
+                                legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=10))
+                            )
                             st.plotly_chart(fig_pc, use_container_width=True)
                     except Exception as e:
                         st.error(f"Error PC: {e}")
