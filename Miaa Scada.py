@@ -768,7 +768,7 @@ if "graficar_pozo" in params:
     with col_f1:
         opcion_fecha = st.selectbox(
             "Rango de tiempo:", 
-            ["Hoy", "Ayer", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 6 meses", "Personalizado"], 
+            ["Hoy", "Ayer", "Últimos 7 días", "Últimos 14 días", "Este Mes", "Último Mes", "Últimos 3 meses", "Últimos 6 meses", "Personalizado"], 
             index=3, 
             key="fecha_pozo_v8"
         )
@@ -792,6 +792,8 @@ if "graficar_pozo" in params:
     elif opcion_fecha == "Último Mes":
         f_ini = (hoy_dt.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         f_fin = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+    elif opcion_fecha == "Últimos 3 meses":
+        f_ini = (medianoche - timedelta(days=90))    
     elif opcion_fecha == "Últimos 6 meses":
         f_ini = (medianoche - timedelta(days=180))
     elif opcion_fecha == "Personalizado":
@@ -885,7 +887,7 @@ if "graficar_pozo" in params:
                 if tags_amperaje:
                     val_a_prom = f"{df[df['TagName'].isin(tags_amperaje)]['VALUE'].mean():,.1f}"
 
-# --- RENDER CABECERA ---
+# ----------------------- RENDER CABECERA INDICADORES EN TARGETAS DEL POZO ---------------------------------------------------------------------------------------------
             cabecera_placeholder.markdown(f"""
 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px;">
     <h1 style="margin: 0; font-size: 32px; color: white; white-space: nowrap;">Sitio: <span style="color:#00d4ff;">{nombre_pozo}</span></h1>
@@ -926,7 +928,7 @@ if "graficar_pozo" in params:
 </div>
 """, unsafe_allow_html=True)
 
-            # --- PESTAÑA DE VOLÚMENES ---
+# ------------------------------------------------------- PESTAÑA DE VOLÚMENES Y GRAFICO DE BARRAS DE VOLUMEN TOTALIZADO ------------------------------------------------------------------------------
             with st.expander("📅 Análisis de volumen real", expanded=False):
                 if tag_totalizado and tag_totalizado != 'N/A':
                     curr_year = datetime.now().year
@@ -956,8 +958,6 @@ if "graficar_pozo" in params:
                         # Eliminamos el último registro (el mes actual) que no tiene producción cerrada
                         res_meses = res_meses.dropna(subset=['produccion_neta'])
 
-                        
-
                         col_g, col_t = st.columns([2, 1])
                         with col_g:
                             fig_hist = go.Figure()
@@ -986,7 +986,7 @@ if "graficar_pozo" in params:
                             st.dataframe(pivot.style.format("{:,.0f}"), use_container_width=True)
                     else: st.info("Sin datos.")
 
-            # --- PROCESAMIENTO GRAFICO DE BARRAS DEL VOLUMEN -------------------------------
+            # ------------------------ PROCESAMIENTO GRAFICO DE VARIABLES DEL POZO -------------------------------------------------------------------------------------------------------------------
             if not df.empty:
                 df['FECHA'] = pd.to_datetime(df['FECHA'])
                 
@@ -997,6 +997,9 @@ if "graficar_pozo" in params:
                 
                 for t in tags_grafico:
                     dft_l = df[df['TagName'] == t['tag']].sort_values('FECHA').copy()
+
+                    if len(dft_l) <= 3:
+                        continue
                     
                     if dft_l.empty:
                         fecha_limite = f_ini - timedelta(days=30)
@@ -1193,7 +1196,8 @@ if "graficar_pozo" in params:
                         position=1.00,
                         showline=True,        # Línea activa: Divide Niveles Pozo de Eléctricos
                         linecolor='white',
-                        linewidth=1.5
+                        linewidth=1.5,
+                        rangemode="tozero"
                     )
                 )
                 st.plotly_chart(fig_line, use_container_width=True)
@@ -1743,7 +1747,7 @@ for id_p, info in mapa_pozos_dict.items():
         pozos_falla_com.append(id_p)
     else:
         val_bba, _ = data_scada.get(info['bomba'], (0, "N/A"))
-        if val_bba == 1:
+        if val_bba >= 1:
             info.update({'status_label': 'OPERANDO', 'color_final': '#00FF00', 'blink': False})
             pozos_on.append(id_p)
             total_q += data_scada.get(info['caudal'], (0, ""))[0]
