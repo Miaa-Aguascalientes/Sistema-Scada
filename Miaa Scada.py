@@ -1039,7 +1039,19 @@ if "graficar_pozo" in params:
                         )
                     )
                     
-                    dft_l['HORA_REAL'] = dft_l['FECHA'].dt.strftime('%d-%m-%Y %H:%M:%S')
+                    dias_es = {'Mon': 'Lun', 'Tue': 'Mar', 'Wed': 'Mié', 'Thu': 'Jue', 'Fri': 'Vie', 'Sat': 'Sáb', 'Sun': 'Dom'}
+                    meses_es = {'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun', 
+                                'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'}
+
+                    # 2. PROCESAMIENTO DE FECHA TRADUCIDA
+                    # En lugar de solo strftime, transformamos el formato al vuelo
+                    def traducir_fecha(d):
+                        dia_nom = dias_es.get(d.strftime('%a'), d.strftime('%a'))
+                        mes_nom = meses_es.get(d.strftime('%b'), d.strftime('%b'))
+                        return f"{dia_nom} {d.day}-{mes_nom} {d.strftime('%H:%M:%S')}"
+
+                    # Aplicamos la traducción a la columna antes del merge
+                    dft_l['HORA_TRADUCIDA'] = dft_l['FECHA'].apply(traducir_fecha)
                     
                     df_tag_maestro = pd.merge_asof(
                         df_interactivo, 
@@ -1049,22 +1061,21 @@ if "graficar_pozo" in params:
                         direction='backward'
                     )
                     df_tag_maestro['VALUE'] = df_tag_maestro['VALUE'].bfill()
-                    df_tag_maestro['HORA_REAL'] = df_tag_maestro['HORA_REAL'].bfill()
+                    # Usamos la columna traducida
+                    df_tag_maestro['HORA_TRADUCIDA'] = df_tag_maestro['HORA_TRADUCIDA'].bfill()
                     
-                    # 2. TRAZA DE HOVER BLINDADA CON FORZADO EN COLOR DE MARCADORES Y BORDES
+                    # 3. TRAZA DE HOVER (Aquí no cambias nada más, el customdata ya lleva el texto en español)
                     fig_line.add_trace(
                         go.Scatter(
                             x=df_interactivo['FECHA_INDEX'],
                             y=df_tag_maestro['VALUE'],
                             name=t['label'],
                             mode='lines',
-                            # Ponemos un ancho minúsculo (0.01) para obligar a Plotly a reconocer el color en el hover
                             line=dict(color=t['color'], width=0.01), 
                             yaxis=t['axis'],
                             showlegend=False,
-                            customdata=df_tag_maestro['HORA_REAL'].tolist(),
+                            customdata=df_tag_maestro['HORA_TRADUCIDA'].tolist(), # <--- YA VA TRADUCIDO
                             hovertext=df_tag_maestro['VALUE'].tolist(),
-                            # Estructuramos el texto inyectándole etiquetas HTML con el color hexadecimal exacto
                             hovertemplate=f"<span style='color:{t['color']};'>■</span> <b>{t['label']}</b>: %{{hovertext:,.2f}} <span style='color:#888; font-size:11px;'>(%{{customdata}})</span><extra></extra>",
                             hoverlabel=dict(
                                 bordercolor=t['color']
@@ -1088,7 +1099,7 @@ if "graficar_pozo" in params:
                 ]
 
                 # 2. DIBUJO DE LÍNEAS CON SOMBRA (VRECT + VLINE)
-                delta = pd.Timedelta(hours=1) # Ancho del halo detrás de la línea
+                delta = pd.Timedelta(hours=0.15) # Ancho del halo detrás de la línea
                 for d in fechas_lineas:
                     es_lunes = (d.dayofweek == 0)
                     
@@ -1125,22 +1136,23 @@ if "graficar_pozo" in params:
                     legend=dict(orientation="h", y=1.08),
                     
                     xaxis=dict(
-                        title=dict(text="<b>Línea de Tiempo</b>"),
-                        domain=[0.07, 0.91],
-                                                
-                        tickvals=ticks_filtrados,
-                        ticktext=etiquetas_filtradas,
-                        tickangle=0,
-                        
-                        showline=False,
-                        range=[df['FECHA'].min(), df['FECHA'].max()],
-                        autorange=True,
-                        showspikes=True,
-                        spikethickness=1, 
-                        spikedash="dash",
-                        spikemode="across",
-                        spikecolor="rgba(255, 255, 255, 0.6)"   
-                    ),
+                    title=dict(text="<b>Tiempo</b>"),
+                    domain=[0.07, 0.91],
+                    tickangle=0,
+                    showline=False,
+                    autorange=True,
+                    showspikes=True,
+                    spikethickness=1,
+                    spikedash="dash",
+                    spikemode="across",
+                    spikecolor="rgba(255, 255, 255, 0.6)",
+                    # Configuración para mostrar día y hora automáticamente
+                    tickformatstops=[
+                        dict(dtickrange=[None, 86400000], value="%H:%M <br>%a %d-%b-%Y"), # Día, Mes y AÑO
+                        dict(dtickrange=[86400000, 604800000], value="%a %d-%b-%Y"),      # Día, Mes y AÑO
+                        dict(dtickrange=[604800000, None], value="%d-%b-%Y")             # Mes y AÑO
+                    ]
+                ),
                 
                     
                     # --- CONFIGURACIÓN DE EJES Y (LÍNEAS DIVISORIAS INTERNAS COMPLETAS) ---
@@ -2826,7 +2838,7 @@ with st.sidebar:
     with st.expander("🗺️ Control de Capas", expanded=False):
         ver_sectores = st.checkbox("Mostrar Sectores", value=True)
         ver_pozos = st.checkbox("Mostrar Pozos", value=True)
-        ver_tanques = st.checkbox("Mostrar Tanques", value=False)
+        ver_tanques = st.checkbox("Mostrar Tanques", value=True)
         ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=False) # Activado por defecto para facilitar localización
         ver_macromedidores = st.checkbox("Macromedidores", value=False)
     
