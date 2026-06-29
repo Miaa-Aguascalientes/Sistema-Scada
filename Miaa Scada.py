@@ -18,7 +18,8 @@ import plotly.graph_objects as go
 from folium.plugins import MousePosition, LocateControl
 from streamlit_folium import st_folium
 import locale
- 
+from shapely import wkt
+import geopandas as gpd
 
 st.set_page_config(
     page_title="Sistema Scada", 
@@ -305,6 +306,22 @@ def cargar_sectores_poligonos():
         # al terminar la función, exitosa o fallida.
         if conn:
             conn.close()
+
+# Función corregida para leer el campo 'geom' directamente
+@st.cache_data(ttl=3600)
+def get_todas_las_colonias():
+    # Eliminamos el filtro WHERE para obtener todo el diccionario
+    query = "SELECT ST_AsText(geom) as geom_wkt, Pozos, Col_atl, Sector, Distrito, Supervisor FROM Diccionario_colonias"
+    try:
+        df = pd.read_sql(query, get_mysql_telemetria_engine())
+        if not df.empty:
+            df['geometry'] = df['geom_wkt'].apply(wkt.loads)
+            gdf = gpd.GeoDataFrame(df, geometry='geometry')
+            gdf.set_crs(epsg=32613, inplace=True)
+            return gdf.to_crs(epsg=4326)
+    except Exception as e:
+        st.error(f"Error cargando polígonos: {e}")
+    return None
 
 # 2.7. Funcion para cambiar el formato de horas
 def formato_hora(decimal):
@@ -2800,18 +2817,43 @@ with st.sidebar:
         key="busqueda_sectores"
     )
 
+    # 8.5.1. BUSCADOR DE COLONIAS (BLINDADO)
+    if 'gdf_colonias_lista' not in st.session_state:
+        st.session_state.gdf_colonias_lista = get_todas_las_colonias()
+    
+    df_col = st.session_state.gdf_colonias_lista
+    
+    # Validamos que el DataFrame sea válido y contenga 'Col_atl'
+    if df_col is not None and not df_col.empty and 'Col_atl' in df_col.columns:
+        lista_colonias = sorted(df_col['Col_atl'].unique().tolist())
+    else:
+        lista_colonias = []
+        if df_col is not None and 'Col_atl' not in df_col.columns:
+            st.sidebar.error("Error: La columna 'Col_atl' no existe en los datos.")
+
+    colonia_buscada = st.sidebar.selectbox(
+        "🏙️ Localizar Colonia",
+        options=[""] + lista_colonias,
+        format_func=lambda x: "Seleccionar" if x == "" else f" {x}",
+        key="busqueda_colonias"
+    )
+
+
     # 8.6. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
     datos_sector_resaltado = None
     
     if pozo_buscado:
         st.session_state.centro_mapa = mapa_pozos_dict[pozo_buscado]['coord']
         st.session_state.zoom_inicial = 18
+        
     elif tanque_buscado:
         st.session_state.centro_mapa = mapa_tanques_dict[tanque_buscado]['coord']
         st.session_state.zoom_inicial = 18
+        
     elif rebombeo_buscado:
         st.session_state.centro_mapa = mapa_rebombeos_dict[rebombeo_buscado]['coord']
         st.session_state.zoom_inicial = 18
+        
     elif sector_buscado:
         datos_s = next((s for s in sectores if s['sector'] == sector_buscado), None)
         if datos_s:
@@ -2823,6 +2865,20 @@ with st.sidebar:
                 st.session_state.zoom_inicial = 14.5
             except:
                 pass
+
+    # NUEVA INTEGRACIÓN PARA COLONIAS
+    elif colonia_buscada and colonia_buscada != "":
+        df = st.session_state.gdf_colonias_lista
+        if df is not None:
+            col_sel = df[df['Col_atl'] == colonia_buscada]
+            if not col_sel.empty:
+                # GUARDAMOS LA COLONIA SELECCIONADA EN EL ESTADO
+                st.session_state.colonia_resaltada = col_sel.iloc[0]
+                
+                centro = st.session_state.colonia_resaltada.geometry.centroid
+                st.session_state.centro_mapa = [centro.y, centro.x]
+                st.session_state.zoom_inicial = 15.5
+                
     else:
         # Si no hay nada seleccionado, mantener vista general
         st.session_state.centro_mapa = [21.8820, -102.2800]
@@ -2836,11 +2892,12 @@ with st.sidebar:
         
     # 8.8. CONTROL DE CAPAS ---
     with st.expander("🗺️ Control de Capas", expanded=False):
-        ver_sectores = st.checkbox("Mostrar Sectores", value=True)
-        ver_pozos = st.checkbox("Mostrar Pozos", value=True)
-        ver_tanques = st.checkbox("Mostrar Tanques", value=False)
-        ver_rebombeos = st.checkbox("Mostrar Rebombeos", value=False) # Activado por defecto para facilitar localización
-        ver_macromedidores = st.checkbox("Macromedidores", value=False)
+        ver_sectores = st.checkbox("🏘️ Sectores", value=True)
+        ver_pozos = st.checkbox("💧 Pozos", value=True)
+        ver_tanques = st.checkbox("🛢️ Tanques", value=False)
+        ver_rebombeos = st.checkbox("🧊 Rebombeos", value=False) # Activado por defecto para facilitar localización
+        ver_macromedidores = st.checkbox("🌀 Macromedidores", value=False)
+        ver_colonias = st.checkbox("🏙️ Colonias", value=False)
     
     # 8.9. LISTADO DE ESTADOS ---
     with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
@@ -3332,6 +3389,49 @@ if sectores_data:
                 
             except Exception as e:
                 continue
-           
-    folium.LayerControl(position='topright', collapsed=False).add_to(m)          
+
+# 9.10. RENDERIZADO DE POLÍGONOS DE COLONIAS (Nivel 4 espacios: fuera del FOR, pero dentro del IF padre)
+    if ver_colonias:
+        gdf_colonias = st.session_state.get('gdf_colonias_lista')
+        
+        if gdf_colonias is not None and not gdf_colonias.empty:
+            fg_colonias = folium.FeatureGroup(name="Colonias")
+            
+            # --- ESTILOS ---
+            def estilo_final(feature):
+                props = feature.get('properties', {})
+                nombre_actual = props.get('Col_atl')
+                col_sel = st.session_state.get('colonia_resaltada')
+                es_match = (col_sel is not None and nombre_actual == col_sel.get('Col_atl'))
+                
+                return {
+                    'fillColor': '#F1C40F' if es_match else '#2ECC71', # Amarillo si es selección
+                    'color': '#F39C12' if es_match else '#27AE60',
+                    'weight': 3 if es_match else 1,
+                    'fillOpacity': 0.6 if es_match else 0.2
+                }
+
+            def estilo_hover(feature):
+                return {'fillOpacity': 0.8, 'weight': 4, 'color': '#34495E'}
+
+            # --- RENDERIZADO CON TOOLTIP COMPLETO ---
+            folium.GeoJson(
+                gdf_colonias,
+                name="Colonias",
+                style_function=estilo_final,
+                highlight_function=estilo_hover,
+                tooltip=folium.GeoJsonTooltip(
+                    # Asegúrate de que estos nombres coincidan con las columnas de tu DF:
+                    # ['Col_atl', 'Pozos', 'Sector', 'Distrito']
+                    fields=['Col_atl', 'Pozos', 'Sector', 'Distrito'],
+                    aliases=['Colonia:', 'Pozos:', 'Sector:', 'Distrito:'],
+                    localize=True,
+                    sticky=True
+                )
+            ).add_to(fg_colonias)
+            
+            fg_colonias.add_to(m)
+
+    # 9.11. CONTROL DE CAPAS Y RENDERIZADO FINAL (Nivel 4 espacios)
+    folium.LayerControl(position='topright', collapsed=False).add_to(m)
     folium_static(m, width=None, height=750)
