@@ -567,7 +567,40 @@ def cargar_medidores_desde_db():
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
         return {}
-
+        
+# 3.6. Funcion para optener las incidencias
+@st.cache_data(ttl=60)
+def get_data():
+    engine = get_mysql_scada_engine()
+    
+    if engine is None:
+        st.error("No se pudo establecer conexión.")
+        return pd.DataFrame()
+        
+    try:
+        # AQUÍ ES DONDE AGREGAS TODOS LOS CAMPOS QUE QUIERAS TRAER
+        query = """
+            SELECT NUM_POZO, COLONIA, FECHA_HORA_INICIO, FECHA_HORA_FIN, 
+                   DIAGNOSTICO_FALLA, TIEMPO_ESTIMADO_ATENCION, ESTATUS 
+            FROM vw_incidencias_en_pozos 
+            ORDER BY FECHA_HORA_INICIO DESC
+        """
+        df = pd.read_sql(query, engine)
+        return df
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return pd.DataFrame()
+        
+# 3.7. Funcion para optener las colonias del diccionario de colonias        
+@st.cache_data(ttl=60)
+def get_diccionario_completo():
+    try:
+        # Asegúrate de que get_engine_telemetria() esté disponible en tu archivo
+        query = "SELECT Pozos, Col_atl, Sector, Distrito, Supervisor, ST_AsText(geom) as geom_wkt FROM Diccionario_colonias"
+        return pd.read_sql(query, get_mysql_telemetria_engine())
+    except Exception as e:
+        st.error(f"Error en get_diccionario_colonias: {e}")
+        return pd.DataFrame()
 
 # 4. SECCION -------------------------------------------------------------------------------- 4. GRAFICAR LOS TANQUES EN EL POPUP --------------------------------------------------------------------
 params = st.query_params
@@ -3435,3 +3468,89 @@ if sectores_data:
     # 9.11. CONTROL DE CAPAS Y RENDERIZADO FINAL (Nivel 4 espacios)
     folium.LayerControl(position='topright', collapsed=False).add_to(m)
     folium_static(m, width=None, height=750)
+
+    # ---------------------------------------------------------------------------- FINAL DEL MAPA -------------------------------------------------------------------------------------------
+
+    # 10. SECCIÓN DE INCIDENCIAS DE POZOS
+    st.markdown("---")
+    st.subheader("⚠️ Incidencias: Pozos fuera de servicio")
+    
+    # 1. Obtener datos
+    df_incidencias = get_data() 
+    df_diccionario = get_diccionario_completo()
+    
+    if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
+        
+        # --- PREPARACIÓN DEL DICCIONARIO ---
+        df_diccionario['Pozos'] = df_diccionario['Pozos'].astype(str)
+        df_dict_expanded = df_diccionario.assign(Pozos=df_diccionario['Pozos'].str.split(',')).explode('Pozos')
+        df_dict_expanded['Pozos_limpios'] = df_dict_expanded['Pozos'].str.strip().str.replace('-', '', regex=False)
+        
+        # --- LIMPIEZA DE INCIDENCIAS ---
+        df_incidencias['NUM_POZO_LIMPIO'] = df_incidencias['NUM_POZO'].astype(str).str.replace('-', '', regex=False)
+        
+        # --- MERGE ---
+        df_merged = df_incidencias.merge(
+            df_dict_expanded[['Pozos_limpios', 'Col_atl']], 
+            left_on='NUM_POZO_LIMPIO', 
+            right_on='Pozos_limpios', 
+            how='left'
+        )
+        
+        # --- AGRUPACIÓN ---
+        columnas_agrupar = ['NUM_POZO', 'FECHA_HORA_INICIO', 'FECHA_HORA_FIN', 'DIAGNOSTICO_FALLA', 'ESTATUS', 'TIEMPO_ESTIMADO_ATENCION']
+        df_agrupado = df_merged.groupby(columnas_agrupar, dropna=False)['Col_atl'].apply(lambda x: ', '.join(x.dropna().unique())).reset_index()
+        df_agrupado.rename(columns={'Col_atl': 'COLONIAS_AFECTADAS'}, inplace=True)
+        df_agrupado['COLONIAS_AFECTADAS'] = df_agrupado['COLONIAS_AFECTADAS'].replace('', 'No definida')
+        
+        # --- CÁLCULOS Y FORMATO DE FECHAS EN ESPAÑOL ---
+        meses = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
+                 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+        
+        def formatear_fecha_es(fecha):
+            # Si es nulo o NaT, regresamos un guion
+            if pd.isnull(fecha):
+                return "-"
+            ts = pd.to_datetime(fecha)
+            # Formato: HH:MM - DD/Mes/YYYY
+            return ts.strftime(f"%H:%M - %d/{meses[ts.month]}/%Y")
+            
+        # Convertimos a datetime antes de aplicar el formato
+        df_agrupado['FECHA_HORA_INICIO'] = pd.to_datetime(df_agrupado['FECHA_HORA_INICIO'])
+        df_agrupado['FECHA_HORA_FIN'] = pd.to_datetime(df_agrupado['FECHA_HORA_FIN'])
+        
+        # Aplicamos el formato con el guion separador
+        df_agrupado['FECHA_HORA_INICIO_STR'] = df_agrupado['FECHA_HORA_INICIO'].apply(formatear_fecha_es)
+        df_agrupado['FECHA_HORA_FIN_STR'] = df_agrupado['FECHA_HORA_FIN'].apply(formatear_fecha_es)
+        
+        # Cálculo de duración
+        def formatear_duracion(td):
+            return f"{td.days} días, {td.seconds // 3600} horas y {(td.seconds % 3600) // 60} min"
+        
+        # Calculamos la duración con la fecha de fin actual si es nula
+        df_agrupado['DURACION_COMPLETA'] = (df_agrupado['FECHA_HORA_FIN'].fillna(pd.Timestamp.now()) - df_agrupado['FECHA_HORA_INICIO']).apply(formatear_duracion)
+        
+        # --- ORDENAMIENTO ---
+        df_final = df_agrupado.sort_values(by='FECHA_HORA_INICIO', ascending=False)
+        
+        # --- VISUALIZACIÓN ---
+        def aplicar_color_estatus(val):
+            colores = {'CERRADA': 'green', 'EN PROCESO': 'orange', 'PENDIENTE': 'red'}
+            return f'color: {colores.get(str(val).strip().upper(), "black")}; font-weight: bold;'
+
+        st.dataframe(
+            df_final[['NUM_POZO', 'COLONIAS_AFECTADAS', 'FECHA_HORA_INICIO_STR', 'FECHA_HORA_FIN_STR', 'DIAGNOSTICO_FALLA', 'DURACION_COMPLETA', 'ESTATUS']]
+            .style.map(aplicar_color_estatus, subset=['ESTATUS']),
+            use_container_width=True, hide_index=True,
+            column_config={
+                "NUM_POZO": "Pozo",
+                "FECHA_HORA_INICIO_STR": "Inicio",
+                "DIAGNOSTICO_FALLA": "Diagnóstico de Falla",
+                "COLONIAS_AFECTADAS": "Colonias Afectadas",
+                "FECHA_HORA_FIN_STR": "Fin",
+                "DURACION_COMPLETA": "Duración",
+                "ESTATUS": "Estatus"
+            }
+        )
+    else:
+        st.success("✅ No hay incidencias reportadas actualmente.")
