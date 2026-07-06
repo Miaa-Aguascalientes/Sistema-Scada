@@ -167,7 +167,7 @@ if not st.session_state.autenticado:
         
         if not st.session_state.fase_carga:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE CREDENCIALES</h2>', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#00d4ff; font-size:18px;">// INGRESE SUS CREDENCIALES</h2>', unsafe_allow_html=True)
             
             with st.form("login_form", clear_on_submit=False):
                 u = st.text_input("USUARIO", key="u_login")
