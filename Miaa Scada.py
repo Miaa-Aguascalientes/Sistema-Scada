@@ -77,15 +77,14 @@ def verificar_credenciales(usuario_input, password_input):
         return None
 
 # 0.3. ESTILO VISUAL HUD AJUSTADO
-# 0.3. ESTILO VISUAL HUD AJUSTADO
 st.markdown("""
 <style>
-    /* Configuración base de la aplicación */
+    /* Configuración base */
     .stApp { background-color: #050a10 !important; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
     header, footer { visibility: hidden !important; }
     
-    /* Animación del HUD */
+    /* HUD Visual Elements */
     .visual-core { position: relative; width: 480px; height: 480px; margin: auto; }
     .ring { position: absolute; border-radius: 50%; border: 4px solid transparent; animation: spin var(--d) linear infinite; }
     .r1 { width: 100%; height: 100%; border-top: 8px solid #00d4ff; border-bottom: 8px solid #00d4ff; --d: 4s; }
@@ -93,7 +92,7 @@ st.markdown("""
     .center-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
     .logo-miaa { width: 190px; filter: drop-shadow(0 0 15px #00d4ff); }
     
-    /* Contenedor Login */
+    /* Login Box */
     .login-box { 
         background: rgba(0, 212, 255, 0.05); 
         border-left: 8px solid #00d4ff; 
@@ -105,40 +104,43 @@ st.markdown("""
     
     @keyframes spin { 100% { transform: rotate(360deg); } }
     
-    /* CORRECCIONES PARA INPUTS (Soluciona el corte visual del texto) */
+    /* --- ESTILO INTEGRADO PARA INPUTS (El ajuste clave) --- */
     div[data-testid="stTextInputRootElement"] {
         background-color: #0d1b2a !important;
         border: 1px solid #1f4068 !important;
-        padding: 5px 50px !important;
+        border-radius: 0px !important; /* Estilo recto como en la imagen */
+        padding: 0px 10px !important; 
+        height: 40px !important;
         box-shadow: none !important;
     }
     
     .stTextInput input { 
-        background-color: #0d1b2a !important; 
+        background-color: transparent !important; 
         color: #00d4ff !important; 
-        border: none !important; /* Eliminamos borde aquí para dejar que el contenedor se encargue */
-        height: 80px !important;
-        font-size: 16px !important;
+        border: none !important;
+        height: 100% !important;
+        font-family: 'Courier New', monospace; /* Estilo terminal */
+        font-size: 15px !important;
+        padding: 0 !important;
     }
     
-    /* Eliminación del foco azul de Streamlit */
+    /* Eliminar cualquier foco o sombra al interactuar */
     div[data-testid="stTextInputRootElement"]:focus-within {
-        outline: none !important;
-        box-shadow: none !important;
         border: 1px solid #00d4ff !important;
+        box-shadow: none !important;
     }
     
-    /* Estilo para el botón de formulario */
-    .stButton button, div[data-testid="stForm"] button { 
+    /* Botones */
+    .stButton button { 
         background: #00d4ff !important; 
         color: #050a10 !important; 
         font-weight: bold !important; 
         width: 100%; 
         height: 45px; 
         border: none !important;
+        border-radius: 0px !important;
     }
     
-    /* Eliminar borde por defecto del formulario de Streamlit */
     div[data-testid="stForm"] {
         border: none !important;
         padding: 0 !important;
