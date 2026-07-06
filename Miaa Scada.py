@@ -117,7 +117,7 @@ st.markdown("""
         background-color: #0d1b2a !important; 
         color: #00d4ff !important; 
         border: none !important; /* Eliminamos borde aquí para dejar que el contenedor se encargue */
-        height: 35px !important;
+        height: 80px !important;
         font-size: 16px !important;
     }
     
