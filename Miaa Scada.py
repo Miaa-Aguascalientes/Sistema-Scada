@@ -109,7 +109,7 @@ st.markdown("""
     div[data-testid="stTextInputRootElement"] {
         background-color: #0d1b2a !important;
         border: 1px solid #1f4068 !important;
-        padding: 5px 10px !important;
+        padding: 5px 50px !important;
         box-shadow: none !important;
     }
     
