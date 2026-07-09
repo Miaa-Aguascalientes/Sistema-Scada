@@ -629,7 +629,7 @@ def get_data():
         # AQUÍ ES DONDE AGREGAS TODOS LOS CAMPOS QUE QUIERAS TRAER
         query = """
             SELECT NUM_POZO, COLONIA, FECHA_HORA_INICIO, FECHA_HORA_FIN, 
-                   DIAGNOSTICO_FALLA, TIEMPO_ESTIMADO_ATENCION, ESTATUS 
+                   DIAGNOSTICO_FALLA, TIEMPO_ESTIMADO_ATENCION, RESPONSABLE, ESTATUS 
             FROM vw_incidencias_en_pozos 
             ORDER BY FECHA_HORA_INICIO DESC
         """
@@ -3555,6 +3555,9 @@ import pytz
 from datetime import datetime
 from streamlit_folium import st_folium
 
+tz_mx = pytz.timezone('America/Mexico_City')
+ahora_mx = datetime.now(tz_mx)
+
 def normalizar_id(valor):
     return str(valor).strip().upper()
 
@@ -3570,7 +3573,16 @@ def renderizar_bloque_incidencia(row, index, tipo):
         if col_pozo:
             gdf = gdf[gdf[col_pozo].apply(normalizar_id) == id_pozo]
 
-    col1, col2 = st.columns([2, 1])
+    st.markdown("""
+        <style>
+        [data-testid="column"] {
+            padding-left: 0px !important;
+            padding-right: 0px !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)        
+
+    col1, col2 = st.columns([3, 2], gap="small")
     
     with col1:
         if gdf is not None and not gdf.empty:
@@ -3580,7 +3592,9 @@ def renderizar_bloque_incidencia(row, index, tipo):
                 lat, lon = gdf.geometry.centroid.y.mean(), gdf.geometry.centroid.x.mean()
                 m = folium.Map(location=[lat, lon], zoom_start=15, tiles="CartoDB dark_matter")
                 folium.GeoJson(gdf.__geo_interface__).add_to(m)
-                st_folium(m, width=600, height=400, key=f"map_{tipo}_{id_pozo}_{index}")
+                
+                st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo}_{index}")
+                
             except Exception as e: st.error(f"Error mapa: {e}")
         else:
             st.warning("Sin datos geográficos específicos.")
@@ -3600,8 +3614,23 @@ def renderizar_bloque_incidencia(row, index, tipo):
         tz_mx = pytz.timezone('America/Mexico_City')
         ahora_mx = datetime.now(tz_mx)
         inicio = pd.to_datetime(row['FECHA_HORA_INICIO']).tz_localize(None).tz_localize(tz_mx)
-        estimado = float(row.get('TIEMPO_ESTIMADO_ATENCION', 4))
-        hora_limite = inicio + pd.Timedelta(hours=estimado)
+        
+        # Obtenemos el valor crudo del campo
+        valor_raw = row.get('TIEMPO_ESTIMADO_ATENCION')
+        
+        # Validamos que no sea nulo y convertimos a float
+        if pd.notnull(valor_raw):
+            try:
+                estimado = float(valor_raw)
+                hora_limite = inicio + pd.Timedelta(hours=estimado)
+            except ValueError:
+                # Esto ocurre si el campo contiene texto que no es un número
+                st.error(f"Error: El tiempo estimado '{valor_raw}' no es un número válido.")
+                hora_limite = inicio # O el valor que decidas en caso de error
+        else:
+            # Esto ocurre si el campo está vacío (NaN/None)
+            st.warning("Advertencia: No hay tiempo estimado de atención definido.")
+            hora_limite = inicio # O asigna un valor por defecto lógico si lo prefieres
         
         # Barra de progreso
         total_seg = (hora_limite - inicio).total_seconds()
@@ -3630,10 +3659,44 @@ def renderizar_bloque_incidencia(row, index, tipo):
         
         # Indicadores debajo de la línea
         transcurrido = ahora_mx - inicio
-        st.markdown(f"🟢 **Fecha de Inicio:** {inicio.strftime('%H:%M')}")
-        st.markdown(f"🔵 **Tiempo actual:** {ahora_mx.strftime('%H:%M')}")
-        st.markdown(f"🔴 **Tiempo Límite para atención:** {hora_limite.strftime('%H:%M')}")
-        st.markdown(f"⏱️ **Duración del evento:** {int(transcurrido.total_seconds()//3600)}h {int((transcurrido.total_seconds()%3600)//60)}m")
+        color_inicio = "#00CC96" # Verde
+        color_ahora = "#1f77b4"  # Azul
+        color_limite = "#FF4B4B" # Rojo
+
+        # Indicadores con color aplicado mediante HTML
+        st.markdown(f'<span style="color:{color_inicio}">▲</span> **Fecha de Inicio:** {inicio.strftime("%H:%M %d de %B de %Y")}', unsafe_allow_html=True)
+        st.markdown(f'<span style="color:{color_ahora}">▲</span> **Tiempo actual:** {ahora_mx.strftime("%H:%M %d de %B de %Y")}', unsafe_allow_html=True)
+        st.markdown(f'<span style="color:{color_limite}">▲</span> **Tiempo límite para atención:** {hora_limite.strftime("%H:%M %d de %B de %Y")}', unsafe_allow_html=True)
+        dias = transcurrido.days
+        horas = transcurrido.seconds // 3600
+        minutos = (transcurrido.seconds % 3600) // 60
+
+        st.markdown(f"⏱️ **Duración del evento:** {dias}d {horas}h {minutos}m")
+
+        # LÓGICA: SECTOR, DISTRITO Y RESPONSABLE EN COLUMNAS
+        # Primero preparamos los datos del archivo de geometrías
+        if gdf is not None and not gdf.empty:
+            sectores = [str(s) for s in gdf['Sector'].unique() if pd.notnull(s)]
+            distritos = [str(d) for d in gdf['Distrito'].unique() if pd.notnull(d)]
+            sector_val = ', '.join(sectores) if sectores else 'N/A'
+            distrito_val = ', '.join(distritos) if distritos else 'N/A'
+        else:
+            sector_val = 'N/A'
+            distrito_val = 'N/A'
+
+        # Obtenemos el responsable de la tabla de incidencias
+        responsable_val = row.get('RESPONSABLE', 'N/A')
+
+        # Mostramos los tres en columnas
+        col_sec, col_dis, col_res = st.columns(3)
+        with col_sec:
+            st.markdown(f"📍 **Sector:** {sector_val}")
+        with col_dis:
+            st.markdown(f"🏢 **Distrito:** {distrito_val}")
+        with col_res:
+            st.markdown(f"👤 **Responsable:** {responsable_val}")
+
+        
 
 # --- LÓGICA PRINCIPAL ---
 df_incidencias = get_data()
@@ -3646,28 +3709,85 @@ if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
     df_actual = df_final[df_final['ESTATUS'].str.upper().isin(['EN PROCESO', 'PENDIENTE']) | ((df_final['ESTATUS'].str.upper() == 'CERRADA') & (df_final['FECHA_HORA_INICIO'].dt.normalize() == hoy))]
     df_historial = df_final[(df_final['ESTATUS'].str.upper() == 'CERRADA') & (df_final['FECHA_HORA_INICIO'].dt.normalize() < hoy)]
 
+    # 1. Incidencias Activas
+    tz_mx = pytz.timezone('America/Mexico_City')
     st.subheader("📋 Incidencias Activas y del día")
+    # Usamos la zona horaria definida arriba (tz_mx)
+    ahora_mx = datetime.now(tz_mx) 
+    
     for index, row in df_actual.iterrows():
-        # Lógica corregida para el color del círculo
-        estatus = str(row.get('ESTATUS', '')).upper()
-        if estatus == 'CERRADA':
-            ind = "🟢"
-        elif estatus == 'PENDIENTE':
-            ind = "🔴"
-        else: # EN PROCESO
-            ind = "🟡"
+        estatus = str(row.get('ESTATUS', 'N/A')).upper()
+        diag = str(row.get('DIAGNOSTICO_FALLA', 'N/A'))
+        
+        # Convertimos inicio a datetime y le asignamos la zona horaria de México
+        inicio_raw = pd.to_datetime(row.get('FECHA_HORA_INICIO')).tz_localize(None).tz_localize(tz_mx)
+        fin_raw = row.get('FECHA_HORA_FIN')
+        
+        # Formateo de fechas para el título
+        inicio_str = inicio_raw.strftime('%H:%M %d de %B de %Y')
+        
+        if pd.notnull(fin_raw):
+            fin_dt = pd.to_datetime(fin_raw).tz_localize(None).tz_localize(tz_mx)
+            fin_str = fin_dt.strftime('%H:%M %d de %B de %Y')
+            delta = fin_dt - inicio_raw
+        else:
+            fin_str = "Pendiente"
+            # Restamos ahora_mx (que YA tiene la zona horaria) contra inicio_raw
+            delta = ahora_mx - inicio_raw
             
-        with st.expander(f"{ind} **Pozo: {row['NUM_POZO']}** | Inicio: {row['FECHA_HORA_INICIO'].strftime('%d/%m/%y %H:%M')}"):
+        # Formato exacto: 0d 0h 22m
+        duracion_str = f"{delta.days}d {delta.seconds//3600}h {(delta.seconds//60)%60}m"
+
+        ind = "🟢" if estatus == 'CERRADA' else ("🔴" if estatus == 'PENDIENTE' else "🟡")
+        
+        titulo = f"{ind} **Pozo: {row.get('NUM_POZO', 'N/A')}** | Fecha y hora de inicio: {inicio_str} | Diagnostico de la falla: {diag} | Fecha y hora de cierre: {fin_str} | Duración del evento: {duracion_str} | Estatus: {estatus}"
+        
+        with st.expander(titulo):
             renderizar_bloque_incidencia(row, index, "act")
 
     st.markdown("---")
     st.subheader("📜 Historial de Incidencias Cerradas")
+    
+    # Aseguramos que la columna de fecha esté en formato datetime para poder operar con ella
+    df_historial['FECHA_HORA_INICIO'] = pd.to_datetime(df_historial['FECHA_HORA_INICIO'])
+    df_historial['FECHA_FIN'] = pd.to_datetime(df_historial['FECHA_HORA_FIN'], errors='coerce')
+    
     df_historial['MES_AÑO'] = df_historial['FECHA_HORA_INICIO'].dt.strftime('%B %Y').str.capitalize()
     meses = sorted(df_historial['MES_AÑO'].unique(), reverse=True)
+    
     if meses:
         mes_sel = st.selectbox("Seleccionar mes:", meses, key="select_mes_historial")
-        for index, row in df_historial[df_historial['MES_AÑO'] == mes_sel].iterrows():
-            with st.expander(f"🟢 **Pozo: {row['NUM_POZO']}** | {row['FECHA_HORA_INICIO'].strftime('%d/%m/%y')}"):
+        
+        # Filtramos por el mes seleccionado
+        datos_mes = df_historial[df_historial['MES_AÑO'] == mes_sel]
+        
+        for index, row in datos_mes.iterrows():
+            inicio_raw = row['FECHA_HORA_INICIO']
+            fin_raw = row['FECHA_HORA_FIN']
+            
+            # Cálculo de la duración
+            if pd.notnull(fin_raw):
+                delta = fin_raw - inicio_raw
+                # Extracción de días, horas y minutos exactos
+                dias = delta.days
+                horas = delta.seconds // 3600
+                minutos = (delta.seconds % 3600) // 60
+                duracion_str = f"{dias}d {horas}h {minutos}m"
+                fin_str = fin_raw.strftime('%H:%M %d de %B de %Y')
+            else:
+                duracion_str = "N/A"
+                fin_str = "N/A"
+            
+            # Título completo con toda la información solicitada
+            titulo_hist = (
+                f"🟢 **Pozo: {row.get('NUM_POZO', 'N/A')}** | "
+                f"Fecha y hora de inicio: {inicio_raw.strftime('%H:%M %d de %B de %Y')} | "
+                f"Diagnostico de la falla: {diag} | "
+                f"Fecha y hora de cierre: {fin_str} | "
+                f"Duración del evento: {duracion_str} | "
+                f"Estatus: {str(row.get('ESTATUS', 'CERRADA')).upper()}"
+            )
+            
+            with st.expander(titulo_hist):
+                # Llamamos a tu función de renderizado original pasando la fila completa
                 renderizar_bloque_incidencia(row, index, "hist")
-
-
