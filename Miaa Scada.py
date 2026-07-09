@@ -3554,6 +3554,7 @@ import altair as alt
 import pytz
 from datetime import datetime
 from streamlit_folium import st_folium
+from folium.plugins import MarkerCluster
 
 tz_mx = pytz.timezone('America/Mexico_City')
 ahora_mx = datetime.now(tz_mx)
@@ -3586,18 +3587,52 @@ def renderizar_bloque_incidencia(row, index, tipo):
     
     with col1:
         if gdf is not None and not gdf.empty:
-            st.markdown(f"**Colonias:** {', '.join(gdf['Col_atl'].unique())}")
-            # ... (Lógica de mapa igual) ...
             try:
                 lat, lon = gdf.geometry.centroid.y.mean(), gdf.geometry.centroid.x.mean()
-                m = folium.Map(location=[lat, lon], zoom_start=15, tiles="CartoDB dark_matter")
-                folium.GeoJson(gdf.__geo_interface__).add_to(m)
+                m = folium.Map(location=[lat, lon], zoom_start=13, tiles="CartoDB dark_matter")
+                
+                folium.GeoJson(
+                    gdf, 
+                    style_function=lambda x: {'fillColor': '#3186cc', 'color': 'white', 'weight': 1, 'fillOpacity': 0.4}
+                ).add_to(m)
+                
+                # Bucle de etiquetas con estilo de alto contraste
+                for _, r in gdf.iterrows():
+                    if r.geometry:
+                        c = r.geometry.centroid
+                        # Línea guía
+                        folium.PolyLine(
+                            locations=[[c.y, c.x], [c.y + 0.001, c.x + 0.001]],
+                            color="white", weight=1
+                        ).add_to(m)
+                        
+                        # Cuadro de texto con fondo oscuro y letra blanca
+                        folium.Marker(
+                            location=[c.y + 0.001, c.x + 0.001],
+                            icon=folium.DivIcon(
+                                icon_size=(150, 30),
+                                html=f'''
+                                <div style="
+                                    background: rgba(0, 0, 0, 0.8); 
+                                    color: white; 
+                                    padding: 3px 6px; 
+                                    border: 1px solid #FFFFFF; 
+                                    font-size: 9px; 
+                                    font-weight: bold; 
+                                    border-radius: 4px;
+                                    white-space: nowrap;
+                                ">
+                                    {str(r.get("Col_atl", "N/A"))}
+                                </div>
+                                '''
+                            )
+                        ).add_to(m)
                 
                 st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo}_{index}")
-                
-            except Exception as e: st.error(f"Error mapa: {e}")
+            except Exception as e:
+                st.error(f"Error al renderizar el mapa: {e}")
         else:
-            st.warning("Sin datos geográficos específicos.")
+            st.warning("Sin datos geográficos disponibles.")
 
     with col2:
         st.subheader("Tiempo de Atención")
