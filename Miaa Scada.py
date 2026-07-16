@@ -1337,7 +1337,31 @@ if "graficar_pozo" in params:
                 )
                 st.plotly_chart(fig_line, use_container_width=True)
 
-        except Exception as e: st.error(f"Error: {e}")
+                # --- NUEVA SECCIÓN: DESCARGA DE DATOS ---
+                # Usamos el dataframe 'df' que ya contiene toda la información de los tags
+                if not df.empty:
+                    # 1. Pivotamos para tener columnas por TagName
+                    df_pivot = df.pivot(index='FECHA', columns='TagName', values='VALUE')
+                    
+                    # 2. APLICAMOS EL RELLENO HACIA ADELANTE (ffill)
+                    # Esto toma el último valor válido y lo copia en los huecos vacíos
+                    df_pivot = df_pivot.ffill().reset_index()
+                    
+                    # 3. Convertimos a CSV
+                    csv_data = df_pivot.to_csv(index=False).encode('utf-8')
+                    
+                    st.download_button(
+                        label="📥 Descargar datos limpios (CSV)",
+                        data=csv_data,
+                        file_name=f"reporte_limpio_{nombre_pozo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        help="Descarga los datos con los espacios vacíos rellenados con el último valor conocido"
+                    )
+                else:
+                    st.warning("No hay datos disponibles para procesar.")
+
+        except Exception as e: 
+            st.error(f"Error: {e}")
             
     st.stop()
 
