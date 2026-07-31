@@ -442,7 +442,7 @@ def calcular_color_colonia(props, pozos_con_incidencia):
     elif 31 <= max_afectacion <= 50:
         return '#FFA500', max_afectacion  # Naranja
     elif 1 <= max_afectacion <= 30:
-        return '#FFDAB9', max_afectacion  # Naranja bajito
+        return '#69ADDD', max_afectacion  # Naranja bajito
     else:
         return '#3498DB', 0
 
@@ -3697,9 +3697,42 @@ if sectores_data:
     folium.LayerControl(position='topright', collapsed=False).add_to(m)
     folium_static(m, width=None, height=600)
 
+    # --- % DE AFECTACIONES POR COLONIAS ---
+    st.markdown("##### 🗺️ % de Afectación en Colonias")
+    
+    col_l1, col_l2, col_l3, col_l4, col_l5 = st.columns(5)
+    
+    with col_l1:
+        st.markdown(
+            '<div style="background-color: #FF0000; padding: 8px; border-radius: 5px; text-align: center; color: white; font-weight: bold; font-size: 14px;">76% - 100%<br><span style="font-size: 11px;">Rojo (Crítico)</span></div>', 
+            unsafe_allow_html=True
+        )
+    with col_l2:
+        st.markdown(
+            '<div style="background-color: #FFFF00; padding: 8px; border-radius: 5px; text-align: center; color: black; font-weight: bold; font-size: 14px;">51% - 75%<br><span style="font-size: 11px;">Amarillo (Alto)</span></div>', 
+            unsafe_allow_html=True
+        )
+    with col_l3:
+        st.markdown(
+            '<div style="background-color: #FFA500; padding: 8px; border-radius: 5px; text-align: center; color: black; font-weight: bold; font-size: 14px;">31% - 50%<br><span style="font-size: 11px;">Naranja (Moderado)</span></div>', 
+            unsafe_allow_html=True
+        )
+    with col_l4:
+        st.markdown(
+            '<div style="background-color: #69ADDD; padding: 8px; border-radius: 5px; text-align: center; color: black; font-weight: bold; font-size: 14px;">1% - 30%<br><span style="font-size: 11px;">Azul Claro (Leve)</span></div>', 
+            unsafe_allow_html=True
+        )
+    with col_l5:
+        st.markdown(
+            '<div style="background-color: #3498DB; padding: 8px; border-radius: 5px; text-align: center; color: white; font-weight: bold; font-size: 14px;">0%<br><span style="font-size: 11px;">Normal / Sin Afectación</span></div>', 
+            unsafe_allow_html=True
+        )
+
+    
+
     # ---------------------------------------------------------------------------- FINAL DEL MAPA -------------------------------------------------------------------------------------------
 
-# SECCION 10 Mapa de colonias Incidencias ----------------------------------------------------------------------------
+# SECCION 12 Mapa de colonias Incidencias ----------------------------------------------------------------------------
 
 import streamlit as st
 import pandas as pd
