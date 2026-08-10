@@ -3744,7 +3744,7 @@ if ver_pozos:  # Si el checkbox está activo, creamos el FeatureGroup para los p
 
 
     # 9.11. CONTROL DE CAPAS Y RENDERIZADO FINAL 
-    
+    folium.LayerControl(position='topright', collapsed=False).add_to(m)
     folium_static(m, width=None, height=600)
 
     # --- % DE AFECTACIONES POR COLONIAS ---
@@ -4001,9 +4001,89 @@ if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
     df_actual = df_final[df_final['ESTATUS'].str.upper().isin(['EN PROCESO', 'PENDIENTE']) | ((df_final['ESTATUS'].str.upper() == 'CERRADA') & (df_final['FECHA_HORA_INICIO'].dt.normalize() == hoy))]
     df_historial = df_final[(df_final['ESTATUS'].str.upper() == 'CERRADA') & (df_final['FECHA_HORA_INICIO'].dt.normalize() < hoy)]
 
-    # 1. Incidencias Activas
+    # 1. Incidencias Activas con línea azul intenso superior
     tz_mx = pytz.timezone('America/Mexico_City')
+    st.markdown('<hr style="border: none; height: 2px; background-color: #007bff; margin-top: 20px; margin-bottom: 20px;">', unsafe_allow_html=True)
     st.subheader("📋 Incidencias Activas y del día")
+    
+    # --- CÁLCULO DE MÉTRICAS BASADAS EN DF_ACTUAL Y EL MES RECIENTE DEL HISTORIAL ---
+    total_en_proceso = len(df_actual[df_actual['ESTATUS'].str.upper() == 'EN PROCESO'])
+    total_pendientes = len(df_actual[df_actual['ESTATUS'].str.upper() == 'PENDIENTE'])
+    total_cerradas_hoy = len(df_actual[df_actual['ESTATUS'].str.upper() == 'CERRADA'])
+    
+    # Calculamos el total del mes más reciente disponible en el historial o combinado
+    df_historial_temp = df_historial.copy()
+    df_historial_temp['MES_AÑO'] = df_historial_temp['FECHA_HORA_INICIO'].dt.strftime('%B %Y').str.capitalize()
+    meses_hist = sorted(df_historial_temp['MES_AÑO'].unique(), reverse=True)
+    
+    if meses_hist:
+        mes_mas_reciente = meses_hist[0]
+        total_mes_reciente = len(df_historial_temp[df_historial_temp['MES_AÑO'] == mes_mas_reciente]) + len(df_actual)
+    else:
+        total_mes_reciente = len(df_actual)
+
+    # --- RENDERIZADO DE TARJETAS INDICADORAS DEBAJO DEL TÍTULO (MÁS DELGADAS) ---
+    st.markdown("""
+        <style>
+        .metric-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            margin-bottom: 25px;
+        }
+        .metric-card {
+            background-color: #111418;
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
+            flex: 1;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            border: 1px solid #222d3d;
+        }
+        .metric-card.proceso { border-color: #d4ac0d; }
+        .metric-card.pendientes { border-color: #c0392b; }
+        .metric-card.cerradas { border-color: #196f3d; }
+        .metric-card.total { border-color: #2e4053; }
+        
+        .metric-title {
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+        .metric-title.proceso { color: #f1c40f; }
+        .metric-title.pendientes { color: #e74c3c; }
+        .metric-title.cerradas { color: #2ecc71; }
+        .metric-title.total { color: #bdc3c7; }
+        
+        .metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+        </style>
+
+        <div class="metric-container">
+            <div class="metric-card proceso">
+                <div class="metric-title proceso">EN PROCESO</div>
+                <div class="metric-value">""" + str(total_en_proceso) + """</div>
+            </div>
+            <div class="metric-card pendientes">
+                <div class="metric-title pendientes">PENDIENTES</div>
+                <div class="metric-value">""" + str(total_pendientes) + """</div>
+            </div>
+            <div class="metric-card cerradas">
+                <div class="metric-title cerradas">CERRADAS (HOY)</div>
+                <div class="metric-value">""" + str(total_cerradas_hoy) + """</div>
+            </div>
+            <div class="metric-card total">
+                <div class="metric-title total">TOTAL (MES)</div>
+                <div class="metric-value">""" + str(total_mes_reciente) + """</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
     # Usamos la zona horaria definida arriba (tz_mx)
     ahora_mx = datetime.now(tz_mx) 
     
