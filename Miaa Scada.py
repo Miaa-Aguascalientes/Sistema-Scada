@@ -3431,6 +3431,10 @@ if sectores_data:
             v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
             a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
 
+            # Validamos si este pozo tiene una incidencia registrada (limpiando formato de ID si es necesario)
+            num_limpio = re.sub(r'\D', '', str(id_p))
+            tiene_incidencia_activa = (id_p in dic_incidencias_activas or num_limpio in dic_incidencias_activas)
+
             # SOLUCIÓN AL LOGIN: Incluimos access=granted y el rol actual en la URL
             rol_actual = st.session_state.get('rol', 'usuario')
             nombre_codificado = urllib.parse.quote(id_p)
@@ -3520,6 +3524,7 @@ if sectores_data:
                 </div>
                 """
 
+            # Renderizado de la etiqueta de texto del pozo
             folium.Marker(
                 location=info['coord'],
                 icon=folium.DivIcon(
@@ -3529,7 +3534,29 @@ if sectores_data:
                 )
             ).add_to(m)
 
-            if info.get('blink'):
+            # Si tiene incidencia activa, mostramos un marcador con icono de estrella/alerta superpuesto
+            if tiene_incidencia_activa:
+                # Obtenemos el diagnóstico/motivo desde tu diccionario o estructura de incidencias
+                # (Ajusta la clave 'diagnostico' o 'motivo' según cómo guardes la información en tu diccionario)
+                info_incidencia = dic_incidencias_activas.get(id_p) or dic_incidencias_activas.get(num_limpio, {})
+                
+                if isinstance(info_incidencia, dict):
+                    diagnostico_falla = info_incidencia.get('diagnostico', info_incidencia.get('motivo', 'INCIDENCIA REGISTRADA'))
+                else:
+                    diagnostico_falla = str(info_incidencia)  # Por si lo guardas directamente como texto
+                
+                folium.Marker(
+                    location=info['coord'],
+                    icon=folium.Icon(
+                        color='red',
+                        icon='wrench',
+                        prefix='fa'
+                    ),
+                    popup=folium.Popup(html_popup, max_width=450),
+                    tooltip=f"⚠️ POZO {id_p} - {diagnostico_falla}"
+                ).add_to(m)
+                
+            elif info.get('blink'):
                 folium.Marker(
                     location=info['coord'],
                     icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
