@@ -4006,21 +4006,13 @@ if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
     st.markdown('<hr style="border: none; height: 2px; background-color: #007bff; margin-top: 20px; margin-bottom: 20px;">', unsafe_allow_html=True)
     st.subheader("📋 Incidencias Activas y del día")
     
-    # --- CÁLCULO DE MÉTRICAS BASADAS EN DF_ACTUAL Y EL MES RECIENTE DEL HISTORIAL ---
+    # --- CÁLCULO DE MÉTRICAS ---
     total_en_proceso = len(df_actual[df_actual['ESTATUS'].str.upper() == 'EN PROCESO'])
     total_pendientes = len(df_actual[df_actual['ESTATUS'].str.upper() == 'PENDIENTE'])
     total_cerradas_hoy = len(df_actual[df_actual['ESTATUS'].str.upper() == 'CERRADA'])
     
-    # Calculamos el total del mes más reciente disponible en el historial o combinado
-    df_historial_temp = df_historial.copy()
-    df_historial_temp['MES_AÑO'] = df_historial_temp['FECHA_HORA_INICIO'].dt.strftime('%B %Y').str.capitalize()
-    meses_hist = sorted(df_historial_temp['MES_AÑO'].unique(), reverse=True)
-    
-    if meses_hist:
-        mes_mas_reciente = meses_hist[0]
-        total_mes_reciente = len(df_historial_temp[df_historial_temp['MES_AÑO'] == mes_mas_reciente]) + len(df_actual)
-    else:
-        total_mes_reciente = len(df_actual)
+    # El indicador TOTAL ahora representa la suma total de las incidencias activas y del día (df_actual)
+    total_activas_y_dia = len(df_actual)
 
     # --- RENDERIZADO DE TARJETAS INDICADORAS DEBAJO DEL TÍTULO (MÁS DELGADAS) ---
     st.markdown("""
@@ -4078,8 +4070,8 @@ if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
                 <div class="metric-value">""" + str(total_cerradas_hoy) + """</div>
             </div>
             <div class="metric-card total">
-                <div class="metric-title total">TOTAL (MES)</div>
-                <div class="metric-value">""" + str(total_mes_reciente) + """</div>
+                <div class="metric-title total">TOTAL ACTIVAS/DÍA</div>
+                <div class="metric-value">""" + str(total_activas_y_dia) + """</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -4132,14 +4124,16 @@ if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
     df_historial['FECHA_FIN'] = pd.to_datetime(df_historial['FECHA_HORA_FIN'], errors='coerce')
     
     df_historial['MES_AÑO'] = df_historial['FECHA_HORA_INICIO'].dt.strftime('%B %Y').str.capitalize()
-    meses = sorted(df_historial['MES_AÑO'].unique(), reverse=True)
+    df_historial['PERIODO'] = df_historial['FECHA_HORA_INICIO'].dt.to_period('M')
+    
+    periodos_hist = sorted(df_historial['PERIODO'].unique(), reverse=True)
+    meses = [p.strftime('%B %Y').capitalize() for p in periodos_hist]
     
     if meses:
-        # 1. Obtenemos el nombre del mes actual (ej: "July 2026")
+        # 1. Obtenemos el nombre del mes actual (ej: "August 2026")
         mes_actual = datetime.now().strftime('%B %Y').capitalize()
         
         # 2. Calculamos el índice del mes actual en nuestra lista ordenada
-        # Si el mes actual no está en la lista (ej: no hubo incidencias), usamos 0
         default_index = meses.index(mes_actual) if mes_actual in meses else 0
         
         # 3. Pasamos el index al selectbox
