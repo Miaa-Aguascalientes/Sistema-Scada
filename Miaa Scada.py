@@ -404,7 +404,7 @@ def obtener_pozos_con_incidencias_hoy():
         return {}
 
 def calcular_color_colonia(props, pozos_con_incidencia):
-    max_afectacion = 0
+    suma_afectacion = 0.0
     tiene_incidencia_activa = False
     
     for i in range(1, 11):
@@ -412,37 +412,42 @@ def calcular_color_colonia(props, pozos_con_incidencia):
         afectacion_col = props.get(f'Afectacion_{i}')
         
         if pozo_col is not None:
-            # CORRECCIÓN: Conservamos el formato exacto con letras y guiones sin borrar con \D
-            id_col_normalizado = str(pozo_col).strip().upper()
+            # Normalización robusta con y sin guion (ej. P087A / P-087A)
+            id_p_limpio = str(pozo_col).strip().upper()
+            id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
+            id_p_sin_guion = id_p_limpio.replace('-', '')
             
-            if id_col_normalizado in pozos_con_incidencia:
+            if (id_p_limpio in pozos_con_incidencia or 
+                id_p_con_guion in pozos_con_incidencia or 
+                id_p_sin_guion in pozos_con_incidencia):
+                
                 tiene_incidencia_activa = True
                 if pd.notna(afectacion_col):
                     try:
                         val_str = str(afectacion_col).replace('%', '').strip()
                         val_afect = float(val_str)
-                        if val_afect > max_afectacion:
-                            max_afectacion = val_afect
+                        # ⚠️ CAMBIO CLAVE: Sumar los porcentajes en lugar de buscar el máximo
+                        suma_afectacion += val_afect
                     except:
                         pass
 
     if not tiene_incidencia_activa:
         return '#3498DB', 0  # Azul para colonias sin afectación activa
 
-    if tiene_incidencia_activa and max_afectacion == 0:
+    if tiene_incidencia_activa and suma_afectacion == 0:
         return '#FFA500', 1  
 
-    # Rangos de color según la afectación activa
-    if 76 <= max_afectacion <= 100:
-        return '#FF0000', max_afectacion  # Rojo
-    elif 51 <= max_afectacion <= 75:
-        return '#FFFF00', max_afectacion  # Amarillo
-    elif 31 <= max_afectacion <= 50:
-        return '#FFA500', max_afectacion  # Naranja
-    elif 1 <= max_afectacion <= 30:
-        return '#69ADDD', max_afectacion  # Naranja bajito
+    # Rangos de color según la afectación acumulada total
+    if 76 <= suma_afectacion <= 100:
+        return '#FF0000', suma_afectacion  # Rojo
+    elif 51 <= suma_afectacion <= 75:
+        return '#FFFF00', suma_afectacion  # Amarillo
+    elif 31 <= suma_afectacion <= 50:
+        return '#FFA500', suma_afectacion  # Naranja
+    elif 1 <= suma_afectacion <= 30:
+        return '#69ADDD', suma_afectacion  # Naranja bajito
     else:
-        return '#3498DB', 0
+        return '#FF0000', suma_afectacion  # Por si supera el 100%
 
 # 2.7. Funcion para cambiar el formato de horas
 def formato_hora(decimal):
@@ -3318,7 +3323,7 @@ if sectores_data:
 # Declaración global de incidencias para que esté disponible para pozos y colonias siempre
 dic_incidencias_activas = obtener_pozos_con_incidencias_hoy() if 'obtener_pozos_con_incidencias_hoy' in globals() else {}            
 
-# 9.6. RENDERIZADO DE POLÍGONOS DE COLONIAS
+# 9.6. RENDERIZADO DE POLÍGONOS DE COLONIAS __________________________________________________________________________________________________________________________________
 if ver_colonias:
     gdf_colonias = get_todas_las_colonias()
     
@@ -3328,7 +3333,7 @@ if ver_colonias:
         lista_afectacion_tooltip = []
         
         for idx, row in gdf_colonias.iterrows():
-            max_afec = 0
+            suma_afec = 0.0
             descripciones_fallas = []
             
             for i in range(1, 11):
@@ -3336,27 +3341,37 @@ if ver_colonias:
                 afectacion_col = row.get(f'Afectacion_{i}')
                 
                 if pd.notna(pozo_col):
-                    # CORRECCIÓN: Conservamos la nomenclatura exacta (letras y guiones como P-095)
-                    id_pozo_exacto = str(pozo_col).strip().upper()
+                    id_p_limpio = str(pozo_col).strip().upper()
+                    id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
+                    id_p_sin_guion = id_p_limpio.replace('-', '')
                     
-                    if id_pozo_exacto:
-                        # Buscamos directamente por la clave exacta en el diccionario de incidencias
-                        if id_pozo_exacto in dic_incidencias_activas:
-                            falla = dic_incidencias_activas.get(id_pozo_exacto, 'Activa')
-                            descripciones_fallas.append(f"{pozo_col}: {falla}")
+                    if (id_p_limpio in dic_incidencias_activas or 
+                        id_p_con_guion in dic_incidencias_activas or 
+                        id_p_sin_guion in dic_incidencias_activas):
+                        
+                        falla = (
+                            dic_incidencias_activas.get(id_p_limpio) or 
+                            dic_incidencias_activas.get(id_p_con_guion) or 
+                            dic_incidencias_activas.get(id_p_sin_guion, 'Activa')
+                        )
+                        if isinstance(falla, dict):
+                            falla_txt = falla.get('diagnostico', falla.get('motivo', 'Activa'))
+                        else:
+                            falla_txt = str(falla)
                             
-                            if pd.notna(afectacion_col):
-                                try:
-                                    val_str = str(afectacion_col).replace('%', '').strip()
-                                    val_f = float(val_str)
-                                    if val_f > max_afec:
-                                        max_afec = val_f
-                                except:
-                                    pass
+                        descripciones_fallas.append(f"{pozo_col}: {falla_txt}")
+                        
+                        if pd.notna(afectacion_col):
+                            try:
+                                val_str = str(afectacion_col).replace('%', '').strip()
+                                val_f = float(val_str)
+                                suma_afec += val_f  # ⚠️ Suma acumulativa para el tooltip
+                            except:
+                                pass
             
             if descripciones_fallas:
                 lista_incidencias_tooltip.append(" | ".join(descripciones_fallas))
-                lista_afectacion_tooltip.append(f"{int(max_afec)}%" if max_afec > 0 else "N/D")
+                lista_afectacion_tooltip.append(f"{int(suma_afec)}%" if suma_afec > 0 else "N/D")
             else:
                 lista_incidencias_tooltip.append("Ninguna")
                 lista_afectacion_tooltip.append("0%")
@@ -3799,6 +3814,9 @@ if ver_pozos:
 
 import streamlit as st
 import pandas as pd
+import geopandas as gpd
+from shapely import wkt
+import re
 import folium
 from folium.plugins import Fullscreen
 import altair as alt
@@ -3813,15 +3831,71 @@ ahora_mx = datetime.now(tz_mx)
 def normalizar_id(valor):
     return str(valor).strip().upper()
 
+@st.cache_data(ttl=60)
+def get_geometries(num_pozo):
+    if not num_pozo:
+        return None
+        
+    id_busqueda = str(num_pozo).strip().upper()
+    engine = get_mysql_telemetria_engine()
+    if engine is None:
+        return None
+        
+    try:
+        # CONSULTA ESTRICTA Y SEGURA: Evitamos comodines peligrosos en SQL
+        query = """
+            SELECT ST_AsText(geom) as geom_wkt, Pozos, Col_atl, Sector, Distrito, Supervisor 
+            FROM Diccionario_colonias 
+            WHERE Pozos = %s 
+               OR Pozos LIKE %s 
+               OR Pozos LIKE %s 
+               OR Pozos LIKE %s
+        """
+        p_exacto = id_busqueda
+        p_comienza = f"{id_busqueda},%"
+        p_medio = f"%, {id_busqueda},%"
+        p_termina = f"%, {id_busqueda}"
+        
+        df = pd.read_sql(query, engine, params=(p_exacto, p_comienza, p_medio, p_termina))
+        
+        # FILTRO DE SEGURIDAD EN MEMORIA: Verificamos elemento por elemento en la lista de pozos
+        if not df.empty:
+            def pozo_en_lista(cell_value):
+                if pd.isna(cell_value):
+                    return False
+                pozos_en_celda = [p.strip().upper() for p in str(cell_value).replace(';', ',').split(',')]
+                return id_busqueda in pozos_en_celda
+
+            df = df[df['Pozos'].apply(pozo_en_lista)]
+
+        if not df.empty and 'geom_wkt' in df.columns and df['geom_wkt'].iloc[0] is not None:
+            df['geometry'] = df['geom_wkt'].apply(wkt.loads)
+            gdf = gpd.GeoDataFrame(df, geometry='geometry')
+            gdf.set_crs(epsg=32613, inplace=True)
+            return gdf.to_crs(epsg=4326)
+            
+    except Exception as e:
+        st.error(f"Error en BD al obtener geometrías: {e}")
+        
+    return None
+
 @st.fragment
 def renderizar_bloque_incidencia(row, index, tipo):
-    id_pozo = normalizar_id(row['NUM_POZO'])
-    gdf = get_geometries(id_pozo)
+    val = row['NUM_POZO']
+    if pd.notna(val):
+        id_pozo_original = str(val).strip().upper()
+    else:
+        id_pozo_original = ""
     
+    # Llamamos a la nueva función get_geometries optimizada y estricta
+    gdf = get_geometries(id_pozo_original) if id_pozo_original else None
+
+    # FILTRO DE SEGURIDAD ADICIONAL EN MEMORIA
     if gdf is not None and not gdf.empty:
-        col_pozo = next((c for c in ['NUM_POZO', 'Pozo', 'pozo'] if c in gdf.columns), None)
-        if col_pozo:
-            gdf = gdf[gdf[col_pozo].apply(normalizar_id) == id_pozo]
+        col_pozo_encontrada = next((c for c in gdf.columns if c.upper() in ['NUM_POZO', 'POZO', 'ID_POZO', 'CVE_POZO', 'SITE', 'SITIO']), None)
+        
+        if col_pozo_encontrada:
+            gdf = gdf[gdf[col_pozo_encontrada].astype(str).str.strip().str.upper() == id_pozo_original]
 
     st.markdown("""
         <style>
@@ -3836,7 +3910,7 @@ def renderizar_bloque_incidencia(row, index, tipo):
     
     with col1:
         if gdf is not None and not gdf.empty:
-            nombres_colonias = sorted(gdf['Col_atl'].unique())
+            nombres_colonias = sorted(gdf['Col_atl'].dropna().unique())
             st.markdown(f"**📍 Colonias afectadas ({len(nombres_colonias)}):**")
             st.info(", ".join([str(n) for n in nombres_colonias]))
             try:
@@ -3884,7 +3958,7 @@ def renderizar_bloque_incidencia(row, index, tipo):
                         ).add_to(m)
                 
                 Fullscreen(position='topright').add_to(m)
-                st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo}_{index}")
+                st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo_original}_{index}")
             except Exception as e:
                 st.error(f"Error al renderizar el mapa: {e}")
         else:
@@ -3972,7 +4046,6 @@ def renderizar_bloque_incidencia(row, index, tipo):
             st.markdown(f"🏢 **Distrito:** {distrito_val}")
         with col_res:
             st.markdown(f"👤 **Responsable:** {responsable_val}")
-
 # --- LÓGICA PRINCIPAL ---
 df_incidencias = get_data()
 
