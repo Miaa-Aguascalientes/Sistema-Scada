@@ -28,6 +28,9 @@ import pytz
 from datetime import datetime
 from sqlalchemy import create_engine, text
 from cryptography.fernet import Fernet
+from folium.plugins import Fullscreen
+import altair as alt
+from folium.plugins import MarkerCluster
 
 st.set_page_config(
     page_title="Sistema Scada", 
