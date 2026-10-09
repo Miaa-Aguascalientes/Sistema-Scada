@@ -448,7 +448,7 @@ def get_todas_las_colonias():
 @st.cache_data(ttl=3600)
 def get_todos_los_sectores_geo():
     query = """
-        SELECT ST_AsText(geom) as geom_wkt, Sector, Pozos, 
+        SELECT ST_AsText(geom) as geom_wkt, Sector, Pozos, Col_atl,
                Pozo_1, Afectacion_1, Pozo_2, Afectacion_2, 
                Pozo_3, Afectacion_3, Pozo_4, Afectacion_4, 
                Pozo_5, Afectacion_5, Pozo_6, Afectacion_6, 
@@ -2339,7 +2339,16 @@ if sector_seleccionado:
             m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=12, tiles=None, height=350)
             folium.TileLayer(tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google', name='Vista Satélite', overlay=False).add_to(m_sec)
             folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri', name='Satélite (Esri)', overlay=False).add_to(m_sec)
-            folium.TileLayer(tiles="CartoDB dark_matter", name="Vista Nocturna", attr="CartoDB", overlay=False).add_to(m_sec)
+            api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+            folium.TileLayer(
+                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+                name="Vista Nocturna",
+                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains="abcd",
+                max_zoom=20,
+                overlay=False,
+                control=True
+            ).add_to(m_sec)
 
             if datos_s and datos_s.get('geo'):
                 try:
@@ -3391,17 +3400,28 @@ with col_mapa:
         </style>
         """
 
-# 9.5.  -----------------------------------------------------------------------  RENDERIZADO DE POLÍGONOS DE SECTORES (Diccionario_sectores) ----------------------------------------------------
+# 9.5. RENDERIZADO DE POLÍGONOS DE SECTORES (Diccionario_sectores)
 if ver_sectores:
     gdf_sectores = get_todos_los_sectores_geo()
     
     if gdf_sectores is not None and not gdf_sectores.empty:
         lista_incidencias_sec_tooltip = []
         lista_afectacion_sec_tooltip = []
+        lista_colonias_sec_tooltip = []
         
         for idx, row in gdf_sectores.iterrows():
             suma_afec_sec = 0.0
             descripciones_fallas_sec = []
+            
+            # Formateamos las colonias en formato de lista vertical limpia
+            col_atl_raw = str(row.get('Col_atl', ''))
+            if pd.isna(row.get('Col_atl')) or not col_atl_raw.strip():
+                colonias_html = "Sin colonias registradas"
+            else:
+                lista_c = [c.strip() for c in col_atl_raw.split(',') if c.strip()]
+                colonias_html = "<br>".join([f"• {c}" for c in lista_c])
+                
+            lista_colonias_sec_tooltip.append(colonias_html)
             
             for i in range(1, 11):
                 pozo_sec = row.get(f'Pozo_{i}')
@@ -3440,24 +3460,22 @@ if ver_sectores:
 
         gdf_sectores['Info_Incidencia'] = lista_incidencias_sec_tooltip
         gdf_sectores['Info_Porcentaje'] = lista_afectacion_sec_tooltip
+        gdf_sectores['Info_Colonias'] = lista_colonias_sec_tooltip
 
         fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos")
         
         def estilo_final_sector(feature):
             props = feature.get('properties', {})
-            
-            # Obtenemos el color dinámico y el valor de afectación usando la misma lógica
             color_dinamico, afectacion_val = calcular_color_sector(props, dic_incidencias_activas)
             
-            # Lógica de pesos y opacidades idéntica a las colonias
             if afectacion_val > 0:
                 border_color_final = color_dinamico
                 weight_final = 2.5
                 opacity_final = 0.25
             else:
-                border_color_final = '#2980B9' # Mismo tono de contorno base que las colonias
+                border_color_final = '#2980B9'
                 weight_final = 1
-                opacity_final = 0.08         # Misma opacidad ligera de relleno base
+                opacity_final = 0.08
             
             return {
                 'fillColor': color_dinamico,
@@ -3469,21 +3487,53 @@ if ver_sectores:
         def estilo_hover_sector(feature):
             return {'fillOpacity': 0.8, 'weight': 3, 'color': '#FFFFFF'}
 
-        folium.GeoJson(
-            gdf_sectores,
-            name="Sectores Hidráulicos",
-            style_function=estilo_final_sector,
-            highlight_function=estilo_hover_sector,
-            tooltip=folium.GeoJsonTooltip(
-                fields=['Sector', 'Pozos', 'Info_Incidencia', 'Info_Porcentaje'],
-                aliases=['Sector:', 'Pozos:', 'Incidencia:', 'Afectación:'],
-                localize=True,
-                sticky=True
-            )
-        ).add_to(fg_sectores)
+        # Recorremos cada fila creando el Feature y añadiendo el botón de acceso al sector
+        for _, row in gdf_sectores.iterrows():
+            feature_dict = {
+                'type': 'Feature',
+                'geometry': row['geometry'].__geo_interface__,
+                'properties': row.drop('geometry').to_dict()
+            }
+            
+            props = feature_dict['properties']
+            color_dinamico, _ = calcular_color_sector(props, dic_incidencias_activas)
+            
+            nombre_sec = str(props.get('Sector', 'N/A'))
+            sector_encoded = urllib.parse.quote(nombre_sec)
+            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+            
+            html_popup_sector = f"""
+            <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 320px; max-height: 300px; overflow-y: auto; border: 2px solid {color_dinamico}; font-family: sans-serif;">
+                <b style="color: #00d4ff; font-size: 15px;">SECTOR: {nombre_sec}</b>
+                <hr style="border: 0.5px solid #333; margin: 6px 0;">
+                <div style="font-size: 11px; line-height: 1.4; margin-bottom: 10px;">
+                    <b>Pozos:</b> {props.get('Pozos', 'N/A')}<br>
+                    <b>Incidencia:</b> <span style="color: #ff4d4d;">{props.get('Info_Incidencia', 'Ninguna')}</span><br>
+                    <b>Afectación:</b> <span style="color: #ffff00;">{props.get('Info_Porcentaje', '0%')}</span><br>
+                    <b style="display: block; margin-top: 6px; color: #00ffcc;">Colonias afectadas:</b>
+                    <div style="margin-top: 3px; padding-left: 5px; color: #d1d5db; font-size: 10px; max-height: 100px; overflow-y: auto;">
+                        {props.get('Info_Colonias', 'Sin registro')}
+                    </div>
+                </div>
+                
+                <a href="{url_acceso}" target="_blank" 
+                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
+                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
+                          border-radius: 5px; transition: 0.3s;">
+                   🚀 ABRIR SECTOR
+                </a>
+            </div>
+            """
+            
+            folium.GeoJson(
+                feature_dict,
+                style_function=estilo_final_sector,
+                highlight_function=estilo_hover_sector,
+                popup=folium.Popup(html_popup_sector, max_width=350),
+                tooltip=f"Sector: {nombre_sec} (Clic para ver detalle)"
+            ).add_to(fg_sectores)
         
         fg_sectores.add_to(m)
-
          
 
 # 9.6. RENDERIZADO DE POLÍGONOS DE COLONIAS __________________________________________________________________________________________________________________________________
