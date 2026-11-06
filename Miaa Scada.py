@@ -28,12 +28,13 @@ import pytz
 from datetime import datetime
 from sqlalchemy import create_engine, text
 from cryptography.fernet import Fernet
+import altair as alt
 
 st.set_page_config(
     page_title="Sistema Scada", 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 
@@ -1586,6 +1587,7 @@ if "graficar_pozo" in params:
             
     st.stop()
 
+
 # 4.7. SECCION ---------------------------------------------------------------- 4.7. GRAFICAR LOS MACROMEDIDORES ------------------------------------------------------------------------------------
 import streamlit as st
 import pandas as pd
@@ -1906,34 +1908,69 @@ if "ver_grafico" in st.query_params:
         st.plotly_chart(fig_bar, use_container_width=True)
 
     st.stop()
-    
-# 5. SECCION------------------------------------------------------------------------------5. ESTILO CSS ----------------------------------------------------------------------------------------------------------
+
+# 5. ESTILO CSS GENERAL ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 st.markdown("""
     <style>
         [data-testid="collapsedControl"], button[kind="headerNoPadding"], [data-testid="stSidebarCollapseButton"] {
             display: none !important;
         }
         header { visibility: hidden !important; height: 0px !important; }
+        [data-testid="stHeader"] { display: none !important; }
+        
         .stApp { background-color: #000000; color: white; }
         
         .block-container {
-            padding-top: 0rem !important;
-            margin-top: 15px !important; /* Subimos el inicio de la página al máximo */
+            padding-top: 5px !important; 
+            padding-bottom: 0rem !important;
+            margin-top: 0px !important;
             max-width: 100% !important;
         }
 
+        div[data-testid="stHorizontalBlock"] {
+            margin-top: 0px !important;
+            padding-top: 0px !important;
+        }
+
+        .stMarkdown {
+            margin-top: 0px !important;
+            padding-top: 0px !important;
+        }
+
+        /* Barra de pestañas arriba */
+        .miaa-skew-bar {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: -12px !important; 
+            margin-bottom: 8px !important;
+            padding: 0 !important;
+            position: relative;
+            z-index: 999;
+        }
+
+        /* Mapa ajustado justo debajo de las pestañas */
+        div.element-container:has(iframe) {
+            margin-top: -25px !important;
+            margin-bottom: 0px !important;
+        }
+
+        .mapa-area {
+            margin-top: 0px !important;
+        }
+
         .mapa-area iframe { 
-            margin-top: 90px !important; /* Ajusta este para subir el mapa al ras */
+            margin-top: 0px !important;
             border: 1px solid #1f4068 !important;
             height: 85vh !important;
         }
 
-        /* Evitamos que las columnas de sectores se rompan */
-            .mapa-area [data-testid="column"] {
+        .mapa-area [data-testid="column"] {
             flex: 1 1 0% !important;
+            margin-top: 0px !important;
+            padding-top: 0px !important;
         }
 
-        /* 5. TÍTULO SUPERIOR (BARRA FIJA) */
         .titulo-superior {
             position: fixed;
             top: 0px; 
@@ -1946,14 +1983,13 @@ st.markdown("""
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-            background-color: #000000; /* Fondo sólido para que no haya transparencias feas */
+            background-color: #000000;
             width: 100%;
             text-align: center;
-            padding: 10px 0;
+            padding: 4px 0;
             border-bottom: 1px solid #1f4068;
         }
 
-        /* CONTENEDOR DE INDICADORES (HUD FIJO) */
         .contenedor-indicadores {
            position: fixed;
            top: 65px; 
@@ -1962,67 +1998,64 @@ st.markdown("""
            display: flex;
            justify-content: center;
            align-items: center;
-           gap: 15px; /* <--- Aumenta esto para despegarlos (puedes probar 10px o 15px) */
+           gap: 15px;
            z-index: 1001;
-           background: transparent; /* Quita el fondo negro del contenedor para que se vea el hueco */
+           background: transparent;
            padding: 0 15px;
-         }
+        }
 
         .card-indicador {
            flex: 1;
-         /* Cambia el borde a uno más brillante para que se note la separación */
            border: 1px solid #1f4068; 
            background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%);
            padding: 8px 5px;
            text-align: center;
-           border-radius: 10px; /* <--- Añade esto para redondear las esquinas y que no parezca tabla */
-           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); /* Sombra para dar volumen */
+           border-radius: 10px;
+           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
         }
         .card-indicador:first-child { border-left: 1px solid #1f4068; }
 
         .card-label { color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin: 0; }
         .card-value { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; margin: 0; }
         
-        .val-on { color: #00ff00; text-shadow: 0 0 8px rgba(0, 255, 0, 0.5); }
-        .val-off { color: #ff0000; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5); }
-        .val-falla { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.5); }
-        .val-sin { color: #ffffff; }
-
-        /* ESTO SUBE EL MAPA A LA FUERZA */
         .mapa-principal-ajuste {
-            margin-top: -200px !important; /* Margen negativo agresivo para eliminar el hueco */
+            margin-top: -200px !important;
             z-index: 1;
         }
-        /* Ajuste específico para el iframe de Folium */
         .mapa-principal-ajuste iframe {
             border: 1px solid #1f4068 !important;
             border-top: none !important;
         }
 
-        /* 6. SIDEBAR - CONTENIDO PEGADO AL LOGO */
+        /* --- BARRA LATERAL SEPARADA DE LA DERECHA Y FORZADA VISIBLE --- */
         [data-testid="stSidebarContent"] {
             padding-top: 3px !important; 
+            padding-right: 8px !important;
         }
 
         [data-testid="stSidebar"] { 
             background-color: #0b1a29 !important; 
-            border-right: 2px solid #1f4068; 
+            border-right: 2px solid #1f4068 !important; 
+            margin-right: 10px !important;
+            display: block !important;
+            visibility: visible !important;
+            transform: none !important;
+            min-width: 280px !important;
         }
 
-        /* Ajuste Sidebar */
        .sidebar-logo { 
-           position: fixed; 
-           top: 20px; 
-           left: 40px; 
-           width: 170px;  /* <--- REDUCE ESTE VALOR (ej. 200px) */
-           height: 50px;  /* <--- REDUCE ESTE VALOR (ej. 60px) para que sea menos alto */
-           z-index: 999999; 
-           display: flex; 
-           justify-content: center; 
-           align-items: center;
-           background-color: #0b1a29; 
-           border-bottom: 1px solid #1f4068;
-         }
+            position: fixed; 
+            top: 20px; 
+            left: 40px; 
+            width: 170px;  
+            height: 50px;  
+            z-index: 999999; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            background-color: #0b1a29; 
+            border-bottom: 1px solid #1f4068;
+        }
          
         .status-tag { 
             font-size: 10px; 
@@ -2035,15 +2068,6 @@ st.markdown("""
         .status-ok { background-color: #1b5e20; color: #a5d6a7; }
         .status-err { background-color: #b71c1c; color: #ef9a9a; }
         
-        .section-header { 
-            padding: 10px; 
-            border-radius: 3px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            color: white; 
-        }
-
-        /* ANIMACIÓN DE PARPADEO */
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         .blink_me { animation: blink 1.2s infinite; }
 
@@ -2055,56 +2079,39 @@ st.markdown("""
             50% { opacity: 0.1; }
             100% { opacity: 1; }
         }
-
     </style>
 """, unsafe_allow_html=True)
-# 6. SECCION----------------------------------------------------------------- 6. PROCESAMIENTO (MODIFICADO) -----------------------------------------------------------------
-# 6.1. Carga de datos base
+
+# 6. PROCESAMIENTO DE DATOS BASE -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 sectores = cargar_sectores_poligonos()
 mapa_pozos_dict = cargar_mapa_pozos_desde_db()
 mapa_tanques_dict = cargar_tanques_desde_db()
 mapa_rebombeos_dict = cargar_rebombeos_desde_db()
 
-# 6.2. Recolección de tags para la consulta masiva
 tags_a_consultar = []
-
 for p in mapa_pozos_dict.values():
-    # 6.3. Añadimos los campos que te faltaban: nivel_dinamico, sumergencia y columna
     tags_a_consultar.extend([
-        p['bomba'], 
-        p['caudal'], 
-        p['presion'], 
-        p['nivel_tanque'],
-        p['nivel_dinamico'],
-        p['sumergencia'],
-        p['columna']
+        p['bomba'], p['caudal'], p['presion'], p['nivel_tanque'],
+        p['nivel_dinamico'], p['sumergencia'], p['columna']
     ])
-    # 6.4. Voltajes y amperajes
     tags_a_consultar.extend(p['voltajes_l'] + p['amperajes_l'])
 
-# 6.5. Tags de Tanques
 for t in mapa_tanques_dict.values():
     if t['tag_nivel']: tags_a_consultar.append(t['tag_nivel'])
 
-# 6.6. Tags de Rebombeos
 for r in mapa_rebombeos_dict.values():
     tags_a_consultar.extend([r['presion'], r['nivel_tanque']])
     tags_a_consultar.extend(r['voltajes_l'] + r['amperajes_l'])
 
-# 6.7. Limpieza de la lista
 tags_finales = list(set([str(t).strip() for t in tags_a_consultar if t and str(t) not in ['0', 'Sin telemetria', 'None']]))
-
-# 6.8. Consulta al SCADA pasando la LISTA corregida
 data_scada = cargar_datos_scada(tags_finales)
 
-# 6.9. Inicialización de contadores
 pozos_on, pozos_off, pozos_sin_telemetria, pozos_falla_com = [], [], [], []
 total_q, total_p = 0.0, 0.0
 
-import datetime as dt
 ahora = dt.datetime.utcnow() - dt.timedelta(hours=6) 
 
-# 6.10. LÓGICA DE POZOS
 for id_p, info in mapa_pozos_dict.items():
     bomba_val = str(info['bomba']).strip()
     if bomba_val == "Sin telemetria":
@@ -2136,117 +2143,40 @@ for id_p, info in mapa_pozos_dict.items():
             info.update({'status_label': 'APAGADO', 'color_final': '#FF0000', 'blink': True})
             pozos_off.append(id_p)
 
-# 6.11. LÓGICA DE REBOMBEOS (CORREGIDA) 
 for id_rb, info in mapa_rebombeos_dict.items():
-
     telemetria_status = str(info.get('telemetria', '')).strip().lower()
-    
     if telemetria_status == "sin telemetria":
-        info.update({
-            'status_label': 'SIN TELEMETRÍA', 
-            'color_final': '#808080',  # Color Gris
-            'blink': False
-        })
+        info.update({'status_label': 'SIN TELEMETRÍA', 'color_final': '#808080', 'blink': False})
     else:
-        # 6.12. Si tiene telemetría, aplicar la lógica de presión actual
         pres_val, _ = data_scada.get(info['presion'], (0, "N/A"))
         if pres_val < 0.10:
-            info.update({
-                'status_label': 'APAGADO', 
-                'color_final': '#FF0000', 
-                'blink': True
-            })
+            info.update({'status_label': 'APAGADO', 'color_final': '#FF0000', 'blink': True})
         else:
-            info.update({
-                'status_label': 'OPERANDO', 
-                'color_final': '#00FF00', 
-                'blink': False
-            })
+            info.update({'status_label': 'OPERANDO', 'color_final': '#00FF00', 'blink': False})
 
+# 7. DETALLE DE SECTOR -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 
-# 7. SECCION ------------------------------------------------------------------7. DETALLE DE SECTOR -------------------------------------------------------------------------------------------
 if sector_seleccionado:
-    # 7.1. Estilos CSS: Ajuste agresivo y mejoras para los nuevos gráficos
     st.markdown(
         f"""
         <style>
-            [data-testid="column"] {{
-            margin-top: -105px !important;
-            }}
-        
+            [data-testid="column"] {{ margin-top: -105px !important; }}
             [data-testid="stSidebar"] {{display: none;}}
             header {{visibility: hidden;}}
             .stAppDeployButton {{display:none;}}
             #MainMenu {{visibility: hidden;}}
             footer {{visibility: hidden;}}
-            
-            .block-container {{
-                padding-top: 0px !important;
-                padding-bottom: 0px !important;
-                margin-top: -100px !important;
-            }}
-            
-            .contenedor-centrado {{
-                text-align: center;
-                margin-bottom: 0px;
-            }}
-            
-            .titulo-sector {{
-                margin-top: 10px !important;
-                font-size: 1.8rem;
-                font-weight: 800;
-                color: #00d4ff;
-                margin: 10px;
-                text-transform: uppercase;
-            }}
-
-            .col-mapa-offset {{
-                margin-top: 0px !important;
-            }}
-
-            .stFolium {{
-                margin-top: -10px !important;
-            }}            
-
-            hr {{
-                margin-top: 2px !important;
-                margin-bottom: 5px !important;
-                border: 0;
-                border-top: 1px solid #1f4068;
-            }}
-
-            .card-indicador {{
-                background: rgba(16, 33, 54, 0.8);
-                padding: 10px;
-                border-radius: 8px;
-                border: 1px solid #1f4068;
-                text-align: center;
-                margin-bottom: 5px;
-            }}
-
-            .label-indicador {{
-                color: #ffffff; 
-                font-size: 0.8rem; 
-                margin: 0;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-              }}
-
-             .value-indicador {{
-                color: #00ffcc; 
-                font-size: 1.1rem; 
-                font-weight: bold; 
-                margin: 0;
-              }}
-              
-              [data-testid="column"]:nth-child(2) {{
-                margin-top: 0px !important;
-              }}
-
-            .js-plotly-plot {{
-                margin-bottom: 10px !important;
-            }}
-
+            .block-container {{ padding-top: 0px !important; padding-bottom: 0px !important; margin-top: -100px !important; }}
+            .contenedor-centrado {{ text-align: center; margin-bottom: 0px; }}
+            .titulo-sector {{ margin-top: 10px !important; font-size: 1.8rem; font-weight: 800; color: #00d4ff; margin: 10px; text-transform: uppercase; }}
+            .col-mapa-offset {{ margin-top: 0px !important; }}
+            .stFolium {{ margin-top: -10px !important; }}            
+            hr {{ margin-top: 2px !important; margin-bottom: 5px !important; border: 0; border-top: 1px solid #1f4068; }}
+            .card-indicador {{ background: rgba(16, 33, 54, 0.8); padding: 10px; border-radius: 8px; border: 1px solid #1f4068; text-align: center; margin-bottom: 5px; }}
+            .label-indicador {{ color: #ffffff; font-size: 0.8rem; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; }}
+            .value-indicador {{ color: #00ffcc; font-size: 1.1rem; font-weight: bold; margin: 0; }}
+            [data-testid="column"]:nth-child(2) {{ margin-top: 0px !important; }}
+            .js-plotly-plot {{ margin-bottom: 10px !important; }}
         </style>
         <div class="contenedor-centrado">
             <h1 class="titulo-sector">ANÁLISIS DE SECTOR: {sector_seleccionado}</h1>
@@ -2257,9 +2187,7 @@ if sector_seleccionado:
     sec_id = str(sector_seleccionado).split('.')[0].strip()
     datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
 
-    # 7.2. Métricas de cabecera
     if datos_s:
-        # --- INICIALIZACIÓN PREVENTIVA DE VARIABLES (EVITA NAMEERROR) ---
         sel_r_id = None
         sel_v_id = None
         f_ini_h = datetime.now().date()
@@ -2267,18 +2195,15 @@ if sector_seleccionado:
 
         st.markdown('<div class="metrics-row">', unsafe_allow_html=True)
         c1, c2, c3, c4, c5, c6 = st.columns(6)
-        
         with c1: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Población</p><p class="value-indicador">{datos_s.get("Poblacion", 0):,.0f}</p></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="card-indicador"><p class="label-indicador">U. Totales</p><p class="value-indicador">{datos_s.get("U_Tot", 0):,.0f}</p></div>', unsafe_allow_html=True)
         with c3: st.markdown(f'<div class="card-indicador"><p class="label-indicador">U. Domésticos</p><p class="value-indicador">{datos_s.get("U_Domesticos", 0):,.0f}</p></div>', unsafe_allow_html=True)
         with c4: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Consumo m³</p><p class="value-indicador">{datos_s.get("Cons_m3", 0):,.1f}</p></div>', unsafe_allow_html=True) 
         with c5: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Dotación</p><p class="value-indicador">{datos_s.get("Dotacion", 0):,.1f}</p></div>', unsafe_allow_html=True)
         with c6: st.markdown(f'<div class="card-indicador"><p class="label-indicador">Balance</p><p class="value-indicador">{datos_s.get("Balance_Estimado", 0):,.1f}%</p></div>', unsafe_allow_html=True)
-        
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
-        # 7.3. Carga de Diccionarios y Selectores
         dict_reg_all = cargar_puntos_de_control_desde_db() 
         dict_reg = {k: v for k, v in dict_reg_all.items() if str(v.get('sector')).strip() == str(sec_id).strip()}
         reg_nombres = {v['nombre']: k for k, v in dict_reg.items()}
@@ -2296,13 +2221,11 @@ if sector_seleccionado:
                 ["Hoy", "Esta Semana", "Últimos 14 días", "Este Mes", "Personalizado"],
                 index=3,
                 key="f_sector_full",
-                label_visibility="collapsed" # Colapsamos el label para que queden alineados
+                label_visibility="collapsed"
         )
-        # Inicialización de fechas
         hoy = datetime.now().date()
         f_ini_h, f_fin_h = hoy, hoy
 
-        # Lógica de asignación de periodos
         if opcion_fecha == "Hoy":
             f_ini_h, f_fin_h = hoy, hoy
         elif opcion_fecha == "Esta Semana":
@@ -2313,7 +2236,6 @@ if sector_seleccionado:
             f_ini_h, f_fin_h = hoy.replace(day=1), hoy
         elif opcion_fecha == "Personalizado":
             with c_fecha_ext:
-                # El calendario aparece a la derecha y nivelado al pixel
                 rango_p = st.date_input(
                     "Periodo:",
                     value=(hoy - timedelta(days=7), hoy),
@@ -2325,12 +2247,8 @@ if sector_seleccionado:
                     f_ini_h, f_fin_h = rango_p
                 else:
                     f_ini_h, f_fin_h = hoy, hoy    
-        
 
-
-        # 7.4. Layout Superior: Mapa e Histórico Puntos de Control
         col_izq, col_der = st.columns([1.0, 1.0])
-        
         with col_izq:
             st.markdown('<div class="col-mapa-offset">', unsafe_allow_html=True)
             if "ultimo_clic_sv" not in st.session_state:
@@ -2343,11 +2261,8 @@ if sector_seleccionado:
             folium.TileLayer(
                 tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
                 name="Vista Nocturna",
-                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains="abcd",
-                max_zoom=20,
-                overlay=False,
-                control=True
+                attr='&copy; OpenStreetMap contributors &copy; CARTO',
+                subdomains="abcd", max_zoom=20, overlay=False, control=True
             ).add_to(m_sec)
 
             if datos_s and datos_s.get('geo'):
@@ -2357,7 +2272,6 @@ if sector_seleccionado:
                     m_sec.fit_bounds(folium_geo.get_bounds())
                 except: pass
 
-            # 7.5. RECOLECCIÓN DE TAGS (Incluyendo VRP y PC)
             tags_para_scada = []
             for r in dict_reg.values():
                 for k in ['tag_p1', 'tag_p2', 'tag_q', 'tag_vbat']:
@@ -2374,232 +2288,55 @@ if sector_seleccionado:
 
             scada_res_reg = cargar_datos_scada(list(set(tags_para_scada)))
 
-# 7.6. MARCADORES PUNTOS DE CONTROL
             for r in dict_reg.values():
                 def get_rv(tk):
                     v, f = scada_res_reg.get(r.get(tk), (0.0, "N/A"))
                     try: return float(v), f
                     except: return 0.0, f
-                
                 rp1, fp1 = get_rv('tag_p1'); rcau, fq = get_rv('tag_q'); rbat, fb = get_rv('tag_vbat')
                 id_reg = r.get('Serie', 'S/N') 
                 html_popup_reg = f"""<div style="background:#000; color:white; padding:12px; border-radius:10px; border:1px solid #00FFFF; width:250px; font-family:sans-serif;"><b style="color:#00FFFF; font-size:14px;">{r['nombre']}</b><hr style="opacity:0.2; margin:8px 0;"><div style="font-size:11px;">💧 Caudal: <b>{rcau:.2f} L/s</b><br><span style="color:#FFFF00;">{fq}</span><br><br>🚀 Presión: <b>{rp1:.2f} kg</b><br><span style="color:#FFFF00;">{fp1}</span><br><br>🔋 Bat: <b>{rbat:.2f} V</b><br><span style="color:#FFFF00;">{fb}</span></div></div>"""
 
-
-
-# --- MARCADOR TACHUELA REALISTA AZUL (ESTILO 3D) ---
                 from folium.features import DivIcon
-
-                # Ajuste de gradientes para tonos azules tipo SCADA
                 icon_html = """
                 <div style="position: relative; width: 30px; height: 30px;">
-                    <!-- Esfera con volumen azul -->
-                    <div style="
-                        width: 20px; 
-                        height: 20px; 
-                        background: radial-gradient(circle at 30% 30%, #66ccff, #007bff, #003366);
-                        border-radius: 50%;
-                        box-shadow: 2px 4px 6px rgba(0,0,0,0.5);
-                        position: absolute;
-                        top: 0; left: 5px;
-                        z-index: 2;">
-                    </div>
-                    <!-- Pin metálico -->
-                    <div style="
-                        width: 2px; 
-                        height: 15px; 
-                        background: linear-gradient(to right, #e0e0e0, #808080);
-                        position: absolute;
-                        top: 18px; left: 14px;
-                        z-index: 1;">
-                    </div>
+                    <div style="width: 20px; height: 20px; background: radial-gradient(circle at 30% 30%, #66ccff, #007bff, #003366); border-radius: 50%; box-shadow: 2px 4px 6px rgba(0,0,0,0.5); position: absolute; top: 0; left: 5px; z-index: 2;"></div>
+                    <div style="width: 2px; height: 15px; background: linear-gradient(to right, #e0e0e0, #808080); position: absolute; top: 18px; left: 14px; z-index: 1;"></div>
                 </div>
                 """
+                folium.Marker(location=r['coord'], icon=DivIcon(icon_size=(30, 40), icon_anchor=(15, 33), html=icon_html), popup=folium.Popup(html_popup_reg, max_width=300)).add_to(m_sec)
+                folium.Marker(location=r['coord'], icon=folium.features.DivIcon(icon_size=(250,36), icon_anchor=(-15, 35), html=f'<div style="font-size: 10pt; color: #00FFFF; font-weight: bold; text-shadow: 2px 2px 4px #000; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; width: max-content; white-space: nowrap; border: 1px solid rgba(0,255,255,0.4);">SN: {id_reg}</div>')).add_to(m_sec)
 
-                folium.Marker(
-                    location=r['coord'],
-                    icon=DivIcon(
-                        icon_size=(30, 40),
-                        icon_anchor=(15, 33),
-                        html=icon_html
-                    ),
-                    popup=folium.Popup(html_popup_reg, max_width=300)
-                ).add_to(m_sec)
-
-                # --- ETIQUETA FLOTANTE (DIVICON) ---
-                folium.Marker(
-                    location=r['coord'],
-                    icon=folium.features.DivIcon(
-                        icon_size=(250,36),
-                        icon_anchor=(-15, 35), # Desplazado para no tapar la estrella
-                        html=f"""
-                            <div style="
-                                font-size: 10pt; 
-                                color: #00FFFF; 
-                                font-weight: bold; 
-                                text-shadow: 2px 2px 4px #000; 
-                                background: rgba(0,0,0,0.6); 
-                                padding: 2px 8px; 
-                                border-radius: 4px; 
-                                width: max-content; 
-                                white-space: nowrap; 
-                                border: 1px solid rgba(0,255,255,0.4);
-                            ">
-                                SN: {id_reg}
-                            </div>
-                        """
-                    )
-                ).add_to(m_sec)
-
-# 7.7. MARCADORES PUNTOS CRITICOS EN EL MAPA
             for id_pc, pc in dict_pc_sec.items():
                 domicilio_texto = pc.get('Domicilio', 'S/D')
                 val_p, fec_p = scada_res_reg.get(pc['tag_p1'], (0.0, "N/A"))
+                html_pc = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF00FF; width:180px; font-family:sans-serif;"><b style="color:#FF00FF; font-size:13px;">PUNTO CRÍTICO</b><br><small>{domicilio_texto}</small><hr style="opacity:0.2; margin:5px 0;">Presión: <b style="color:#FF00FF;">{val_p:.2f} kg</b><br><span style="color:#FFFF00; font-size:9px;">{fec_p}</span></div>"""
                 
-                html_pc = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF00FF; width:180px; font-family:sans-serif;">
-                                <b style="color:#FF00FF; font-size:13px;">PUNTO CRÍTICO</b><br>
-                                <small>{domicilio_texto}</small><br>
-                                <hr style="opacity:0.2; margin:5px 0;">
-                                Presión: <b style="color:#FF00FF;">{val_p:.2f} kg</b><br>
-                                <span style="color:#FFFF00; font-size:9px;">{fec_p}</span>
-                            </div>"""
+                folium.Marker(location=pc['coord'], icon=folium.DivIcon(icon_size=(250,36), icon_anchor=(-15, 35), html=f'<div style="font-size: 10pt; color: #FF00FF; font-weight: bold; text-shadow: 2px 2px 4px #000; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; width: max-content; white-space: nowrap; border: 1px solid rgba(255,0,255,0.4);">NS: {id_pc}</div>')).add_to(m_sec)
                 
-                # --- ETIQUETA FLOTANTE (DIVICON) SOLO CON ID/SERIE 
-                folium.Marker(
-                    location=pc['coord'],
-                    icon=folium.DivIcon(
-                        icon_size=(250,36),
-                        icon_anchor=(-15, 35), # Ajusta la posición a la derecha del marcador
-                        html=f"""
-                            <div style="
-                                font-size: 10pt; 
-                                color: #FF00FF; 
-                                font-weight: bold; 
-                                text-shadow: 2px 2px 4px #000; 
-                                background: rgba(0,0,0,0.6); 
-                                padding: 2px 8px; 
-                                border-radius: 4px; 
-                                width: max-content; 
-                                white-space: nowrap; 
-                                border: 1px solid rgba(255,0,255,0.4);
-                            ">
-                                NS: {id_pc}
-                            </div>
-                        """
-                    )
-                ).add_to(m_sec)
-                
-# --- MARCADOR TACHUELA REALISTA ROJA (ESTILO 3D) ---
-                from folium.features import DivIcon
-
-                # Gradiente rojo para imitar el volumen de image_87abee.png
                 icon_html = """
                 <div style="position: relative; width: 30px; height: 30px;">
-                    <!-- Esfera con volumen rojo -->
-                    <div style="
-                        width: 20px; 
-                        height: 20px; 
-                        background: radial-gradient(circle at 30% 30%, #ff4d4d, #ff0000, #800000);
-                        border-radius: 50%;
-                        box-shadow: 2px 4px 6px rgba(0,0,0,0.5);
-                        position: absolute;
-                        top: 0; left: 5px;
-                        z-index: 2;">
-                    </div>
-                    <!-- Pin metálico -->
-                    <div style="
-                        width: 2px; 
-                        height: 15px; 
-                        background: linear-gradient(to right, #e0e0e0, #808080);
-                        position: absolute;
-                        top: 18px; left: 14px;
-                        z-index: 1;">
-                    </div>
+                    <div style="width: 20px; height: 20px; background: radial-gradient(circle at 30% 30%, #ff4d4d, #ff0000, #800000); border-radius: 50%; box-shadow: 2px 4px 6px rgba(0,0,0,0.5); position: absolute; top: 0; left: 5px; z-index: 2;"></div>
+                    <div style="width: 2px; height: 15px; background: linear-gradient(to right, #e0e0e0, #808080); position: absolute; top: 18px; left: 14px; z-index: 1;"></div>
                 </div>
                 """
-
-                folium.Marker(
-                    location=pc['coord'],
-                    icon=DivIcon(
-                        icon_size=(30, 40),
-                        icon_anchor=(15, 33),
-                        html=icon_html
-                    ),
-                    popup=folium.Popup(html_pc, max_width=250)
-                ).add_to(m_sec)
+                folium.Marker(location=pc['coord'], icon=DivIcon(icon_size=(30, 40), icon_anchor=(15, 33), html=icon_html), popup=folium.Popup(html_pc, max_width=250)).add_to(m_sec)
                 
-# 7.7.1 MARCADORES DE VALVULAS REDUCTORAS DE PRESION EN EL MAPA
             for id_vrp, vrp in dict_vrp_sec.items():
                 val_p1, _ = scada_res_reg.get(vrp['tag_p1'], (0.0, "N/A"))
                 val_p2, _ = scada_res_reg.get(vrp['tag_p2'], (0.0, "N/A"))
                 serie_vrp = vrp.get('Serie', 'S/N')
                 html_vrp = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFCC; width:200px; font-family:sans-serif;"><b style="color:#00FFCC; font-size:13px;">VALVULA VRP</b><br><small>{vrp['nombre']}</small><hr style="opacity:0.2; margin:5px 0;">P. Entrada: <b>{val_p1:.2f} kg</b><br>P. Salida: <b style="color:#00FFCC;">{val_p2:.2f} kg</b></div>"""
                 
-# --- MARCADOR TACHUELA REALISTA VERDE (ESTILO 3D) ---
-                from folium.features import DivIcon
-
-                # Gradiente verde para simular volumen y brillo
                 icon_html = """
                 <div style="position: relative; width: 30px; height: 30px;">
-                    <!-- Esfera con volumen verde -->
-                    <div style="
-                        width: 20px; 
-                        height: 20px; 
-                        background: radial-gradient(circle at 30% 30%, #a1ffce, #28a745, #004d1a);
-                        border-radius: 50%;
-                        box-shadow: 2px 4px 6px rgba(0,0,0,0.5);
-                        position: absolute;
-                        top: 0; left: 5px;
-                        z-index: 2;">
-                    </div>
-                    <!-- Pin metálico -->
-                    <div style="
-                        width: 2px; 
-                        height: 15px; 
-                        background: linear-gradient(to right, #e0e0e0, #808080);
-                        position: absolute;
-                        top: 18px; left: 14px;
-                        z-index: 1;">
-                    </div>
+                    <div style="width: 20px; height: 20px; background: radial-gradient(circle at 30% 30%, #a1ffce, #28a745, #004d1a); border-radius: 50%; box-shadow: 2px 4px 6px rgba(0,0,0,0.5); position: absolute; top: 0; left: 5px; z-index: 2;"></div>
+                    <div style="width: 2px; height: 15px; background: linear-gradient(to right, #e0e0e0, #808080); position: absolute; top: 18px; left: 14px; z-index: 1;"></div>
                 </div>
                 """
+                folium.Marker(location=vrp['coord'], icon=DivIcon(icon_size=(30, 40), icon_anchor=(15, 33), html=icon_html), popup=folium.Popup(html_vrp, max_width=250)).add_to(m_sec)
+                folium.Marker(location=vrp['coord'], icon=folium.features.DivIcon(icon_size=(250,36), icon_anchor=(-15, 35), html=f'<div style="font-size: 10pt; color: #00FFCC; font-weight: bold; text-shadow: 2px 2px 4px #000; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; width: max-content; white-space: nowrap; border: 1px solid rgba(0,255,204,0.4);">SN: {serie_vrp}</div>')).add_to(m_sec)
 
-                folium.Marker(
-                    location=vrp['coord'],
-                    icon=DivIcon(
-                        icon_size=(30, 40),
-                        icon_anchor=(15, 33),
-                        html=icon_html
-                    ),
-                    popup=folium.Popup(html_vrp, max_width=250)
-                ).add_to(m_sec)
-
-                # --- ETIQUETA FLOTANTE PARA VRP ---
-                folium.Marker(
-                    location=vrp['coord'],
-                    icon=folium.features.DivIcon(
-                        icon_size=(250,36),
-                        icon_anchor=(-15, 35), # Posición a la derecha del icono verde
-                        html=f"""
-                            <div style="
-                                font-size: 10pt; 
-                                color: #00FFCC; 
-                                font-weight: bold; 
-                                text-shadow: 2px 2px 4px #000; 
-                                background: rgba(0,0,0,0.6); 
-                                padding: 2px 8px; 
-                                border-radius: 4px; 
-                                width: max-content; 
-                                white-space: nowrap; 
-                                border: 1px solid rgba(0,255,204,0.4);
-                            ">
-                                SN: {serie_vrp}
-                            </div>
-                        """
-                    )
-                ).add_to(m_sec)
-
-            # 7.8. MARCADOR DE POZOS EN EL MAPA
             ids_p = [p.strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
@@ -2614,32 +2351,12 @@ if sector_seleccionado:
                     
                     html_popup_sec = f"""<div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;"><div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;"><b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b><span style="font-size: 10px; background: {info['color_final']}; color: black; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{info['status_label']}</span></div><div style="margin-bottom: 12px;"><div style="font-size: 10px; color: #888; margin-bottom: 4px;">HIDRÁULICA</div><div style="display: flex; align-items: baseline; font-size: 11px; margin-bottom: 3px;"><span>💧 Caudal: <b>{q:.2f} L/s</b></span><span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_q}</span></div><div style="display: flex; align-items: baseline; font-size: 11px;"><span>🚀 Presión: <b>{p:.2f} kg</b></span><span style="color: #FFFF00; font-size: 8px; margin-left: auto;">{f_p}</span></div></div><div><div style="font-size: 10px; color: #888; margin-bottom: 4px;">ELÉCTRICO</div><table style="width: 100%; font-size: 10px; border-collapse: collapse;"><tr><td>L1-L2</td><td>{v[0][0]:.1f}V</td><td>{a[0][0]:.1f}A</td></tr></table></div></div>"""
 
-                    # --- ETIQUETA CON NOMBRE DEL POZO (DIVICON) ---
-                    folium.Marker(
-                        location=info['coord'],
-                        icon=folium.DivIcon(
-                            html=f"""<div style="font-size: 11px; color: white; font-weight: bold; 
-                                     text-shadow: 1px 1px 2px black; width: 100px; 
-                                     position: relative; left: 17px; top: -3px;">
-                                     {id_p}
-                                     </div>"""
-                        )
-                    ).add_to(m_sec)
+                    folium.Marker(location=info['coord'], icon=folium.DivIcon(html=f'<div style="font-size: 11px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; width: 100px; position: relative; left: 17px; top: -3px;">{id_p}</div>')).add_to(m_sec)
                     
                     if info.get('blink'):
-                        folium.Marker(
-                            location=info['coord'],
-                            icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                            popup=folium.Popup(html_popup_sec, max_width=400)
-                        ).add_to(m_sec)
+                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
                     else:
-                        folium.CircleMarker(
-                            location=info['coord'],
-                            radius=6,
-                            color=info['color_final'],
-                            fill=True, fill_opacity=1,
-                            popup=folium.Popup(html_popup_sec, max_width=400)
-                        ).add_to(m_sec)
+                        folium.CircleMarker(location=info['coord'], radius=6, color=info['color_final'], fill=True, fill_opacity=1, popup=folium.Popup(html_popup_sec, max_width=400)).add_to(m_sec)
 
             if st.session_state.get("ultimo_clic_sv"):
                 c_lat, c_lng = st.session_state.ultimo_clic_sv["lat"], st.session_state.ultimo_clic_sv["lng"]
@@ -2657,14 +2374,11 @@ if sector_seleccionado:
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
-# 7.10. ------------------------------------------- Histórico Punto de Control y Pozos del Sector (Lado derecho del mapa) -------------------------
         with col_der:
             st.markdown(f"<h3 style='color:#00d4ff; font-size:18px; text-align: center; margin-bottom:0px;'>Histórico Puntos de control</h3>", unsafe_allow_html=True)
-            
             tags_visualizar = []
             mapeo_config = {}
 
-            # 1. Recolección de Puntos de Control (dict_reg)
             for s_id in list(dict_reg.keys()):
                 r_info = dict_reg[s_id]
                 conf_pc = [
@@ -2678,7 +2392,6 @@ if sector_seleccionado:
                         tags_visualizar.append(tag_v)
                         mapeo_config[tag_v] = {'label': lb, 'color': clr, 'sec': sec}
 
-            # 2. Recolección de Pozos (mapa_pozos_dict)
             for id_p in ids_p:
                 if id_p in mapa_pozos_dict:
                     p_info = mapa_pozos_dict[id_p]
@@ -2693,7 +2406,6 @@ if sector_seleccionado:
                             tags_visualizar.append(tag_v)
                             mapeo_config[tag_v] = {'label': lb, 'color': clr, 'sec': sec}
 
-            # 3. Consulta y Renderizado del gráfico derecho
             if tags_visualizar:
                 try:
                     engine_h = get_mysql_scada_engine()
@@ -2701,33 +2413,22 @@ if sector_seleccionado:
                     q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_unicos_query}') AND h.FECHA BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59' ORDER BY h.FECHA ASC"
                     df_h = pd.read_sql(q_hist, engine_h)
                     
-                    df_h = pd.read_sql(q_hist, engine_h)
-                    
                     if not df_h.empty:
-                        # --- INICIO DE LA LÓGICA DE FECHAS (Indentación ajustada) ---
                         df_h['FECHA'] = pd.to_datetime(df_h['FECHA'])
                         dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
-                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
-                                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
 
-                        # Rango para las líneas divisorias
-                        fechas_lineas = pd.date_range(start=df_h['FECHA'].min().floor('D'), 
-                                                      end=df_h['FECHA'].max().ceil('D'), freq='D')
-                        
-                        # Cálculo del paso para evitar amontonamiento
+                        fechas_lineas = pd.date_range(start=df_h['FECHA'].min().floor('D'), end=df_h['FECHA'].max().ceil('D'), freq='D')
                         num_dias = len(fechas_lineas)
                         paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
                         ticks_filtrados = fechas_lineas[::paso]
 
-                        # Creación de etiquetas en español
                         etiquetas_filtradas = [
                             f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
                             for d in ticks_filtrados
                         ]
                     
                         fig = go.Figure()
-                        
-                        # Contadores para variar la intensidad
                         idx_q = 0
                         idx_p = 0
 
@@ -2735,118 +2436,61 @@ if sector_seleccionado:
                             df_tag = df_h[df_h['TAG'] == tag_name]
                             if not df_tag.empty:
                                 cfg = mapeo_config[tag_name]
-                                
                                 es_caudal = not cfg['sec']
-                                
                                 label_u = cfg['label'].upper()
 
-                                if es_caudal:
-                                    unidad_pc = "Lps"
-                                elif "NIVEL" in label_u or "TANQUE" in label_u or "MTS" in label_u:
-                                    unidad_pc = "Mts"
-                                else:
-                                    unidad_pc = "kg/cm²"
+                                if es_caudal: unidad_pc = "Lps"
+                                elif "NIVEL" in label_u or "TANQUE" in label_u or "MTS" in label_u: unidad_pc = "Mts"
+                                else: unidad_pc = "kg/cm²"
                                 
-                                # --- LÓGICA DE COLORES DINÁMICOS ---
                                 if es_caudal:
-                                    # Diferentes tonos de AZUL/CIAN (Caudal)
-                                    # Variamos la luminosidad basándonos en idx_q
                                     brillo = max(75 - (idx_q * 15), 35) 
                                     color_base = f"hsl(200, 100%, {brillo}%)" 
                                     idx_q += 1
                                 else:
-                                    # Diferentes tonos de VERDE (Presión)
                                     brillo = max(80 - (idx_p * 20), 30)
                                     color_base = f"hsl(145, 100%, {brillo}%)"
                                     idx_p += 1
 
                                 fig.add_trace(go.Scatter(
-                                    x=df_tag['FECHA'], 
-                                    y=df_tag['VALUE'], 
-                                    name=cfg['label'], 
-                                    yaxis="y2" if cfg['sec'] else "y1", 
-                                    mode='lines+markers',
+                                    x=df_tag['FECHA'], y=df_tag['VALUE'], name=cfg['label'], 
+                                    yaxis="y2" if cfg['sec'] else "y1", mode='lines+markers',
                                     line=dict(width=2, color=color_base),
-                                    
-                                    marker=dict(size=3 if es_caudal else 3, symbol='circle'),
-                                    
-                                    # Configuración de Área para Caudales
+                                    marker=dict(size=3, symbol='circle'),
                                     fill='tozeroy' if es_caudal else None,
-                                    # La opacidad se mantiene en 0.15 (15%)
                                     fillcolor=color_base.replace("hsl", "hsla").replace(")", ", 0.15)"),
-                                    
                                     hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} ' + unidad_pc + '<extra></extra>'
-                                                 
                                 ))
 
                         delta = pd.Timedelta(hours=1)
                         for d in fechas_lineas:
                             es_lunes = (d.dayofweek == 0)
                             fig.add_vrect(x0=d - delta, x1=d + delta, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
-                            fig.add_vline(x=d, line_width=1.5, line_dash="dash", 
-                                          line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
+                            fig.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
                         
                         fig.update_layout(
-                            paper_bgcolor='rgba(0,0,0,0)', 
-                            plot_bgcolor='rgba(0,0,0,0)', 
-                            height=350, 
-                            margin=dict(l=50, r=50, t=10, b=10), 
-                            hovermode="x unified", 
-                            legend=dict(
-                                orientation="h", 
-                                yanchor="bottom", 
-                                y=1.05, 
-                                x=0.5, 
-                                xanchor="center", 
-                                font=dict(color="white", size=10)
-                            ),
-                            xaxis=dict(
-                                color="white", 
-                                showgrid=False,
-                                tickvals=ticks_filtrados,      # <--- Tu lista filtrada
-                                ticktext=etiquetas_filtradas,  # <--- Tus etiquetas con fecha/hora
-                                tickangle=0,
-                                tickformat="%d-%b-%Y %H:%M"
-                            ),
-                            yaxis=dict(
-                                title="Caudales (m³/h)", 
-                                color="#00d4ff", 
-                                tickformat=".2f"
-                            ),
-                            yaxis2=dict(
-                                title="Presiones (kg)", 
-                                side="right", 
-                                overlaying="y", 
-                                color="#00ff00", 
-                                showgrid=False, 
-                                tickformat=".2f"
-                            )
+                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=350, 
+                            margin=dict(l=50, r=50, t=10, b=10), hovermode="x unified", 
+                            legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=10)),
+                            xaxis=dict(color="white", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0, tickformat="%d-%b-%Y %H:%M"),
+                            yaxis=dict(title="Caudales (m³/h)", color="#00d4ff", tickformat=".2f"),
+                            yaxis2=dict(title="Presiones (kg)", side="right", overlaying="y", color="#00ff00", showgrid=False, tickformat=".2f")
                         )
-                        
                         st.plotly_chart(fig, use_container_width=True)
                 except Exception as e:
                     st.error(f"Error Scada (Derecha): {e}")
-                        
 
-# 7.11. ------------------------------------------------------------------------- ZONA : VRP ----------------------------------------------
         col_vrp, col_pc = st.columns([1.0, 1.0])
-
         with col_vrp:
-            # 1. Recolección de TODAS las variables de TODAS las VRP del sector
             tags_vrp_global = []
             mapeo_vrp_global = {}
-            
-            # Recorremos el diccionario de VRPs del sector
             for v_id, v_info in dict_vrp_sec.items():
-                # USAMOS EL ID (v_id) PARA QUE SEA MÁS CORTO EN LA LEYENDA
                 identificador = f"VRP {v_id}" 
-                
                 conf_vrp = [
                     ('tag_q', f"{identificador} - Q", False),
                     ('tag_p1', f"{identificador} - P1", True),
                     ('tag_p2', f"{identificador} - P2", True)
                 ]
-                
                 for key_t, lb, sec in conf_vrp:
                     t_val = v_info.get(key_t)
                     if t_val and str(t_val).strip().lower() not in ['0', 'none', 'n/a']:
@@ -2863,14 +2507,11 @@ if sector_seleccionado:
                     if not df_v.empty:
                         st.markdown(f"<h3 style='color:#00ffcc; font-size:20px; margin-bottom:10px; text-align: center;'>Análisis Integral de VRPs del Sector</h3>", unsafe_allow_html=True)
 
-                        # --- 1. LÓGICA DE FECHAS (Estandarizada) ---
                         df_v['FECHA'] = pd.to_datetime(df_v['FECHA'])
                         dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
-                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
-                                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
                         
-                        fechas_lineas = pd.date_range(start=df_v['FECHA'].min().floor('D'), 
-                                                      end=df_v['FECHA'].max().ceil('D'), freq='D')
+                        fechas_lineas = pd.date_range(start=df_v['FECHA'].min().floor('D'), end=df_v['FECHA'].max().ceil('D'), freq='D')
                         num_dias = len(fechas_lineas)
                         paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
                         ticks_filtrados = fechas_lineas[::paso]
@@ -2880,25 +2521,11 @@ if sector_seleccionado:
                         ]
                         
                         fig_v = go.Figure()
-
-                        # --- 2. DIBUJO DE SOMBRAS Y LÍNEAS (Separador de días) ---
-                        delta = pd.Timedelta(hours=1) # Ajusta este ancho según necesites
+                        delta = pd.Timedelta(hours=1)
                         for d in fechas_lineas:
                             es_lunes = (d.dayofweek == 0)
-                            
-                            # AÑADIR LA SOMBRA (El fondo gris para resaltar el día)
-                            fig_v.add_vrect(
-                                x0=d - delta, x1=d + delta, 
-                                fillcolor="gray", opacity=0.2, 
-                                layer="below", line_width=0
-                            )
-                            
-                            # AÑADIR LA LÍNEA (El separador)
-                            fig_v.add_vline(
-                                x=d, line_width=0.5, line_dash="dash", 
-                                line_color="#fffb00" if es_lunes else "white", 
-                                opacity=0.5, layer="above"
-                            )
+                            fig_v.add_vrect(x0=d - delta, x1=d + delta, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
+                            fig_v.add_vline(x=d, line_width=0.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
                         
                         idx_vq = 0
                         idx_vp = 0
@@ -2908,74 +2535,39 @@ if sector_seleccionado:
                             if not df_t.empty:
                                 c_vrp = mapeo_vrp_global[t_name]
                                 es_caudal_v = not c_vrp['sec']
-                                if "P1" in c_vrp['label'] or "P2" in c_vrp['label']:
-                                    unidad_final = "kg/cm²"
-                                else:
-                                    unidad_final = "Lps"
+                                unidad_final = "kg/cm²" if "P1" in c_vrp['label'] or "P2" in c_vrp['label'] else "Lps"
                                 
-                                # --- COLORES DINÁMICOS ---
                                 if es_caudal_v:
-                                    # Paleta de Azules: Brillo controlado entre 40% y 75%
-                                    brillo = 75 - (idx_vq * 15)
-                                    brillo = max(brillo, 35)
+                                    brillo = max(75 - (idx_vq * 15), 35)
                                     color_v = f"hsl(200, 100%, {brillo}%)" 
                                     idx_vq += 1
                                 else:
-                                    # Paleta de Verdes: Brillo controlado entre 40% y 80%
-                                    brillo = 80 - (idx_vp * 15)
-                                    brillo = max(brillo, 30)
+                                    brillo = max(80 - (idx_vp * 15), 30)
                                     color_v = f"hsl(150, 100%, {brillo}%)"
                                     idx_vp += 1
 
                                 fig_v.add_trace(go.Scatter(
-                                    x=df_t['FECHA'], 
-                                    y=df_t['VALUE'], 
-                                    name=c_vrp['label'], 
-                                    yaxis="y2" if c_vrp['sec'] else "y1", 
-                                    mode='lines+markers',
+                                    x=df_t['FECHA'], y=df_t['VALUE'], name=c_vrp['label'], 
+                                    yaxis="y2" if c_vrp['sec'] else "y1", mode='lines+markers',
                                     line=dict(width=1.8, color=color_v),
-                                    # CORRECCIÓN AQUÍ: Sintaxis de marcador limpia
                                     marker=dict(size=3 if es_caudal_v else 4, symbol='circle'),
                                     fill='tozeroy' if es_caudal_v else None,
                                     fillcolor=color_v.replace("hsl", "hsla").replace(")", ", 0.12)"),
                                     hovertemplate=f'<b>%{{fullData.name}}</b>: %{{y:.2f}} {unidad_final}<extra></extra>'
                                 ))
 
-                        for d in fechas_lineas:
-                            es_lunes = (d.dayofweek == 0)
-                            fig_v.add_vline(x=d, line_width=1.5, line_dash="dash", 
-                                          line_color="#fffb00" if es_lunes else "white", opacity=0.3)
-                                          
                         fig_v.update_layout(
-                            paper_bgcolor='rgba(0,0,0,0)', 
-                            plot_bgcolor='rgba(0,0,0,0)', 
-                            height=300, 
-                            margin=dict(l=50, r=50, t=10, b=10), 
-                            hovermode="x unified", 
-                            # Mantenemos la leyenda abajo para que no estorbe
-                            legend=dict(orientation="h",
-                            yanchor="bottom",
-                            y=1.05,
-                            x=0.5,
-                            xanchor="center", font=dict(color="white", size=9)),
-                            xaxis=dict(color="white", 
-                                showgrid=False,
-                                tickvals=ticks_filtrados,
-                                ticktext=etiquetas_filtradas,
-                                tickangle=0,
-                                tickformat="%d-%b-%Y %H:%M" # Encabezado del hover en orden
-                            ),
-                            
+                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300, 
+                            margin=dict(l=50, r=50, t=10, b=10), hovermode="x unified", 
+                            legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=9)),
+                            xaxis=dict(color="white", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0, tickformat="%d-%b-%Y %H:%M"),
                             yaxis=dict(title="Caudal (Lps)", color="#00d4ff", tickformat=".2f"),
                             yaxis2=dict(title="Presión (kg)", side="right", overlaying="y", color="#00ff00", showgrid=False, tickformat=".2f")
                         )
                         st.plotly_chart(fig_v, use_container_width=True)
-                    else:
-                        st.warning("No se encontraron datos para las VRPs.")
                 except Exception as e:
                     st.error(f"Error Scada VRP: {e}")
                     
-# 7.12. ---------------------------------------------------------- GRÁFICO: HISTÓRICO PUNTOS CRÍTICOS -------------------------------------------------------------------------------------
         with col_pc:
             if dict_pc_sec:
                 tags_pc_list = [v['tag_p1'] for v in dict_pc_sec.values() if v.get('tag_p1')]
@@ -2987,7 +2579,6 @@ if sector_seleccionado:
                         if not df_pc_h.empty:
                             st.markdown(f"<h3 style='color:#ff0000; font-size:18px; margin-bottom:10px; text-align: center;'>Puntos críticos del sector:</h3>", unsafe_allow_html=True)
                             
-                            # --- 1. LÓGICA DE FECHAS (Estandarizada) ---
                             df_pc_h['FECHA'] = pd.to_datetime(df_pc_h['FECHA'])
                             dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
                             meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
@@ -2999,8 +2590,6 @@ if sector_seleccionado:
                             etiquetas_filtradas = [f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}" for d in ticks_filtrados]
 
                             fig_pc = go.Figure()
-                            
-                            # --- 2. DIBUJO DE SOMBRAS Y LÍNEAS (Separador de días) ---
                             delta = pd.Timedelta(hours=1)
                             for d in fechas_lineas:
                                 es_lunes = (d.dayofweek == 0)
@@ -3009,7 +2598,6 @@ if sector_seleccionado:
 
                             tag_to_name = {v['tag_p1']: v.get('Domicilio', v.get('nombre', 'S/D')) for v in dict_pc_sec.values()}
 
-                            # --- 3. TRAZADO DE DATOS ---
                             for tag in tags_pc_list:
                                 df_temp = df_pc_h[df_pc_h['TAG'] == tag]
                                 if not df_temp.empty:
@@ -3020,109 +2608,28 @@ if sector_seleccionado:
                                         hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f} kg<extra></extra>'
                                     ))
 
-                            # --- 4. CONFIGURACIÓN DEL LAYOUT ---
                             fig_pc.update_layout(
                                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300, 
                                 margin=dict(l=50, r=50, t=40, b=10), hovermode="x unified",
-                                xaxis=dict(
-                                    color="white", 
-                                    showgrid=False,
-                                    tickvals=ticks_filtrados, 
-                                    ticktext=etiquetas_filtradas, 
-                                    tickangle=0, 
-                                    tickformat="%d-%b-%Y %H:%M" # Encabezado formato Día-Mes-Año
-                                ),
-                                yaxis=dict(tickformat=".2f", color="white"), # Decimales eje Y
+                                xaxis=dict(color="white", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0, tickformat="%d-%b-%Y %H:%M"),
+                                yaxis=dict(tickformat=".2f", color="white"),
                                 legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=10))
                             )
                             st.plotly_chart(fig_pc, use_container_width=True)
                     except Exception as e:
                         st.error(f"Error PC: {e}")
 
-        # Finalizamos el bloque del sector
         st.stop()
     
-# 8. SECCION ------------------------------------------------------------------------------- 8. SIDEBAR BARRA LATERAL IZQUIERDA ------------------------------------------------------------------------------------------
-
-st.set_page_config(layout="wide", initial_sidebar_state="expanded")
-st.markdown("""
-    <style>
-        /* 1. ELIMINAR EL TIRADOR DE REDIMENSIÓN */
-        /* Buscamos el elemento que permite arrastrar la barra y lo desactivamos */
-        [data-testid="stSidebarResizer"] {
-            display: none !important;
-            pointer-events: none !important;
-        }
-        
-        /* 2. FORZAR ANCHO ESTÁTICO E INAMOVIBLE */
-        section[data-testid="stSidebar"] {
-            width: 250px !important;
-            min-width: 250px !important;
-            max-width: 250px !important;
-            /* Evita que el usuario seleccione texto o interactúe con el borde */
-            user-select: none; 
-        }
-
-        /* 3. BLOQUEAR EL CURSOR DE REDIMENSIÓN */
-        /* A veces el cursor cambia a flechas laterales; esto lo devuelve a la normalidad */
-        html, body {
-            cursor: default !important;
-        }
-
-    
-        /* 1. AJUSTE DINÁMICO DEL MAPA AL MARGEN DERECHO */
-        [data-testid="stMain"] {
-            margin-left: 0px !important;
-            /* Restamos el ancho de la barra para que el contenido no desborde */
-            width: calc(100% - 0px) !important; 
-            padding-right: 2rem !important; /* Espacio de seguridad a la derecha */
-        }
-
-        /* 2. ASEGURAR QUE EL CONTENEDOR DE STREAMLIT USE TODO EL ANCHO DISPONIBLE */
-        .block-container {
-            max-width: 100% !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-
-        /* 3. ARREGLAR EL CONTROL DE CAPAS (LayerControl) */
-        /* Forzamos que el cuadro de capas de Folium siempre esté visible y no se desborde */
-        .leaflet-control-layers {
-            margin-right: 20px !important; /* Separa el cuadro del borde derecho de la pantalla */
-            border: 2px solid rgba(0,255,255,0.5) !important; /* Opcional: Estilo futurista */
-            background: rgba(0, 0, 0, 0.8) !important; /* Fondo oscuro para que combine con tu HUD */
-            color: white !important;
-        }
-
-        /* Cambiar color de los textos dentro del selector de capas para que se vean en fondo oscuro */
-        .leaflet-control-layers-list, .leaflet-control-layers-base, .leaflet-control-layers-overlays {
-            color: white !important;
-        }
-        
-        /* 4. RESPONSIVIDAD PARA PANTALLAS PEQUEÑAS */
-        @media (max-width: 991px) {
-            [data-testid="stMain"] {
-                margin-left: 350px !important;
-                width: calc(100% - 350px) !important;
-            }
-        }
-        /* Modificar tamaño de fuente general en la sidebar */
-        section[data-testid="stSidebar"] {
-            font-size: 14px !important; /* Ajusta este valor a tu gusto */
-        }
-    </style>
-""", unsafe_allow_html=True)
+# 8. SIDEBAR -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 with st.sidebar:
-    # 8.1. Contenedor del logo
     st.markdown('<div class="sidebar-logo"><img src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"></div>', unsafe_allow_html=True)
 
-    # 8.2. Inicializamos variables de estado (Solo si no existen)
     if 'centro_mapa' not in st.session_state:
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
     
-    # 8.3. ESTADO DE LAS CONEXIONES
     with st.expander("🔌 Conexiones BD", expanded=False):
         status_mysql_scada = "OK" if get_mysql_scada_engine() else "ERROR"
         status_mysql_tele = "OK" if get_mysql_telemetria_engine() else "ERROR"
@@ -3142,9 +2649,6 @@ with st.sidebar:
         render_status_line("BD-Diccionarios:", status_mysql_tele)
         render_status_line("BD-PostgreSQL:", status_postgres)
     
-    # --- BUSCADORES ---
-    
-    # 8.4. Buscador de Pozos
     lista_pozos_nombres = sorted(list(mapa_pozos_dict.keys()))
     pozo_buscado = st.selectbox(
         "🔍 Localizar Pozo",
@@ -3152,7 +2656,6 @@ with st.sidebar:
         format_func=lambda x: "Seleccionar" if x == "" else f"📍 {x}"
     )
 
-    # 8.4.1 Buscador de Tanques
     lista_tanques_nombres = sorted(list(mapa_tanques_dict.keys()))
     tanque_buscado = st.selectbox(
         "🛢️ Localizar Tanque",
@@ -3160,7 +2663,6 @@ with st.sidebar:
         format_func=lambda x: "Seleccionar" if x == "" else f"📦 {x} - {mapa_tanques_dict[x]['nombre']}"
     )
 
-    # 8.4.2 Buscador de Rebombeos
     lista_rebombeos_nombres = sorted(list(mapa_rebombeos_dict.keys()))
     rebombeo_buscado = st.selectbox(
         "🧊 Localizar Rebombeo",
@@ -3168,7 +2670,6 @@ with st.sidebar:
         format_func=lambda x: "Seleccionar" if x == "" else f"🔄 {x}"
     )
 
-    # 8.5. Buscador de Sectores
     lista_sectores = sorted([s['sector'] for s in sectores])
     sector_buscado = st.selectbox(
         "🏘️ Localizar Sector",
@@ -3177,19 +2678,14 @@ with st.sidebar:
         key="busqueda_sectores"
     )
 
-    # 8.5.1. BUSCADOR DE COLONIAS (BLINDADO)
     if 'gdf_colonias_lista' not in st.session_state:
         st.session_state.gdf_colonias_lista = get_todas_las_colonias()
     
     df_col = st.session_state.gdf_colonias_lista
-    
-    # Validamos que el DataFrame sea válido y contenga 'Col_atl'
     if df_col is not None and not df_col.empty and 'Col_atl' in df_col.columns:
         lista_colonias = sorted(df_col['Col_atl'].unique().tolist())
     else:
         lista_colonias = []
-        if df_col is not None and 'Col_atl' not in df_col.columns:
-            st.sidebar.error("Error: La columna 'Col_atl' no existe en los datos.")
 
     colonia_buscada = st.sidebar.selectbox(
         "🏙️ Localizar Colonia",
@@ -3198,22 +2694,16 @@ with st.sidebar:
         key="busqueda_colonias"
     )
 
-
-    # 8.6. ASIGNACIÓN DE POSICIÓN Y PRIORIDAD
     datos_sector_resaltado = None
-    
     if pozo_buscado:
         st.session_state.centro_mapa = mapa_pozos_dict[pozo_buscado]['coord']
         st.session_state.zoom_inicial = 18
-        
     elif tanque_buscado:
         st.session_state.centro_mapa = mapa_tanques_dict[tanque_buscado]['coord']
         st.session_state.zoom_inicial = 18
-        
     elif rebombeo_buscado:
         st.session_state.centro_mapa = mapa_rebombeos_dict[rebombeo_buscado]['coord']
         st.session_state.zoom_inicial = 18
-        
     elif sector_buscado:
         datos_s = next((s for s in sectores if s['sector'] == sector_buscado), None)
         if datos_s:
@@ -3223,79 +2713,52 @@ with st.sidebar:
                 coords_raw = geom['coordinates'][0][0][0] if geom['type'] == 'MultiPolygon' else geom['coordinates'][0][0]
                 st.session_state.centro_mapa = [coords_raw[1], coords_raw[0]]
                 st.session_state.zoom_inicial = 14.5
-            except:
-                pass
-
-    # NUEVA INTEGRACIÓN PARA COLONIAS
+            except: pass
     elif colonia_buscada and colonia_buscada != "":
         df = st.session_state.gdf_colonias_lista
         if df is not None:
             col_sel = df[df['Col_atl'] == colonia_buscada]
             if not col_sel.empty:
-                # GUARDAMOS LA COLONIA SELECCIONADA EN EL ESTADO
                 st.session_state.colonia_resaltada = col_sel.iloc[0]
-                
                 centro = st.session_state.colonia_resaltada.geometry.centroid
                 st.session_state.centro_mapa = [centro.y, centro.x]
                 st.session_state.zoom_inicial = 15.5
-                
     else:
-        # Si no hay nada seleccionado, mantener vista general
         st.session_state.centro_mapa = [21.8820, -102.2800]
         st.session_state.zoom_inicial = 12.5
         
-    # 8.7. BOTON ACTUALIZAR ---
     if st.button("♻️ Actualizar Datos", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
         st.rerun()
         
-    # 8.8. CONTROL DE CAPAS ---
     with st.expander("🗺️ Control de Capas", expanded=False):
-        
         ver_pozos = st.checkbox("💧 Pozos", value=True)
         ver_colonias = st.checkbox("🏙️ Colonias", value=False)
         ver_sectores = st.checkbox("🏘️ Sectores", value=True)
         ver_tanques = st.checkbox("🛢️ Tanques", value=False)
-        ver_rebombeos = st.checkbox("🧊 Rebombeos", value=False) # Activado por defecto para facilitar localización
+        ver_rebombeos = st.checkbox("🧊 Rebombeos", value=False)
         ver_macromedidores = st.checkbox("🌀 Macromedidores", value=False)
-        
     
-    # 8.9. LISTADO DE ESTADOS ---
     with st.expander(f"🟢 Bombas ON ({len(pozos_on)})", expanded=False):
-        for p in sorted(pozos_on): 
-            st.write(f"🟢 {p}")
-    
+        for p in sorted(pozos_on): st.write(f"🟢 {p}")
     with st.expander(f"🔴 Bombas OFF ({len(pozos_off)})", expanded=False):
-        for p in sorted(pozos_off): 
-            st.write(f"🔴 {p}")
-
+        for p in sorted(pozos_off): st.write(f"🔴 {p}")
     if pozos_falla_com:
         with st.expander(f"⚠️ Falla de Com. ({len(pozos_falla_com)})", expanded=False):
-            for p in sorted(pozos_falla_com):
-                st.write(f"🟠 {p}")
-    
+            for p in sorted(pozos_falla_com): st.write(f"🟠 {p}")
     if pozos_sin_telemetria:
         with st.expander(f"⚪ Sin Telemetría ({len(pozos_sin_telemetria)})", expanded=False):
-            for p in sorted(pozos_sin_telemetria): 
-                st.write(f"⚪ {p}")
+            for p in sorted(pozos_sin_telemetria): st.write(f"⚪ {p}")
 
-    # 8.10. LISTADO DE MACROMEDIDORES ---
     datos_macros = cargar_medidores_desde_db()
-
     if datos_macros:
-        # Filtramos estrictamente los registros antes de hacer cualquier otra cosa
         lista_filtrada = []
         for id_medidor, info in datos_macros.items():
-            # Convertimos a string por seguridad para comparar el ID
             id_str = str(id_medidor).strip()
             nombre = str(info.get('nombre', '')).strip()
-            
-            # Condición estricta: No debe ser '1000' y no debe ser 'Sin instalar'
             if id_str != '1000' and nombre != 'Sin instalar':
                 lista_filtrada.append((id_str, nombre))
-        
-        # Ordenamos la lista filtrada
         lista_filtrada.sort()
         
         with st.expander(f"🟣 Macromedidores ({len(lista_filtrada)})", expanded=False):
@@ -3304,387 +2767,545 @@ with st.sidebar:
     else:
         st.warning("No hay macromedidores disponibles.")
 
-# Declaración global de incidencias para que esté disponible para pozos y colonias siempre
 dic_incidencias_activas = obtener_pozos_con_incidencias_hoy() if 'obtener_pozos_con_incidencias_hoy' in globals() else {}             
-                
-# 9.  SECCION--------------------------------------------------------------------------------- 9. MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------
-st.markdown('<div class="titulo-superior">SISTEMA - AGUASCALIENTES</div>', unsafe_allow_html=True)
 
-# Indicadores usando el sistema de Grid para que ocupen todo el ancho
-c_total = total_q if 'total_q' in locals() else 0.0
-p_prom = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
 
-# Render de indicadores
-st.markdown(f"""
-    <div class="contenedor-indicadores">
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">💧 Caudal total</p><p style="color:#00ffcc; font-size:1.1rem; font-weight:bold; margin:0;">{c_total:.1f} l/s</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">📉 Presión promedio</p><p style="color:#ffff00; font-size:1.1rem; font-weight:bold; margin:0;">{p_prom:.2f} kg</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">🟢 Sitios encendidos</p><p style="color:#00ff00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_on)}</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">🔴 Sitios apagados</p><p style="color:#ff0000; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_off)}</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">⚠️ fallas de comunicación</p><p style="color:#ffaa00; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_falla_com)}</p></div>
-        <div class="card-indicador"><p style="color:#ffffff; font-size:0.8rem; margin:0;">⚪ Sin telemetria</p><p style="color:#ffffff; font-size:1.1rem; font-weight:bold; margin:0;">{len(pozos_sin_telemetria)}</p></div>
-    </div>
+
+# ==============================================================================
+# 9. ORGANIZACIÓN EN PESTAÑAS (MAPA PRINCIPAL VS INCIDENCIAS VS MIAA TANQUES)
+# ==============================================================================
+
+# 1. Obtenemos la pestaña activa de la URL (por defecto "mapa")
+query_params = st.query_params
+tab_activa = query_params.get("nav", "mapa")
+
+# 2. Inyectamos los estilos CSS para las pestañas inclinadas con efectos de brillo
+st.markdown("""
+<style>
+    .miaa-skew-bar {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        margin-bottom: 25px;
+        padding: 5px 0;
+    }
+
+    .skew-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none !important;
+        /* Inclinación tipo paralelogramo */
+        transform: skewX(-14deg);
+        background: linear-gradient(135deg, rgba(8, 25, 50, 0.85) 0%, rgba(4, 12, 25, 0.95) 100%);
+        border: 1px solid rgba(0, 140, 255, 0.25);
+        border-radius: 6px;
+        padding: 12px 10px;
+        box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.08), 0 4px 15px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Enderezamos el contenido interno para que el texto y los iconos no salgan chuecos */
+    .skew-content {
+        transform: skewX(14deg);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+    }
+
+    .skew-tab span {
+        color: #8da4c4;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.2;
+        transition: color 0.3s ease;
+    }
+
+    .skew-tab img {
+        width: 26px;
+        height: 26px;
+        object-fit: contain;
+        filter: brightness(0.8);
+        transition: filter 0.3s ease, transform 0.3s ease;
+    }
+
+    /* Efecto Hover con vida */
+    .skew-tab:hover {
+        border-color: rgba(0, 212, 255, 0.6);
+        background: linear-gradient(135deg, rgba(12, 38, 75, 0.9) 0%, rgba(6, 20, 40, 0.95) 100%);
+    }
+
+    .skew-tab:hover span {
+        color: #ffffff;
+    }
+
+    .skew-tab:hover img {
+        filter: brightness(1.1);
+        transform: scale(1.08);
+    }
+
+    /* ESTADO ACTIVO: Pestaña brillante con degradado cian intenso y resplandor (idéntico a la imagen) */
+    .skew-tab.active {
+        background: linear-gradient(135deg, #0055ff 0%, #00d4ff 100%) !important;
+        border: 1px solid #00ffff !important;
+        box-shadow: 0 0 22px rgba(0, 212, 255, 0.65), inset 0 1px 4px rgba(255, 255, 255, 0.5) !important;
+        transform: skewX(-14deg) scale(1.02);
+        z-index: 2;
+    }
+
+    .skew-tab.active span {
+        color: #ffffff !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .skew-tab.active img {
+        filter: brightness(1.2) drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+        transform: scale(1.1);
+    }
+</style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="mapa-area">', unsafe_allow_html=True)
-col_mapa, col_capas = st.columns([0.94, 0.06])
+# URL base para conservar tus parámetros de sesión y roles
+base_url = f"?access=granted&role={st.session_state.get('rol', 'usuario')}"
 
-with col_mapa:
-    m = folium.Map(
-        location=st.session_state.centro_mapa, 
-        zoom_start=st.session_state.zoom_inicial, 
-        
-    )
+# 3. Renderizamos la barra interactiva con columnas de Streamlit
+col_n1, col_n2, col_n3, col_n4 = st.columns(4)
 
-    folium.TileLayer(
-        tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-        attr='Google',
-        name='Vista Satélite',
-        overlay=False,
-        control=True
-    ).add_to(m)
-
-    folium.TileLayer(
-        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attr='Esri',
-        name='Satélite (Esri)',
-        overlay=False,
-        control=True
-    ).add_to(m)
-
-    # 2. Capas de Fondo (Vista Nocturna)
-    api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
-    
-    folium.TileLayer(
-        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-        name="Vista Nocturna",
-        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains="abcd",
-        max_zoom=20,
-        overlay=False,
-        control=True
-    ).add_to(m)
-
-    Fullscreen().add_to(m)
-
-
-# 9.2. Añadir el resaltado del sector si existe
-    if datos_sector_resaltado:
-        folium.GeoJson(
-            json.loads(datos_sector_resaltado['geo']),
-            style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 3, 'fillOpacity': 0.4}
-        ).add_to(m)
-
-    # 9.3. FUNCIÓN PARA HORARIO 00:00
-    def formato_hora(decimal):
-        try:
-            if decimal == "N/A" or decimal is None: return "00:00"
-            horas = int(float(decimal))
-            minutos = int((float(decimal) - horas) * 60)
-            return f"{horas:02d}:{minutos:02d}"
-        except:
-            return "00:00"
-
-    # 9.4. FUNCIÓN PARA ICONO PARPADEANTE PEQUEÑO (8px)
-    def get_blink_icon(color):
-        return f"""
-        <div style="
-            width: 8px; height: 8px; 
-            background-color: {color}; 
-            border-radius: 50%; 
-            box-shadow: 0 0 8px {color};
-            animation: blinker 1s linear infinite;">
-        </div>
-        <style>
-        @keyframes blinker {{ 50% {{ opacity: 0.2; }} }}
-        </style>
-        """
-
-# 9.5. RENDERIZADO DE POLÍGONOS DE SECTORES (Diccionario_sectores)
-if ver_sectores:
-    gdf_sectores = get_todos_los_sectores_geo()
-    
-    if gdf_sectores is not None and not gdf_sectores.empty:
-        lista_incidencias_sec_tooltip = []
-        lista_afectacion_sec_tooltip = []
-        lista_colonias_sec_tooltip = []
-        
-        for idx, row in gdf_sectores.iterrows():
-            suma_afec_sec = 0.0
-            descripciones_fallas_sec = []
-            
-            # Formateamos las colonias en formato de lista vertical limpia
-            col_atl_raw = str(row.get('Col_atl', ''))
-            if pd.isna(row.get('Col_atl')) or not col_atl_raw.strip():
-                colonias_html = "Sin colonias registradas"
-            else:
-                lista_c = [c.strip() for c in col_atl_raw.split(',') if c.strip()]
-                colonias_html = "<br>".join([f"• {c}" for c in lista_c])
-                
-            lista_colonias_sec_tooltip.append(colonias_html)
-            
-            for i in range(1, 11):
-                pozo_sec = row.get(f'Pozo_{i}')
-                afectacion_sec = row.get(f'Afectacion_{i}')
-                
-                if pd.notna(pozo_sec):
-                    id_p_limpio = str(pozo_sec).strip().upper()
-                    id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
-                    id_p_sin_guion = id_p_limpio.replace('-', '')
-                    
-                    if (id_p_limpio in dic_incidencias_activas or 
-                        id_p_con_guion in dic_incidencias_activas or 
-                        id_p_sin_guion in dic_incidencias_activas):
-                        
-                        falla = (
-                            dic_incidencias_activas.get(id_p_limpio) or 
-                            dic_incidencias_activas.get(id_p_con_guion) or 
-                            dic_incidencias_activas.get(id_p_sin_guion, 'Activa')
-                        )
-                        falla_txt = falla.get('diagnostico', falla.get('motivo', 'Activa')) if isinstance(falla, dict) else str(falla)
-                        descripciones_fallas_sec.append(f"{pozo_sec}: {falla_txt}")
-                        
-                        if pd.notna(afectacion_sec):
-                            try:
-                                val_str = str(afectacion_sec).replace('%', '').strip()
-                                suma_afec_sec += float(val_str)
-                            except:
-                                pass
-            
-            if descripciones_fallas_sec:
-                lista_incidencias_sec_tooltip.append(" | ".join(descripciones_fallas_sec))
-                lista_afectacion_sec_tooltip.append(f"{int(suma_afec_sec)}%" if suma_afec_sec > 0 else "N/D")
-            else:
-                lista_incidencias_sec_tooltip.append("Ninguna")
-                lista_afectacion_sec_tooltip.append("0%")
-
-        gdf_sectores['Info_Incidencia'] = lista_incidencias_sec_tooltip
-        gdf_sectores['Info_Porcentaje'] = lista_afectacion_sec_tooltip
-        gdf_sectores['Info_Colonias'] = lista_colonias_sec_tooltip
-
-        fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos")
-        
-        def estilo_final_sector(feature):
-            props = feature.get('properties', {})
-            color_dinamico, afectacion_val = calcular_color_sector(props, dic_incidencias_activas)
-            
-            if afectacion_val > 0:
-                border_color_final = color_dinamico
-                weight_final = 2.5
-                opacity_final = 0.25
-            else:
-                border_color_final = '#2980B9'
-                weight_final = 1
-                opacity_final = 0.08
-            
-            return {
-                'fillColor': color_dinamico,
-                'color': border_color_final,
-                'weight': weight_final,
-                'fillOpacity': opacity_final
-            }
-
-        def estilo_hover_sector(feature):
-            return {'fillOpacity': 0.8, 'weight': 3, 'color': '#FFFFFF'}
-
-        # Recorremos cada fila creando el Feature y añadiendo el botón de acceso al sector
-        for _, row in gdf_sectores.iterrows():
-            feature_dict = {
-                'type': 'Feature',
-                'geometry': row['geometry'].__geo_interface__,
-                'properties': row.drop('geometry').to_dict()
-            }
-            
-            props = feature_dict['properties']
-            color_dinamico, _ = calcular_color_sector(props, dic_incidencias_activas)
-            
-            nombre_sec = str(props.get('Sector', 'N/A'))
-            sector_encoded = urllib.parse.quote(nombre_sec)
-            url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
-            
-            html_popup_sector = f"""
-            <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 320px; max-height: 300px; overflow-y: auto; border: 2px solid {color_dinamico}; font-family: sans-serif;">
-                <b style="color: #00d4ff; font-size: 15px;">SECTOR: {nombre_sec}</b>
-                <hr style="border: 0.5px solid #333; margin: 6px 0;">
-                <div style="font-size: 11px; line-height: 1.4; margin-bottom: 10px;">
-                    <b>Pozos:</b> {props.get('Pozos', 'N/A')}<br>
-                    <b>Incidencia:</b> <span style="color: #ff4d4d;">{props.get('Info_Incidencia', 'Ninguna')}</span><br>
-                    <b>Afectación:</b> <span style="color: #ffff00;">{props.get('Info_Porcentaje', '0%')}</span><br>
-                    <b style="display: block; margin-top: 6px; color: #00ffcc;">Colonias afectadas:</b>
-                    <div style="margin-top: 3px; padding-left: 5px; color: #d1d5db; font-size: 10px; max-height: 100px; overflow-y: auto;">
-                        {props.get('Info_Colonias', 'Sin registro')}
-                    </div>
+with col_n1:
+    cls = "active" if tab_activa == "mapa" else ""
+    st.markdown(f"""
+        <div class="miaa-skew-bar" style="margin:0;">
+            <a href="{base_url}&nav=mapa" target="_self" class="skew-tab {cls}">
+                <div class="skew-content">
+                    <img src="https://cdn-icons-png.flaticon.com/512/854/854878.png">
+                    <span>Mapa Principal</span>
                 </div>
-                
-                <a href="{url_acceso}" target="_blank" 
-                   style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; 
-                          text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; 
-                          border-radius: 5px; transition: 0.3s;">
-                   🚀 ABRIR SECTOR
-                </a>
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col_n2:
+    cls = "active" if tab_activa == "incidencias" else ""
+    st.markdown(f"""
+        <div class="miaa-skew-bar" style="margin:0;">
+            <a href="{base_url}&nav=incidencias" target="_self" class="skew-tab {cls}">
+                <div class="skew-content">
+                    <img src="https://cdn-icons-png.flaticon.com/512/564/564619.png">
+                    <span>Incidencias Activas<br>y del día</span>
+                </div>
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col_n3:
+    cls = "active" if tab_activa == "tanques" else ""
+    st.markdown(f"""
+        <div class="miaa-skew-bar" style="margin:0;">
+            <a href="{base_url}&nav=tanques" target="_self" class="skew-tab {cls}">
+                <div class="skew-content">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3105/3105807.png">
+                    <span>Miaa Tanques</span>
+                </div>
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col_n4:
+    cls = "active" if tab_activa == "sectores" else ""
+    st.markdown(f"""
+        <div class="miaa-skew-bar" style="margin:0;">
+            <a href="{base_url}&nav=sectores" target="_self" class="skew-tab {cls}">
+                <div class="skew-content">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3105/3105785.png">
+                    <span>Sectores Hidráulicos</span>
+                </div>
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+
+# =====================================================================================================================================================================================================================================
+# PESTAÑA 1 MAPA DE POZOS, TANQUES Y REBOMBEOS
+# =====================================================================================================================================================================================================================================
+if tab_activa == "mapa":
+    st.markdown('<div class="titulo-superior">SISTEMA - AGUASCALIENTES</div>', unsafe_allow_html=True)
+
+    c_total = total_q if 'total_q' in locals() else 0.0
+    p_prom = (total_p / max(len(pozos_on), 1)) if 'total_p' in locals() else 0.0
+
+    # 3 Columnas: Mapa más ancho (0.80), separador pequeño (0.02) y panel lateral estrecho (0.18)
+    col_mapa, col_capas, col_panel_derecho = st.columns([0.85, 0.01, 0.10])
+
+    with col_panel_derecho:
+        st.markdown('<div style="margin-top: 0px;"></div>', unsafe_allow_html=True)
+        st.markdown('<h4 style="color: #00d4ff; font-size: 11px; text-align: center; margin-bottom: 16px; letter-spacing: 1px;">// ESTADO GENERAL</h4>', unsafe_allow_html=True)
+        
+        # Estilos de animación incorporados para que el sistema se vea "vivo"
+        st.markdown('''
+            <style>
+                @keyframes pulse-glow {
+                    0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(46,204,113,0.4)); }
+                    50% { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(46,204,113,0.9)); }
+                    100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(46,204,113,0.4)); }
+                }
+                @keyframes radar-spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes warning-blink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
+                }
+                @keyframes water-flow {
+                    0% { stroke-dashoffset: 24; }
+                    100% { stroke-dashoffset: 0; }
+                }
+                .icon-encendido { animation: pulse-glow 2s infinite ease-in-out; transform-origin: center; }
+                .icon-presion { animation: radar-spin 8s infinite linear; transform-origin: center; }
+                .icon-alerta { animation: warning-blink 1.2s infinite ease-in-out; }
+                .icon-flujo { stroke-dasharray: 6; animation: water-flow 1.5s infinite linear; }
+            </style>
+        ''', unsafe_allow_html=True)
+
+        # Margen inferior de 40px exactos entre cada indicador
+        estilo_tarjeta = "background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%); border: 1px solid #1f4068; border-radius: 6px; display: flex; align-items: center; margin-bottom: 40px; padding: 6px 8px; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);"
+
+        st.markdown(f'''
+            <div style="{estilo_tarjeta}">
+                <div style="flex: 0 0 32px; display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 6px; margin-right: 6px; color: #52a3f5;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="icon-flujo" d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4m-17.07 7.07l2.83-2.83m8.48-8.48l2.83-2.83"></path><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+                </div>
+                <div style="flex-grow: 1; text-align: center;">
+                    <p style="color:#a0aec0; font-size:0.55rem; font-weight:bold; margin:0 0 2px 0; text-transform:uppercase;">CAUDAL TOTAL</p>
+                    <p style="color:#00ffcc; font-size:1.0rem; font-weight:bold; margin:0; font-family:'Courier New', monospace;">{c_total:.1f} L/s</p>
+                </div>
             </div>
-            """
-            
-            folium.GeoJson(
-                feature_dict,
-                style_function=estilo_final_sector,
-                highlight_function=estilo_hover_sector,
-                popup=folium.Popup(html_popup_sector, max_width=350),
-                tooltip=f"Sector: {nombre_sec} (Clic para ver detalle)"
-            ).add_to(fg_sectores)
-        
-        fg_sectores.add_to(m)
-         
 
-# 9.6. RENDERIZADO DE POLÍGONOS DE COLONIAS __________________________________________________________________________________________________________________________________
-if ver_colonias:
-    gdf_colonias = get_todas_las_colonias()
-    
-    if gdf_colonias is not None and not gdf_colonias.empty:
-        
-        lista_incidencias_tooltip = []
-        lista_afectacion_tooltip = []
-        
-        for idx, row in gdf_colonias.iterrows():
-            suma_afec = 0.0
-            descripciones_fallas = []
-            
-            for i in range(1, 11):
-                pozo_col = row.get(f'Pozo_{i}')
-                afectacion_col = row.get(f'Afectacion_{i}')
-                
-                if pd.notna(pozo_col):
-                    id_p_limpio = str(pozo_col).strip().upper()
-                    id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
-                    id_p_sin_guion = id_p_limpio.replace('-', '')
-                    
-                    if (id_p_limpio in dic_incidencias_activas or 
-                        id_p_con_guion in dic_incidencias_activas or 
-                        id_p_sin_guion in dic_incidencias_activas):
-                        
-                        falla = (
-                            dic_incidencias_activas.get(id_p_limpio) or 
-                            dic_incidencias_activas.get(id_p_con_guion) or 
-                            dic_incidencias_activas.get(id_p_sin_guion, 'Activa')
-                        )
-                        if isinstance(falla, dict):
-                            falla_txt = falla.get('diagnostico', falla.get('motivo', 'Activa'))
-                        else:
-                            falla_txt = str(falla)
-                            
-                        descripciones_fallas.append(f"{pozo_col}: {falla_txt}")
-                        
-                        if pd.notna(afectacion_col):
-                            try:
-                                val_str = str(afectacion_col).replace('%', '').strip()
-                                val_f = float(val_str)
-                                suma_afec += val_f  # ⚠️ Suma acumulativa para el tooltip
-                            except:
-                                pass
-            
-            if descripciones_fallas:
-                lista_incidencias_tooltip.append(" | ".join(descripciones_fallas))
-                lista_afectacion_tooltip.append(f"{int(suma_afec)}%" if suma_afec > 0 else "N/D")
-            else:
-                lista_incidencias_tooltip.append("Ninguna")
-                lista_afectacion_tooltip.append("0%")
+            <div style="{estilo_tarjeta}">
+                <div style="flex: 0 0 32px; display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 6px; margin-right: 6px; color: #52a3f5;">
+                    <svg class="icon-presion" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                </div>
+                <div style="flex-grow: 1; text-align: center;">
+                    <p style="color:#a0aec0; font-size:0.55rem; font-weight:bold; margin:0 0 2px 0; text-transform:uppercase;">PRESIÓN PROMEDIO</p>
+                    <p style="color:#ffff00; font-size:1.0rem; font-weight:bold; margin:0; font-family:'Courier New', monospace;">{p_prom:.2f} kg</p>
+                </div>
+            </div>
 
-        gdf_colonias['Info_Incidencia'] = lista_incidencias_tooltip
-        gdf_colonias['Info_Porcentaje'] = lista_afectacion_tooltip
+            <div style="{estilo_tarjeta}">
+                <div style="flex: 0 0 32px; display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 6px; margin-right: 6px; color: #2ecc71;">
+                    <svg class="icon-encendido" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4" fill="currentColor"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2m-15.07 7.07l1.41-1.41m11.32-11.32l1.41-1.41"></path></svg>
+                </div>
+                <div style="flex-grow: 1; text-align: center;">
+                    <p style="color:#a0aec0; font-size:0.55rem; font-weight:bold; margin:0 0 2px 0; text-transform:uppercase;">SITIOS ENCENDIDOS</p>
+                    <p style="color:#00ff00; font-size:1.0rem; font-weight:bold; margin:0; font-family:'Courier New', monospace;">{len(pozos_on)}</p>
+                </div>
+            </div>
 
-        fg_colonias = folium.FeatureGroup(name="Colonias")
-        
-        def estilo_final(feature):
-            props = feature.get('properties', {})
-            nombre_actual = props.get('Col_atl')
-            col_sel = st.session_state.get('colonia_resaltada')
-            es_match = (col_sel is not None and nombre_actual == col_sel.get('Col_atl'))
-            
-            color_dinamico, afectacion_val = calcular_color_colonia(props, dic_incidencias_activas)
-            fill_color_final = '#F1C40F' if es_match else color_dinamico
-            
-            if es_match:
-                border_color_final = '#F39C12'
-                weight_final = 3
-                opacity_final = 0.5
-            elif afectacion_val > 0:
-                border_color_final = color_dinamico
-                weight_final = 2.5
-                opacity_final = 0.25
-            else:
-                border_color_final = '#2980B9'
-                weight_final = 1
-                opacity_final = 0.08
-            
-            return {
-                'fillColor': fill_color_final,
-                'color': border_color_final,
-                'weight': weight_final,
-                'fillOpacity': opacity_final
-            }
+            <div style="{estilo_tarjeta}">
+                <div style="flex: 0 0 32px; display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 6px; margin-right: 6px; color: #e74c3c;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><text x="12" y="16" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" font-weight="bold">A</text></svg>
+                </div>
+                <div style="flex-grow: 1; text-align: center;">
+                    <p style="color:#a0aec0; font-size:0.55rem; font-weight:bold; margin:0 0 2px 0; text-transform:uppercase;">SITIOS APAGADOS</p>
+                    <p style="color:#ff4d4d; font-size:1.0rem; font-weight:bold; margin:0; font-family:'Courier New', monospace;">{len(pozos_off)}</p>
+                </div>
+            </div>
 
-        def estilo_hover(feature):
-            return {'fillOpacity': 0.8, 'weight': 4, 'color': '#FFFFFF'}
+            <div style="{estilo_tarjeta}">
+                <div style="flex: 0 0 32px; display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 6px; margin-right: 6px; color: #f39c12;">
+                    <svg class="icon-alerta" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div style="flex-grow: 1; text-align: center;">
+                    <p style="color:#a0aec0; font-size:0.55rem; font-weight:bold; margin:0 0 2px 0; text-transform:uppercase;">FALLAS COMUNICACIÓN</p>
+                    <p style="color:#ffaa00; font-size:1.0rem; font-weight:bold; margin:0; font-family:'Courier New', monospace;">{len(pozos_falla_com)}</p>
+                </div>
+            </div>
 
-        folium.GeoJson(
-            gdf_colonias,
-            name="Colonias",
-            style_function=estilo_final,
-            highlight_function=estilo_hover,
-            tooltip=folium.GeoJsonTooltip(
-                fields=['Col_atl', 'Pozos', 'Sector', 'Distrito', 'Info_Incidencia', 'Info_Porcentaje'],
-                aliases=['Colonia:', 'Pozos:', 'Sector:', 'Distrito:', 'Incidencia:', 'Afectación:'],
-                localize=True,
-                sticky=True
-            )
-        ).add_to(fg_colonias)
-        
-        fg_colonias.add_to(m)
+            <div style="{estilo_tarjeta}">
+                <div style="flex: 0 0 32px; display: flex; justify-content: center; align-items: center; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 6px; margin-right: 6px; color: #95a5a6;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+                </div>
+                <div style="flex-grow: 1; text-align: center;">
+                    <p style="color:#a0aec0; font-size:0.55rem; font-weight:bold; margin:0 0 2px 0; text-transform:uppercase;">SIN TELEMETRÍA</p>
+                    <p style="color:#ffffff; font-size:1.0rem; font-weight:bold; margin:0; font-family:'Courier New', monospace;">{len(pozos_sin_telemetria)}</p>
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
 
-      
-    
-# 9.7. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL  ___________________________________________________________________________________________________________________________________
-
-if ver_pozos:  
-    fg_pozos = folium.FeatureGroup(name="Pozos", overlay=True, control=True)
-
-    for id_p, info in mapa_pozos_dict.items():
-        d = lambda tag: data_scada.get(tag, (0, "N/A"))
-        is_st = (info['status_label'] == 'SIN TELEMETRÍA')
-        q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
-        p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
-        sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
-        dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
-        tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
-        col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
-        h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
-        h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
-        h_arr_fmt = formato_hora(h_arr_val)
-        h_par_fmt = formato_hora(h_par_val)
-        v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
-        a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
-
-        # ==========================================
-        # AQUÍ VA LA VALIDACIÓN TOLERANTE CON/SIN GUION
-        # ==========================================
-        id_p_limpio = str(id_p).strip().upper()
-        
-        # Generar posibles variantes con o sin guion y con sufijos de letra (ej. P087A / P-087A)
-        id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
-        id_p_sin_guion = id_p_limpio.replace('-', '')
-        
-        tiene_incidencia_activa = (
-            id_p_limpio in dic_incidencias_activas or 
-            id_p_con_guion in dic_incidencias_activas or 
-            id_p_sin_guion in dic_incidencias_activas
+    with col_mapa:
+        st.markdown('<div class="mapa-area">', unsafe_allow_html=True)
+        m = folium.Map(
+            location=st.session_state.centro_mapa, 
+            zoom_start=st.session_state.zoom_inicial, 
         )
 
-        rol_actual = st.session_state.get('rol', 'usuario')
-        nombre_codificado = urllib.parse.quote(id_p)
-        
-        url_pozo_graf = f"?graficar_pozo={id_p}&nombre={nombre_codificado}&access=granted&role={rol_actual}"
+        folium.TileLayer(
+            tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+            attr='Google',
+            name='Vista Satélite',
+            overlay=False,
+            control=True
+        ).add_to(m)
 
-        html_popup = f"""
+        folium.TileLayer(
+            tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            attr='Esri',
+            name='Satélite (Esri)',
+            overlay=False,
+            control=True
+        ).add_to(m)
+
+        api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+        folium.TileLayer(
+            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+            name="Vista Nocturna",
+            attr='&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
+        ).add_to(m)
+
+        Fullscreen().add_to(m)
+
+# 9.2. Añadir el resaltado del sector si existe
+        if datos_sector_resaltado:
+            folium.GeoJson(
+                json.loads(datos_sector_resaltado['geo']),
+                style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 3, 'fillOpacity': 0.4}
+            ).add_to(m)
+
+         
+# 9.5. RENDERIZADO DE POLÍGONOS DE SECTORES (Diccionario_sectores) ----------------------------------------------------------------------------------------------------------------------------------------------
+        if ver_sectores:
+            gdf_sectores = get_todos_los_sectores_geo()
+            if gdf_sectores is not None and not gdf_sectores.empty:
+                lista_incidencias_sec_tooltip = []
+                lista_afectacion_sec_tooltip = []
+                lista_colonias_sec_tooltip = []
+                
+                for idx, row in gdf_sectores.iterrows():
+                    suma_afec_sec = 0.0
+                    descripciones_fallas_sec = []
+                    col_atl_raw = str(row.get('Col_atl', ''))
+                    if pd.isna(row.get('Col_atl')) or not col_atl_raw.strip():
+                        colonias_html = "Sin colonias registradas"
+                    else:
+                        lista_c = [c.strip() for c in col_atl_raw.split(',') if c.strip()]
+                        colonias_html = "<br>".join([f"• {c}" for c in lista_c])
+                    lista_colonias_sec_tooltip.append(colonias_html)
+                    
+                    for i in range(1, 11):
+                        pozo_sec = row.get(f'Pozo_{i}')
+                        afectacion_sec = row.get(f'Afectacion_{i}')
+                        if pd.notna(pozo_sec):
+                            id_p_limpio = str(pozo_sec).strip().upper()
+                            id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
+                            id_p_sin_guion = id_p_limpio.replace('-', '')
+                            
+                            if (id_p_limpio in dic_incidencias_activas or 
+                                id_p_con_guion in dic_incidencias_activas or 
+                                id_p_sin_guion in dic_incidencias_activas):
+                                
+                                falla = (
+                                    dic_incidencias_activas.get(id_p_limpio) or 
+                                    dic_incidencias_activas.get(id_p_con_guion) or 
+                                    dic_incidencias_activas.get(id_p_sin_guion, 'Activa')
+                                )
+                                falla_txt = falla.get('diagnostico', falla.get('motivo', 'Activa')) if isinstance(falla, dict) else str(falla)
+                                descripciones_fallas_sec.append(f"{pozo_sec}: {falla_txt}")
+                                
+                                if pd.notna(afectacion_sec):
+                                    try:
+                                        val_str = str(afectacion_sec).replace('%', '').strip()
+                                        suma_afec_sec += float(val_str)
+                                    except: pass
+                    
+                    if descripciones_fallas_sec:
+                        lista_incidencias_sec_tooltip.append(" | ".join(descripciones_fallas_sec))
+                        lista_afectacion_sec_tooltip.append(f"{int(suma_afec_sec)}%" if suma_afec_sec > 0 else "N/D")
+                    else:
+                        lista_incidencias_sec_tooltip.append("Ninguna")
+                        lista_afectacion_sec_tooltip.append("0%")
+
+                gdf_sectores['Info_Incidencia'] = lista_incidencias_sec_tooltip
+                gdf_sectores['Info_Porcentaje'] = lista_afectacion_sec_tooltip
+                gdf_sectores['Info_Colonias'] = lista_colonias_sec_tooltip
+
+                fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos")
+                def estilo_final_sector(feature):
+                    props = feature.get('properties', {})
+                    color_dinamico, afectacion_val = calcular_color_sector(props, dic_incidencias_activas)
+                    if afectacion_val > 0:
+                        border_color_final = color_dinamico
+                        weight_final = 2.5
+                        opacity_final = 0.25
+                    else:
+                        border_color_final = '#2980B9'
+                        weight_final = 1
+                        opacity_final = 0.08
+                    return {'fillColor': color_dinamico, 'color': border_color_final, 'weight': weight_final, 'fillOpacity': opacity_final}
+
+                def estilo_hover_sector(feature):
+                    return {'fillOpacity': 0.8, 'weight': 3, 'color': '#FFFFFF'}
+
+                for _, row in gdf_sectores.iterrows():
+                    feature_dict = {
+                        'type': 'Feature',
+                        'geometry': row['geometry'].__geo_interface__,
+                        'properties': row.drop('geometry').to_dict()
+                    }
+                    props = feature_dict['properties']
+                    color_dinamico, _ = calcular_color_sector(props, dic_incidencias_activas)
+                    nombre_sec = str(props.get('Sector', 'N/A'))
+                    sector_encoded = urllib.parse.quote(nombre_sec)
+                    url_acceso = f"/?sector={sector_encoded}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+                    
+                    html_popup_sector = f"""
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 320px; max-height: 300px; overflow-y: auto; border: 2px solid {color_dinamico}; font-family: sans-serif;">
+                        <b style="color: #00d4ff; font-size: 15px;">SECTOR: {nombre_sec}</b>
+                        <hr style="border: 0.5px solid #333; margin: 6px 0;">
+                        <div style="font-size: 11px; line-height: 1.4; margin-bottom: 10px;">
+                            <b>Pozos:</b> {props.get('Pozos', 'N/A')}<br>
+                            <b>Incidencia:</b> <span style="color: #ff4d4d;">{props.get('Info_Incidencia', 'Ninguna')}</span><br>
+                            <b>Afectación:</b> <span style="color: #ffff00;">{props.get('Info_Porcentaje', '0%')}</span><br>
+                            <b style="display: block; margin-top: 6px; color: #00ffcc;">Colonias afectadas:</b>
+                            <div style="margin-top: 3px; padding-left: 5px; color: #d1d5db; font-size: 10px; max-height: 100px; overflow-y: auto;">
+                                {props.get('Info_Colonias', 'Sin registro')}
+                            </div>
+                        </div>
+                        <a href="{url_acceso}" target="_blank" style="display: block; text-align: center; background-color: #00d4ff; color: #0b1a29; text-decoration: none; font-weight: bold; font-size: 12px; padding: 8px; border-radius: 5px; transition: 0.3s;">🚀 ABRIR SECTOR</a>
+                    </div>
+                    """
+                    folium.GeoJson(
+                        feature_dict,
+                        style_function=estilo_final_sector,
+                        highlight_function=estilo_hover_sector,
+                        popup=folium.Popup(html_popup_sector, max_width=350),
+                        tooltip=f"Sector: {nombre_sec} (Clic para ver detalle)"
+                    ).add_to(fg_sectores)
+                fg_sectores.add_to(m)
+
+# 9.6. RENDERIZADO DE POLÍGONOS DE COLONIAS --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+        if ver_colonias:
+            gdf_colonias = get_todas_las_colonias()
+            if gdf_colonias is not None and not gdf_colonias.empty:
+                lista_incidencias_tooltip = []
+                lista_afectacion_tooltip = []
+                
+                for idx, row in gdf_colonias.iterrows():
+                    suma_afec = 0.0
+                    descripciones_fallas = []
+                    for i in range(1, 11):
+                        pozo_col = row.get(f'Pozo_{i}')
+                        afectacion_col = row.get(f'Afectacion_{i}')
+                        if pd.notna(pozo_col):
+                            id_p_limpio = str(pozo_col).strip().upper()
+                            id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
+                            id_p_sin_guion = id_p_limpio.replace('-', '')
+                            
+                            if (id_p_limpio in dic_incidencias_activas or 
+                                id_p_con_guion in dic_incidencias_activas or 
+                                id_p_sin_guion in dic_incidencias_activas):
+                                
+                                falla = (
+                                    dic_incidencias_activas.get(id_p_limpio) or 
+                                    dic_incidencias_activas.get(id_p_con_guion) or 
+                                    dic_incidencias_activas.get(id_p_sin_guion, 'Activa')
+                                )
+                                falla_txt = falla.get('diagnostico', falla.get('motivo', 'Activa')) if isinstance(falla, dict) else str(falla)
+                                descripciones_fallas.append(f"{pozo_col}: {falla_txt}")
+                                
+                                if pd.notna(afectacion_col):
+                                    try:
+                                        val_str = str(afectacion_col).replace('%', '').strip()
+                                        suma_afec += float(val_str)
+                                    except: pass
+                    
+                    if descripciones_fallas:
+                        lista_incidencias_tooltip.append(" | ".join(descripciones_fallas))
+                        lista_afectacion_tooltip.append(f"{int(suma_afec)}%" if suma_afec > 0 else "N/D")
+                    else:
+                        lista_incidencias_tooltip.append("Ninguna")
+                        lista_afectacion_tooltip.append("0%")
+
+                gdf_colonias['Info_Incidencia'] = lista_incidencias_tooltip
+                gdf_colonias['Info_Porcentaje'] = lista_afectacion_tooltip
+
+                fg_colonias = folium.FeatureGroup(name="Colonias")
+                def estilo_final(feature):
+                    props = feature.get('properties', {})
+                    nombre_actual = props.get('Col_atl')
+                    col_sel = st.session_state.get('colonia_resaltada')
+                    es_match = (col_sel is not None and nombre_actual == col_sel.get('Col_atl'))
+                    color_dinamico, afectacion_val = calcular_color_colonia(props, dic_incidencias_activas)
+                    fill_color_final = '#F1C40F' if es_match else color_dinamico
+                    
+                    if es_match:
+                        border_color_final, weight_final, opacity_final = '#F39C12', 3, 0.5
+                    elif afectacion_val > 0:
+                        border_color_final, weight_final, opacity_final = color_dinamico, 2.5, 0.25
+                    else:
+                        border_color_final, weight_final, opacity_final = '#2980B9', 1, 0.08
+                    
+                    return {'fillColor': fill_color_final, 'color': border_color_final, 'weight': weight_final, 'fillOpacity': opacity_final}
+
+                def estilo_hover(feature):
+                    return {'fillOpacity': 0.8, 'weight': 4, 'color': '#FFFFFF'}
+
+                folium.GeoJson(
+                    gdf_colonias,
+                    name="Colonias",
+                    style_function=estilo_final,
+                    highlight_function=estilo_hover,
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=['Col_atl', 'Pozos', 'Sector', 'Distrito', 'Info_Incidencia', 'Info_Porcentaje'],
+                        aliases=['Colonia:', 'Pozos:', 'Sector:', 'Distrito:', 'Incidencia:', 'Afectación:'],
+                        localize=True, sticky=True
+                    )
+                ).add_to(fg_colonias)
+                fg_colonias.add_to(m)
+
+# 9.7. RENDERIZADO DE POZOS EN EL MAPA PRINCIPAL  -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+        if ver_pozos:  
+            fg_pozos = folium.FeatureGroup(name="Pozos", overlay=True, control=True)
+            for id_p, info in mapa_pozos_dict.items():
+                d = lambda tag: data_scada.get(tag, (0, "N/A"))
+                is_st = (info['status_label'] == 'SIN TELEMETRÍA')
+                q, f_q = d(info['caudal']) if not is_st else (0.0, "N/A")
+                p, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+                sumer, f_s = d(info['sumergencia']) if not is_st else (0.0, "N/A")
+                dinam, f_d = d(info['nivel_dinamico']) if not is_st else (0.0, "N/A")
+                tanq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
+                col, f_col = d(info['columna']) if not is_st else (0.0, "N/A")
+                h_arr_val, f_h_arr = d(info['h_arranque']) if not is_st else (0.0, "N/A")
+                h_par_val, f_h_par = d(info['h_paro']) if not is_st else (0.0, "N/A")
+                h_arr_fmt = formato_hora(h_arr_val)
+                h_par_fmt = formato_hora(h_par_val)
+                v = [d(t) for t in info['voltajes_l']] if not is_st else [(0.0, "N/A")]*3
+                a = [d(t) for t in info['amperajes_l']] if not is_st else [(0.0, "N/A")]*3
+
+                id_p_limpio = str(id_p).strip().upper()
+                id_p_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_p_limpio)
+                id_p_sin_guion = id_p_limpio.replace('-', '')
+                
+                tiene_incidencia_activa = (
+                    id_p_limpio in dic_incidencias_activas or 
+                    id_p_con_guion in dic_incidencias_activas or 
+                    id_p_sin_guion in dic_incidencias_activas
+                )
+
+                rol_actual = st.session_state.get('rol', 'usuario')
+                nombre_codificado = urllib.parse.quote(id_p)
+                url_pozo_graf = f"?graficar_pozo={id_p}&nombre={nombre_codificado}&access=granted&role={rol_actual}"
+
+                html_popup = f"""
             <div style="background: #050505; color: white; padding: 15px; border-radius: 12px; width: 380px; border: 1px solid {info['color_final']}; font-family: sans-serif;">
                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
                     <b style="color: #00d4ff; font-size: 16px;">POZO {id_p}</b>
@@ -3767,155 +3388,84 @@ if ver_pozos:
             </div>
             """
 
-        # 1. Etiqueta de texto del pozo
-        folium.Marker(
-            location=info['coord'],
-            icon=folium.DivIcon(
-                icon_size=(150,36),
-                icon_anchor=(-12, 6),
-                html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]}; white-space: nowrap; text-shadow: 1px 1px #000; pointer-events: none;">{id_p}</div>'
-            )
-        ).add_to(fg_pozos)
-
-        # ==========================================
-        # 2. MARCADOR CONDICIONAL (GLOBO DESPLAZADO MÁS A LA DERECHA)
-        # ==========================================
-        if tiene_incidencia_activa:
-            info_incidencia = (
-                dic_incidencias_activas.get(id_p_limpio) or 
-                dic_incidencias_activas.get(id_p_con_guion) or 
-                dic_incidencias_activas.get(id_p_sin_guion, {})
-            )
-            
-            if isinstance(info_incidencia, dict):
-                diagnostico_falla = info_incidencia.get('diagnostico', info_incidencia.get('motivo', 'FALLA'))
-            else:
-                diagnostico_falla = str(info_incidencia)
-            
-            # Ampliamos el contenedor y movemos la tarjeta más a la derecha (left: 75px)
-            html_globo_incidencia = f"""
-            <div style="position: relative; width: 350px; height: 80px; pointer-events: none; font-family: sans-serif;">
-                <!-- Línea SVG conectora más larga -->
-                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;">
-                    <line x1="15" y1="65" x2="75" y2="35" stroke="#ff4d4d" stroke-width="2" />
-                    <!-- Puntito blanco exacto sobre la coordenada del pozo -->
-                    <circle cx="15" cy="65" r="4" fill="#ffffff" stroke="#ff4d4d" stroke-width="2" />
-                </svg>
-                
-                <!-- Tarjeta de texto desplazada aún más a la derecha -->
-                <div style="
-                    position: absolute;
-                    top: 0px;
-                    left: 75px;
-                    display: inline-flex;
-                    align-items: center;
-                    background: #000000;
-                    border: 2px solid #ff4d4d;
-                    border-radius: 6px;
-                    padding: 4px 8px;
-                    white-space: nowrap;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-                    pointer-events: auto;">
-                    <span style="font-size: 14px; margin-right: 6px;">🛠️</span>
-                    <span style="font-size: 11px; font-weight: bold; color: #ffffff; margin-right: 8px;">{id_p}</span>
-                    <span style="font-size: 10px; font-weight: bold; color: #ffffff; background: #c0392b; padding: 2px 6px; border-radius: 4px;">{diagnostico_falla.upper()}</span>
-                </div>
-            </div>
-            """
-            
-            folium.Marker(
-                location=info['coord'],
-                icon=folium.DivIcon(
-                    icon_size=(350, 80),
-                    icon_anchor=(15, 65),  # Ancla en el punto exacto del pozo
-                    html=html_globo_incidencia
-                ),
-                popup=folium.Popup(html_popup, max_width=450),
-                tooltip=f"⚠️ POZO {id_p} - {diagnostico_falla}"
-            ).add_to(fg_pozos)
-            
-        elif info.get('blink'):
-            folium.Marker(
-                location=info['coord'],
-                icon=folium.DivIcon(html=get_blink_icon(info['color_final'])),
-                popup=folium.Popup(html_popup, max_width=450)
-            ).add_to(fg_pozos)
-        else:
-            folium.CircleMarker(
-                location=info['coord'],
-                radius=3,
-                color=info['color_final'],
-                fill=True,
-                fill_color=info['color_final'],
-                fill_opacity=1,
-                popup=folium.Popup(html_popup, max_width=450)
-            ).add_to(fg_pozos)
-
-    fg_pozos.add_to(m)
-          
-
-# 9.8. RENDERIZADO DE TANQUES EN EL MAPA PRINCIPAL ________________________________________________________________________________________________________________________________
-    if ver_tanques:
-        for id_tq, info in mapa_tanques_dict.items():
-            try:
-                val_nivel, fecha_tq = data_scada.get(info['tag_nivel'], (0, "N/A"))
-                n_max = info['nivel_max'] if info['nivel_max'] else 1.0
-                porcentaje = (val_nivel / n_max) * 100
-                
-                url_grafico = (
-                    f"?graficar_tanque={info['tag_nivel']}"
-                    f"&nombre={info['nombre'].replace(' ', '%20')}"
-                    f"&access=granted"
-                    f"&role={st.session_state.get('rol', 'usuario')}"
-                )
-
-                html_popup_tq = f"""
-                <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 250px; border: 2px solid #00d4ff; font-family: sans-serif;">
-                    <b style="color: #00d4ff; font-size: 14px;">TANQUE: {info['nombre']}</b><br>
-                    <hr style="border: 0.5px solid #333;">
-                    <div style="font-size: 12px; margin-bottom: 10px;">
-                        💧 Nivel Actual: <b>{val_nivel:.2f} m</b>
-                    </div>
-                    
-                    <div style="text-align: center;">
-                        <a href="{url_grafico}" target="_blank" 
-                           style="background-color: #00d4ff; color: black; padding: 10px; 
-                                  text-decoration: none; border-radius: 5px; font-weight: bold; 
-                                  font-size: 11px; display: inline-block; width: 90%; border: 1px solid #00d4ff;">
-                            📊 VER GRÁFICO HISTÓRICO
-                        </a>
-                    </div>
-                    <div style="margin-top: 10px; font-size: 9px; color: #888; text-align: center;">ID: {id_tq}</div>
-                </div>
-                """
-                
-                folium.RegularPolygonMarker(
-                    location=info['coord'],
-                    number_of_sides=6, radius=5, color="#00d4ff", fill=True, fill_color="#00d4ff",
-                    popup=folium.Popup(html_popup_tq, max_width=300),
-                    tooltip=f"Tanque: {info['nombre']}"
-                ).add_to(m)
-
                 folium.Marker(
                     location=info['coord'],
                     icon=folium.DivIcon(
-                        icon_anchor=(20, -10),
-                        html=f'<div style="font-size: 9px; font-weight: bold; color: #00d4ff; text-shadow: 1px 1px #000;">{id_tq}</div>'
+                        icon_size=(150,36),
+                        icon_anchor=(-12, 6),
+                        html=f'<div style="font-size: 9px; font-weight: bold; color: {info["color_final"]}; white-space: nowrap; text-shadow: 1px 1px #000; pointer-events: none;">{id_p}</div>'
                     )
-                ).add_to(m)
-            except: continue
-            
-# 9.9.  RENDERIZADO DE REBOMBEOS EN EL MAPA PRINCIPAL ___________________________________________________________________________________________________________________
-    if ver_rebombeos:
-        for id_rb, info in mapa_rebombeos_dict.items():
-            try:
-                d = lambda tag: data_scada.get(tag, (0, "N/A"))
-                pres, f_p = d(info['presion'])
-                ntq, f_t = d(info['nivel_tanque'])
-                v_rb = [d(t) for t in info['voltajes_l']]
-                a_rb = [d(t) for t in info['amperajes_l']]
+                ).add_to(fg_pozos)
 
-                html_popup_rb = f"""
+                if tiene_incidencia_activa:
+                    info_incidencia = (
+                        dic_incidencias_activas.get(id_p_limpio) or 
+                        dic_incidencias_activas.get(id_p_con_guion) or 
+                        dic_incidencias_activas.get(id_p_sin_guion, {})
+                    )
+                    diagnostico_falla = info_incidencia.get('diagnostico', info_incidencia.get('motivo', 'FALLA')) if isinstance(info_incidencia, dict) else str(info_incidencia)
+                    
+                    html_globo_incidencia = f"""
+                    <div style="position: relative; width: 350px; height: 80px; pointer-events: none; font-family: sans-serif;">
+                        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;">
+                            <line x1="15" y1="65" x2="75" y2="35" stroke="#ff4d4d" stroke-width="2" />
+                            <circle cx="15" cy="65" r="4" fill="#ffffff" stroke="#ff4d4d" stroke-width="2" />
+                        </svg>
+                        <div style="position: absolute; top: 0px; left: 75px; display: inline-flex; align-items: center; background: #000000; border: 2px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.6); pointer-events: auto;">
+                            <span style="font-size: 14px; margin-right: 6px;">🛠️</span>
+                            <span style="font-size: 11px; font-weight: bold; color: #ffffff; margin-right: 8px;">{id_p}</span>
+                            <span style="font-size: 10px; font-weight: bold; color: #ffffff; background: #c0392b; padding: 2px 6px; border-radius: 4px;">{diagnostico_falla.upper()}</span>
+                        </div>
+                    </div>
+                    """
+                    folium.Marker(
+                        location=info['coord'],
+                        icon=folium.DivIcon(icon_size=(350, 80), icon_anchor=(15, 65), html=html_globo_incidencia),
+                        popup=folium.Popup(html_popup, max_width=450),
+                        tooltip=f"⚠️ POZO {id_p} - {diagnostico_falla}"
+                    ).add_to(fg_pozos)
+                elif info.get('blink'):
+                    folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup, max_width=450)).add_to(fg_pozos)
+                else:
+                    folium.CircleMarker(location=info['coord'], radius=3, color=info['color_final'], fill=True, fill_color=info['color_final'], fill_opacity=1, popup=folium.Popup(html_popup, max_width=450)).add_to(fg_pozos)
+
+            fg_pozos.add_to(m)
+
+
+# 9.8. RENDERIZADO DE TANQUES EN EL MAPA PRINCIPAL  -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if ver_tanques:
+            for id_tq, info in mapa_tanques_dict.items():
+                try:
+                    val_nivel, fecha_tq = data_scada.get(info['tag_nivel'], (0, "N/A"))
+                    url_grafico = f"?graficar_tanque={info['tag_nivel']}&nombre={info['nombre'].replace(' ', '%20')}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+
+                    html_popup_tq = f"""
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 250px; border: 2px solid #00d4ff; font-family: sans-serif;">
+                        <b style="color: #00d4ff; font-size: 14px;">TANQUE: {info['nombre']}</b><br>
+                        <hr style="border: 0.5px solid #333;">
+                        <div style="font-size: 12px; margin-bottom: 10px;">💧 Nivel Actual: <b>{val_nivel:.2f} m</b></div>
+                        <div style="text-align: center;">
+                            <a href="{url_grafico}" target="_blank" style="background-color: #00d4ff; color: black; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 11px; display: inline-block; width: 90%; border: 1px solid #00d4ff;">📊 VER GRÁFICO HISTÓRICO</a>
+                        </div>
+                    </div>
+                    """
+                    folium.RegularPolygonMarker(location=info['coord'], number_of_sides=6, radius=5, color="#00d4ff", fill=True, fill_color="#00d4ff", popup=folium.Popup(html_popup_tq, max_width=300), tooltip=f"Tanque: {info['nombre']}").add_to(m)
+                except: continue
+
+# 9.9.  RENDERIZADO DE REBOMBEOS EN EL MAPA PRINCIPAL -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if ver_rebombeos:
+            for id_rb, info in mapa_rebombeos_dict.items():
+                try:
+                    d = lambda tag: data_scada.get(tag, (0, "N/A"))
+                    is_st = (info.get('status_label') == 'SIN TELEMETRÍA')
+                    
+                    pres, f_p = d(info['presion']) if not is_st else (0.0, "N/A")
+                    ntq, f_t = d(info['nivel_tanque']) if not is_st else (0.0, "N/A")
+                    
+                    v_rb = [d(t) for t in info.get('voltajes_l', [])] if not is_st and info.get('voltajes_l') else [(0.0, "N/A")]*3
+                    a_rb = [d(t) for t in info.get('amperajes_l', [])] if not is_st and info.get('amperajes_l') else [(0.0, "N/A")]*3
+
+                    html_popup_rb = f"""
                 <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 300px; border: 2px solid {info['color_final']}; font-family: sans-serif;">
                     <div style="display: flex; justify-content: space-between;">
                         <b style="color: {info['color_final']}; font-size: 14px;">REBOMBEO: {id_rb}</b>
@@ -3936,611 +3486,2135 @@ if ver_pozos:
                     </table>
                 </div>
                 """
-                if info.get('blink'):
-                    folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup_rb, max_width=350)).add_to(m)
-                else:
-                    folium.RegularPolygonMarker(location=info['coord'], number_of_sides=4, radius=6, color=info['color_final'], fill=True, fill_color=info['color_final'], popup=folium.Popup(html_popup_rb, max_width=350)).add_to(m)
+                    
+                    if info.get('blink'):
+                        folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup_rb, max_width=350)).add_to(m)
+                    else:
+                        folium.RegularPolygonMarker(location=info['coord'], number_of_sides=4, radius=6, color=info['color_final'], fill=True, fill_color=info['color_final'], popup=folium.Popup(html_popup_rb, max_width=350)).add_to(m)
+                except: continue
+
+# 9.10. RENDERIZADO DE MACROMEDIDORES EN EL MAPA PRINCIPAL ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if ver_macromedidores:
+            from datetime import datetime, timedelta
+            datos_macromedidores = cargar_medidores_desde_db()
+            fecha_limite = datetime.now() - timedelta(days=5)
+
+            for id_mm, info in datos_macromedidores.items():
+                # --- FILTRO ---
+                if str(id_mm) == '1000' or info.get('nombre') == 'Sin instalar':
+                    continue
+
+                # --- LÓGICA DE ESTADO Y COLOR ---
+                es_falla = info['ultima_fecha'] < fecha_limite
                 
-                folium.Marker(location=info['coord'], icon=folium.DivIcon(icon_anchor=(-15, 15), html=f'<div style="font-size: 10px; font-weight: bold; color: {info["color_final"]}; text-shadow: 1px 1px #000;">{id_rb}</div>')).add_to(m)
-            except:
-                continue
-                MousePosition().add_to(m_sec)
+                color_borde = '#FF0000' if es_falla else '#B19CD9'
+                color_relleno = '#8B0000' if es_falla else '#800080'
+                color_popup = '#FF0000' if es_falla else '#800080'
+                clase_animacion = "pulsante" if es_falla else ""
 
-# 9.10. RENDERIZADO DE MACROMEDIDORES EN EL MAPA PRINCIPAL ___________________________________________________________________________________________________________________
-    if ver_macromedidores:
-        from datetime import datetime, timedelta
-        datos_macromedidores = cargar_medidores_desde_db()
-        fecha_limite = datetime.now() - timedelta(days=5)
-
-        for id_mm, info in datos_macromedidores.items():
-            # --- FILTRO ---
-            if str(id_mm) == '1000' or info.get('nombre') == 'Sin instalar':
-                continue
-
-            # --- LÓGICA DE ESTADO Y COLOR ---
-            es_falla = info['ultima_fecha'] < fecha_limite
-            
-            color_borde = '#FF0000' if es_falla else '#B19CD9'
-            color_relleno = '#8B0000' if es_falla else '#800080'
-            color_popup = '#FF0000' if es_falla else '#800080'
-            clase_animacion = "pulsante" if es_falla else ""
-
-            try:
-                # Recuperamos la lógica completa del botón de gráfico
-                url_pestaña = f"?ver_grafico={id_mm}&nombre={info.get('nombre', 'Medidor').replace(' ', '%20')}&access=granted&role={st.session_state.get('rol', 'usuario')}"
-                
-                html_popup_mm = f"""
-                <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 220px; border: 2px solid {color_popup}; font-family: sans-serif;">
-                    <b style="color: {color_popup}; font-size: 14px;">MACROMEDIDOR: {id_mm}</b>
-                    <hr style="border: 0.5px solid #333; margin: 8px 0;">
-                    <div style="font-size: 12px;">
-                        📍 Nombre: <b>{info.get('nombre', 'N/A')}</b><br>
-                        📡 Última transmisión: <b>{info['ultima_fecha'].strftime('%Y-%m-%d')}</b>
+                try:
+                    # Recuperamos la lógica completa del botón de gráfico
+                    url_pestaña = f"?ver_grafico={id_mm}&nombre={info.get('nombre', 'Medidor').replace(' ', '%20')}&access=granted&role={st.session_state.get('rol', 'usuario')}"
+                    
+                    html_popup_mm = f"""
+                    <div style="background: #050505; color: white; padding: 12px; border-radius: 10px; width: 220px; border: 2px solid {color_popup}; font-family: sans-serif;">
+                        <b style="color: {color_popup}; font-size: 14px;">MACROMEDIDOR: {id_mm}</b>
+                        <hr style="border: 0.5px solid #333; margin: 8px 0;">
+                        <div style="font-size: 12px;">
+                            📍 Nombre: <b>{info.get('nombre', 'N/A')}</b><br>
+                            📡 Última transmisión: <b>{info['ultima_fecha'].strftime('%Y-%m-%d')}</b>
+                        </div>
+                        <div style="margin-top: 10px; text-align: center;">
+                            <a href="{url_pestaña}" target="_blank" style="background-color: {color_popup}; color: white; padding: 8px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 11px; display: inline-block; width: 90%;">📊 ABRIR GRÁFICO</a>
+                        </div>
                     </div>
-                    <div style="margin-top: 10px; text-align: center;">
-                        <a href="{url_pestaña}" target="_blank" style="background-color: {color_popup}; color: white; padding: 8px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 11px; display: inline-block; width: 90%;">📊 ABRIR GRÁFICO</a>
+                    """
+                    
+                    # SVG con la clase de parpadeo (pulsante)
+                    html_svg = f"""
+                    <svg width="20" height="20" class="{clase_animacion}">
+                        <circle cx="10" cy="10" r="6" stroke="{color_borde}" stroke-width="2" fill="{color_relleno}" fill-opacity="0.9" />
+                    </svg>
+                    """
+                    
+                    # Punto principal
+                    folium.Marker(
+                        location=info['coord'],
+                        icon=folium.DivIcon(icon_size=(20, 20), icon_anchor=(10, 10), html=html_svg),
+                        popup=folium.Popup(html_popup_mm, max_width=300)
+                    ).add_to(m)
+                    
+                    # Texto combinado: ID y Nombre
+                    color_texto = "#FF4C4C" if es_falla else "#FFFFFF"
+                    html_etiqueta = f"""
+                    <div style="font-size: 11px; font-weight: bold; color: {color_texto}; text-shadow: 1px 1px #000; white-space: nowrap;">
+                        - {id_mm} {info.get('nombre', 'N/A')}
                     </div>
-                </div>
-                """
-                
-                # SVG con la clase de parpadeo (pulsante)
-                html_svg = f"""
-                <svg width="20" height="20" class="{clase_animacion}">
-                    <circle cx="10" cy="10" r="6" stroke="{color_borde}" stroke-width="2" fill="{color_relleno}" fill-opacity="0.9" />
-                </svg>
-                """
-                
-                # Punto principal
-                folium.Marker(
-                    location=info['coord'],
-                    icon=folium.DivIcon(icon_size=(20, 20), icon_anchor=(10, 10), html=html_svg),
-                    popup=folium.Popup(html_popup_mm, max_width=300)
-                ).add_to(m)
-                
-                # Texto combinado: ID y Nombre
-                color_texto = "#FF4C4C" if es_falla else "#FFFFFF"
-                html_etiqueta = f"""
-                <div style="font-size: 11px; font-weight: bold; color: {color_texto}; text-shadow: 1px 1px #000; white-space: nowrap;">
-                    {id_mm} - {info.get('nombre', 'N/A')}
-                </div>
-                """
-                
-                folium.Marker(
-                    location=info['coord'], 
-                    icon=folium.DivIcon(icon_anchor=(-15, 10), html=html_etiqueta)
-                ).add_to(m)
-                
-            except Exception as e:
-                continue
+                    """
+                    
+                    folium.Marker(
+                        location=info['coord'], 
+                        icon=folium.DivIcon(icon_anchor=(-15, 10), html=html_etiqueta)
+                    ).add_to(m)
+                    
+                except Exception as e:
+                    continue
 
+        folium.LayerControl(position='topright', collapsed=False).add_to(m)
+        folium_static(m, width=None, height=650)
 
-
-    # 9.11. CONTROL DE CAPAS Y RENDERIZADO FINAL 
-    folium.LayerControl(position='topright', collapsed=False).add_to(m)
-    folium_static(m, width=None, height=600)
-
-# ---INDICADORES DE % DE AFECTACIONES POR COLONIAS --------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    st.markdown("##### 🗺️ % de Afectación en Colonias")
-    
+    st.markdown("##### 🗺️ % de Afectación en Sectores")
     col_l1, col_l2, col_l3, col_l4, col_l5 = st.columns(5)
+    estilo_tarjeta = "background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%); border: 1px solid #1f4068; padding: 10px 5px; border-radius: 10px; text-align: center; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);"
+
+    with col_l1: st.markdown(f'<div style="{estilo_tarjeta}"><span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Rojo (Crítico)</span><span style="color: #FF0000; font-size: 1.1rem; font-weight: bold;">76% - 100%</span></div>', unsafe_allow_html=True)
+    with col_l2: st.markdown(f'<div style="{estilo_tarjeta}"><span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Amarillo (Alto)</span><span style="color: #FFFF00; font-size: 1.1rem; font-weight: bold;">51% - 75%</span></div>', unsafe_allow_html=True)
+    with col_l3: st.markdown(f'<div style="{estilo_tarjeta}"><span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Naranja (Moderado)</span><span style="color: #FFA500; font-size: 1.1rem; font-weight: bold;">31% - 50%</span></div>', unsafe_allow_html=True)
+    with col_l4: st.markdown(f'<div style="{estilo_tarjeta}"><span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Azul Claro (Leve)</span><span style="color: #69ADDD; font-size: 1.1rem; font-weight: bold;">1% - 30%</span></div>', unsafe_allow_html=True)
+    with col_l5: st.markdown(f'<div style="{estilo_tarjeta}"><span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Normal</span><span style="color: #3498DB; font-size: 1.1rem; font-weight: bold;">0%</span></div>', unsafe_allow_html=True)
+
+# ==============================================================================
+# PESTAÑA 2: INCIDENCIAS ACTIVAS Y DEL DÍA (CON MAPA DE CALOR Y TENDENCIA MENSUAL)
+# ==============================================================================
+elif tab_activa == "incidencias":
+    st.markdown('<div class="titulo-superior">REGISTRO Y SEGUIMIENTO A EVENTOS OPERATIVOS </div>', unsafe_allow_html=True)
     
-    estilo_tarjeta = """
-        background: linear-gradient(180deg, rgba(11, 26, 41, 0.95) 0%, rgba(0, 0, 0, 1) 100%); 
-        border: 1px solid #1f4068; 
-        padding: 10px 5px; 
-        border-radius: 10px; 
-        text-align: center; 
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
-    """
-
-    with col_l1:
-        st.markdown(
-            f'<div style="{estilo_tarjeta}">'
-            f'<span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Rojo (Crítico)</span>'
-            f'<span style="color: #FF0000; font-size: 1.1rem; font-weight: bold; text-shadow: 0 0 8px rgba(255, 0, 0, 0.5);">76% - 100%</span>'
-            f'</div>', 
-            unsafe_allow_html=True
-        )
-    with col_l2:
-        st.markdown(
-            f'<div style="{estilo_tarjeta}">'
-            f'<span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Amarillo (Alto)</span>'
-            f'<span style="color: #FFFF00; font-size: 1.1rem; font-weight: bold; text-shadow: 0 0 8px rgba(255, 255, 0, 0.5);">51% - 75%</span>'
-            f'</div>', 
-            unsafe_allow_html=True
-        )
-    with col_l3:
-        st.markdown(
-            f'<div style="{estilo_tarjeta}">'
-            f'<span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Naranja (Moderado)</span>'
-            f'<span style="color: #FFA500; font-size: 1.1rem; font-weight: bold; text-shadow: 0 0 8px rgba(255, 165, 0, 0.5);">31% - 50%</span>'
-            f'</div>', 
-            unsafe_allow_html=True
-        )
-    with col_l4:
-        st.markdown(
-            f'<div style="{estilo_tarjeta}">'
-            f'<span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Azul Claro (Leve)</span>'
-            f'<span style="color: #69ADDD; font-size: 1.1rem; font-weight: bold; text-shadow: 0 0 8px rgba(105, 173, 221, 0.5);">1% - 30%</span>'
-            f'</div>', 
-            unsafe_allow_html=True
-        )
-    with col_l5:
-        st.markdown(
-            f'<div style="{estilo_tarjeta}">'
-            f'<span style="color: #888888; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Normal / Sin Afectación</span>'
-            f'<span style="color: #3498DB; font-size: 1.1rem; font-weight: bold; text-shadow: 0 0 8px rgba(52, 152, 219, 0.5);">0%</span>'
-            f'</div>', 
-            unsafe_allow_html=True
-        )
-
-    
-
-    # ---------------------------------------------------------------------------- FINAL DEL MAPA -------------------------------------------------------------------------------------------
-
-# SECCION 12 Mapa de colonias Incidencias ----------------------------------------------------------------------------
-
-import streamlit as st
-import pandas as pd
-import geopandas as gpd
-from shapely import wkt
-import re
-import folium
-from folium.plugins import Fullscreen
-import altair as alt
-import pytz
-from datetime import datetime
-from streamlit_folium import st_folium
-from folium.plugins import MarkerCluster
-
-tz_mx = pytz.timezone('America/Mexico_City')
-ahora_mx = datetime.now(tz_mx)
-
-def normalizar_id(valor):
-    return str(valor).strip().upper()
-
-@st.cache_data(ttl=60)
-def get_geometries(num_pozo):
-    if not num_pozo:
-        return None
-        
-    id_busqueda = str(num_pozo).strip().upper()
-    engine = get_mysql_telemetria_engine()
-    if engine is None:
-        return None
-        
-    try:
-        # CONSULTA ESTRICTA Y SEGURA: Evitamos comodines peligrosos en SQL
-        query = """
-            SELECT ST_AsText(geom) as geom_wkt, Pozos, Col_atl, Sector, Distrito, Supervisor 
-            FROM Diccionario_colonias 
-            WHERE Pozos = %s 
-               OR Pozos LIKE %s 
-               OR Pozos LIKE %s 
-               OR Pozos LIKE %s
-        """
-        p_exacto = id_busqueda
-        p_comienza = f"{id_busqueda},%"
-        p_medio = f"%, {id_busqueda},%"
-        p_termina = f"%, {id_busqueda}"
-        
-        df = pd.read_sql(query, engine, params=(p_exacto, p_comienza, p_medio, p_termina))
-        
-        # FILTRO DE SEGURIDAD EN MEMORIA: Verificamos elemento por elemento en la lista de pozos
-        if not df.empty:
-            def pozo_en_lista(cell_value):
-                if pd.isna(cell_value):
-                    return False
-                pozos_en_celda = [p.strip().upper() for p in str(cell_value).replace(';', ',').split(',')]
-                return id_busqueda in pozos_en_celda
-
-            df = df[df['Pozos'].apply(pozo_en_lista)]
-
-        if not df.empty and 'geom_wkt' in df.columns and df['geom_wkt'].iloc[0] is not None:
-            df['geometry'] = df['geom_wkt'].apply(wkt.loads)
-            gdf = gpd.GeoDataFrame(df, geometry='geometry')
-            gdf.set_crs(epsg=32613, inplace=True)
-            return gdf.to_crs(epsg=4326)
-            
-    except Exception as e:
-        st.error(f"Error en BD al obtener geometrías: {e}")
-        
-    return None
-
-@st.fragment
-def renderizar_bloque_incidencia(row, index, tipo):
-    val = row['NUM_POZO']
-    if pd.notna(val):
-        id_pozo_original = str(val).strip().upper()
-    else:
-        id_pozo_original = ""
-    
-    # Llamamos a la nueva función get_geometries optimizada y estricta
-    gdf = get_geometries(id_pozo_original) if id_pozo_original else None
-
-    # FILTRO DE SEGURIDAD ADICIONAL EN MEMORIA
-    if gdf is not None and not gdf.empty:
-        col_pozo_encontrada = next((c for c in gdf.columns if c.upper() in ['NUM_POZO', 'POZO', 'ID_POZO', 'CVE_POZO', 'SITE', 'SITIO']), None)
-        
-        if col_pozo_encontrada:
-            gdf = gdf[gdf[col_pozo_encontrada].astype(str).str.strip().str.upper() == id_pozo_original]
-
-    st.markdown("""
-        <style>
-        [data-testid="column"] {
-            padding-left: 0px !important;
-            padding-right: 0px !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)        
-
-    col1, col2 = st.columns([3, 2], gap="small")
-    
-    with col1:
-        if gdf is not None and not gdf.empty:
-            nombres_colonias = sorted(gdf['Col_atl'].dropna().unique())
-            st.markdown(f"**📍 Colonias afectadas ({len(nombres_colonias)}):**")
-            st.info(", ".join([str(n) for n in nombres_colonias]))
-            try:
-                lat, lon = gdf.geometry.centroid.y.mean(), gdf.geometry.centroid.x.mean()
-                m = folium.Map(location=[lat, lon], zoom_start=13, tiles="CartoDB dark_matter")
-                
-                folium.GeoJson(
-                    gdf, 
-                    style_function=lambda x: {'fillColor': '#3186cc', 'color': 'white', 'weight': 1, 'fillOpacity': 0.4}
-                ).add_to(m)
-                
-                for i, (_, r) in enumerate(gdf.iterrows()):
-                    if r.geometry:
-                        c = r.geometry.centroid
-                        destino = [c.y + 0.001, c.x + 0.001]
-                        
-                        folium.CircleMarker([c.y, c.x], radius=2, color="white", fill=True, fill_color="white").add_to(m)
-                        folium.PolyLine(
-                            locations=[[c.y, c.x], destino],
-                            color="white", weight=1
-                        ).add_to(m)
-                        folium.CircleMarker(destino, radius=2, color="white", fill=True, fill_color="white").add_to(m)
-                        
-                        folium.Marker(
-                            location=destino,
-                            icon=folium.DivIcon(
-                                icon_size=(200, 30),
-                                html=f'''
-                                <div style="
-                                    background: rgba(0, 0, 0, 0.9); 
-                                    color: white; 
-                                    padding: 2px 8px; 
-                                    border: 1px solid #FFFFFF; 
-                                    font-size: 10px; 
-                                    font-weight: bold; 
-                                    border-radius: 4px;
-                                    white-space: nowrap;
-                                    margin-left: 5px;
-                                    box-shadow: 0px 0px 5px rgba(255,255,255,0.3);
-                                ">
-                                    {str(r.get("Col_atl", "N/A"))}
-                                </div>
-                                '''
-                            )
-                        ).add_to(m)
-                
-                Fullscreen(position='topright').add_to(m)
-                st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo_original}_{index}")
-            except Exception as e:
-                st.error(f"Error al renderizar el mapa: {e}")
-        else:
-            st.warning("Sin datos geográficos disponibles.")
-
-    with col2:
-        st.subheader("Tiempo de Atención")
-        
-        estatus = str(row.get('ESTATUS', '')).upper()
-        if estatus == 'CERRADA':
-            color_estatus = "🟢"
-        elif estatus == 'PENDIENTE':
-            color_estatus = "🔴"
-        else:
-            color_estatus = "🟡"
-            
-        tz_mx = pytz.timezone('America/Mexico_City')
-        ahora_mx = datetime.now(tz_mx)
-        inicio = pd.to_datetime(row['FECHA_HORA_INICIO']).tz_localize(None).tz_localize(tz_mx)
-        
-        valor_raw = row.get('TIEMPO_ESTIMADO_ATENCION')
-        
-        if pd.notnull(valor_raw):
-            try:
-                estimado = float(valor_raw)
-                hora_limite = inicio + pd.Timedelta(hours=estimado)
-            except ValueError:
-                st.error(f"Error: El tiempo estimado '{valor_raw}' no es un número válido.")
-                hora_limite = inicio
-        else:
-            st.warning("Advertencia: No hay tiempo estimado de atención definido.")
-            hora_limite = inicio
-        
-        total_seg = (hora_limite - inicio).total_seconds()
-        porcentaje = min(max(0, (ahora_mx - inicio).total_seconds()) / total_seg, 1.0) if total_seg > 0 else 1.0
-        st.progress(porcentaje)
-        
-        data = pd.DataFrame({
-            'Evento': ['Inicio', 'Ahora', 'Límite'], 
-            'Tiempo': [inicio, ahora_mx, hora_limite], 
-            'Color': ['#00CC96', '#1f77b4', '#FF4B4B']
-        })
-        chart = alt.Chart(data).mark_point(shape='triangle-up', size=300).encode(
-            x='Tiempo:T', y=alt.value(0), color=alt.Color('Color', scale=None)
-        ).properties(height=50)
-        st.altair_chart(chart, use_container_width=True)
-        
-        restante = hora_limite - ahora_mx
-        if estatus == 'CERRADA':
-            st.info("✅ Incidencia Cerrada")
-        elif ahora_mx > hora_limite:
-            st.error(f"🔴 Restante: Excedido")
-        else:
-            st.success(f"✅ Restante: {int(restante.total_seconds()//3600)}h {int((restante.total_seconds()%3600)//60)}m")
-        
-        transcurrido = ahora_mx - inicio
-        color_inicio = "#00CC96"
-        color_ahora = "#1f77b4"
-        color_limite = "#FF4B4B"
-
-        st.markdown(f'<span style="color:{color_inicio}">▲</span> **Fecha de Inicio:** {inicio.strftime("%H:%M %d de %B de %Y")}', unsafe_allow_html=True)
-        st.markdown(f'<span style="color:{color_ahora}">▲</span> **Tiempo actual:** {ahora_mx.strftime("%H:%M %d de %B de %Y")}', unsafe_allow_html=True)
-        st.markdown(f'<span style="color:{color_limite}">▲</span> **Tiempo límite para atención:** {hora_limite.strftime("%H:%M %d de %B de %Y")}', unsafe_allow_html=True)
-        dias = transcurrido.days
-        horas = transcurrido.seconds // 3600
-        minutos = (transcurrido.seconds % 3600) // 60
-
-        st.markdown(f"⏱️ **Duración del evento:** {dias}d {horas}h {minutos}m")
-
-        if gdf is not None and not gdf.empty:
-            sectores = [str(s) for s in gdf['Sector'].unique() if pd.notnull(s)]
-            distritos = [str(d) for d in gdf['Distrito'].unique() if pd.notnull(d)]
-            sector_val = ', '.join(sectores) if sectores else 'N/A'
-            distrito_val = ', '.join(distritos) if distritos else 'N/A'
-        else:
-            sector_val = 'N/A'
-            distrito_val = 'N/A'
-
-        responsable_val = row.get('RESPONSABLE', 'N/A')
-
-        col_sec, col_dis, col_res = st.columns(3)
-        with col_sec:
-            st.markdown(f"📍 **Sector:** {sector_val}")
-        with col_dis:
-            st.markdown(f"🏢 **Distrito:** {distrito_val}")
-        with col_res:
-            st.markdown(f"👤 **Responsable:** {responsable_val}")
-            
-# --- LÓGICA PRINCIPAL ---
-df_incidencias = get_data()
-
-if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
-    df_incidencias['FECHA_HORA_INICIO'] = pd.to_datetime(df_incidencias['FECHA_HORA_INICIO'])
-    df_incidencias['FECHA_HORA_FIN'] = pd.to_datetime(df_incidencias['FECHA_HORA_FIN'], errors='coerce')
-    
-    if 'Col_atl' not in df_incidencias.columns:
-        df_incidencias['Col_atl'] = "N/A"
-
-    df_final = df_incidencias.sort_values(by='FECHA_HORA_INICIO', ascending=False)
-    
-    # Definimos 'hoy' sin zona horaria
-    hoy = pd.Timestamp.now(tz=pytz.timezone('America/Mexico_City')).normalize().tz_localize(None)
-    
-    # Normalizamos fechas de inicio y fin para comparar sin horas de diferencia
-    f_inicio_norm = df_final['FECHA_HORA_INICIO'].dt.tz_localize(None).dt.normalize()
-    f_fin_norm = df_final['FECHA_HORA_FIN'].dt.tz_localize(None).dt.normalize()
-    
-    # 1. Activas puras (En proceso o pendientes)
-    mask_activas = df_final['ESTATUS'].str.upper().isin(['EN PROCESO', 'PENDIENTE'])
-    
-    # 2. Cerradas que iniciaron HOY o que se cerraron HOY
-    mask_cerradas_hoy = (df_final['ESTATUS'].str.upper() == 'CERRADA') & ((f_inicio_norm == hoy) | (f_fin_norm == hoy))
-    
-    df_actual = df_final[mask_activas | mask_cerradas_hoy]
-    
-    # El historial solo es lo que se cerró antes de hoy y cuya fecha de inicio tampoco es hoy
-    df_historial = df_final[(df_final['ESTATUS'].str.upper() == 'CERRADA') & (f_fin_norm < hoy) & (f_inicio_norm < hoy)]
-
     tz_mx = pytz.timezone('America/Mexico_City')
-    st.markdown('<hr style="border: none; height: 2px; background-color: #007bff; margin-top: 20px; margin-bottom: 20px;">', unsafe_allow_html=True)
-    st.subheader("📋 Incidencias Activas y del día")
-    
-    total_en_proceso = len(df_actual[df_actual['ESTATUS'].str.upper() == 'EN PROCESO'])
-    total_pendientes = len(df_actual[df_actual['ESTATUS'].str.upper() == 'PENDIENTE'])
-    total_cerradas_hoy = len(df_actual[df_actual['ESTATUS'].str.upper() == 'CERRADA'])
-    total_activas_y_dia = len(df_actual)
+    ahora_mx = datetime.now(tz_mx)
 
-    st.markdown("""
-        <style>
-        .metric-container {
-            display: flex;
-            gap: 15px;
-            margin-top: 10px;
-            margin-bottom: 25px;
-        }
-        .metric-card {
-            background-color: #111418;
-            border-radius: 8px;
-            padding: 8px 12px;
-            text-align: center;
-            flex: 1;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            border: 1px solid #222d3d;
-        }
-        .metric-card.proceso { border-color: #d4ac0d; }
-        .metric-card.pendientes { border-color: #c0392b; }
-        .metric-card.cerradas { border-color: #196f3d; }
-        .metric-card.total { border-color: #2e4053; }
-        
-        .metric-title {
-            font-size: 11px;
-            font-weight: bold;
-            margin-bottom: 2px;
-            letter-spacing: 0.5px;
-        }
-        .metric-title.proceso { color: #f1c40f; }
-        .metric-title.pendientes { color: #e74c3c; }
-        .metric-title.cerradas { color: #2ecc71; }
-        .metric-title.total { color: #bdc3c7; }
-        
-        .metric-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffffff;
-            line-height: 1.2;
-        }
-        </style>
+    def normalizar_id(valor):
+        return str(valor).strip().upper()
 
-        <div class="metric-container">
-            <div class="metric-card proceso">
-                <div class="metric-title proceso">EN PROCESO</div>
-                <div class="metric-value">""" + str(total_en_proceso) + """</div>
-            </div>
-            <div class="metric-card pendientes">
-                <div class="metric-title pendientes">PENDIENTES</div>
-                <div class="metric-value">""" + str(total_pendientes) + """</div>
-            </div>
-            <div class="metric-card cerradas">
-                <div class="metric-title cerradas">CERRADAS</div>
-                <div class="metric-value">""" + str(total_cerradas_hoy) + """</div>
-            </div>
-            <div class="metric-card total">
-                <div class="metric-title total">TOTAL ACTIVAS</div>
-                <div class="metric-value">""" + str(total_activas_y_dia) + """</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    ahora_mx = datetime.now(tz_mx) 
-    
-    for index, row in df_actual.iterrows():
-        estatus = str(row.get('ESTATUS', 'N/A')).upper()
-        diag = str(row.get('DIAGNOSTICO_FALLA', 'N/A'))
-        
-        inicio_raw = pd.to_datetime(row.get('FECHA_HORA_INICIO')).tz_localize(None).tz_localize(tz_mx)
-        fin_raw = row.get('FECHA_HORA_FIN')
-        
-        inicio_str = inicio_raw.strftime('%H:%M %d de %B de %Y')
-        
-        if pd.notnull(fin_raw):
-            fin_dt = pd.to_datetime(fin_raw).tz_localize(None).tz_localize(tz_mx)
-            fin_str = fin_dt.strftime('%H:%M %d de %B de %Y')
-            delta = fin_dt - inicio_raw
-        else:
-            fin_str = "Pendiente"
-            delta = ahora_mx - inicio_raw
+    @st.cache_data(ttl=60)
+    def get_geometries(num_pozo):
+        if not num_pozo:
+            return None
             
-        duracion_str = f"{delta.days}d {delta.seconds//3600}h {(delta.seconds//60)%60}m"
+        id_busqueda = str(num_pozo).strip().upper()
+        engine = get_mysql_telemetria_engine()
+        if engine is None:
+            return None
+            
+        try:
+            query = """
+                SELECT ST_AsText(geom) as geom_wkt, Pozos, Col_atl, Sector, Distrito, Supervisor 
+                FROM Diccionario_colonias 
+                WHERE Pozos = %s 
+                   OR Pozos LIKE %s 
+                   OR Pozos LIKE %s 
+                   OR Pozos LIKE %s
+            """
+            p_exacto = id_busqueda
+            p_comienza = f"{id_busqueda},%"
+            p_medio = f"%, {id_busqueda},%"
+            p_termina = f"%, {id_busqueda}"
+            
+            df = pd.read_sql(query, engine, params=(p_exacto, p_comienza, p_medio, p_termina))
+            
+            if not df.empty:
+                def pozo_en_lista(cell_value):
+                    if pd.isna(cell_value):
+                        return False
+                    pozos_en_celda = [p.strip().upper() for p in str(cell_value).replace(';', ',').split(',')]
+                    return id_busqueda in pozos_en_celda
 
-        ind = "🟢" if estatus == 'CERRADA' else ("🔴" if estatus == 'PENDIENTE' else "🟡")
-        
-        titulo = (
-            f"{ind}  **Sitio: {row.get('NUM_POZO', 'N/A')}** "
-            f" |⏱️ Fecha y hora de inicio: {inicio_str} "
-            f" |⚠️ Diagnostico de la falla: {diag} "
-            f" |✅ Fecha y hora de cierre: {fin_str} "
-            f" |⏳ Duración del evento: {duracion_str} "
-            f" |🛠️ Estatus: {estatus}"
-        )
-        
-        with st.expander(titulo):
-            renderizar_bloque_incidencia(row, index, "act")
+                df = df[df['Pozos'].apply(pozo_en_lista)]
 
-    st.markdown("---")
-    st.subheader("📜 Historial de Incidencias Cerradas")
-    
-    df_historial['FECHA_HORA_INICIO'] = pd.to_datetime(df_historial['FECHA_HORA_INICIO'])
-    df_historial['FECHA_FIN'] = pd.to_datetime(df_historial['FECHA_HORA_FIN'], errors='coerce')
-    
-    df_historial['MES_AÑO'] = df_historial['FECHA_HORA_INICIO'].dt.strftime('%B %Y').str.capitalize()
-    df_historial['PERIODO'] = df_historial['FECHA_HORA_INICIO'].dt.to_period('M')
-    
-    periodos_hist = sorted(df_historial['PERIODO'].unique(), reverse=True)
-    meses = [p.strftime('%B %Y').capitalize() for p in periodos_hist]
-    
-    if meses:
-        col_filtro_mes, col_filtro_colonia = st.columns(2)
+            if not df.empty and 'geom_wkt' in df.columns and df['geom_wkt'].iloc[0] is not None:
+                df['geometry'] = df['geom_wkt'].apply(wkt.loads)
+                gdf = gpd.GeoDataFrame(df, geometry='geometry')
+                gdf.set_crs(epsg=32613, inplace=True)
+                return gdf.to_crs(epsg=4326)
+                
+        except Exception as e:
+            st.error(f"Error en BD al obtener geometrías: {e}")
+            
+        return None
+
+    @st.cache_data(ttl=300)
+    def get_todas_las_colonias_diccionario():
+        engine = get_mysql_telemetria_engine()
+        if engine is None:
+            return []
+        try:
+            query = "SELECT DISTINCT Col_atl FROM Diccionario_colonias WHERE Col_atl IS NOT NULL AND Col_atl != ''"
+            df_cols = pd.read_sql(query, engine)
+            if not df_cols.empty:
+                lista = sorted([str(c).strip() for c in df_cols['Col_atl'].dropna().unique() if str(c).strip()])
+                return lista
+        except Exception:
+            pass
+        return []
+
+    @st.fragment
+    def renderizar_bloque_incidencia(row, index, tipo):
+        val = row['NUM_POZO']
+        id_pozo_original = str(val).strip().upper() if pd.notna(val) else ""
         
-        with col_filtro_mes:
+        gdf = get_geometries(id_pozo_original) if id_pozo_original else None
+
+        if gdf is not None and not gdf.empty:
+            col_pozo_encontrada = next((c for c in gdf.columns if c.upper() in ['NUM_POZO', 'POZO', 'ID_POZO', 'CVE_POZO', 'SITE', 'SITIO']), None)
+            if col_pozo_encontrada:
+                gdf = gdf[gdf[col_pozo_encontrada].astype(str).str.strip().str.upper() == id_pozo_original]
+
+        st.markdown("""
+            <style>
+            [data-testid="column"] { padding-left: 0px !important; padding-right: 0px !important; }
+            </style>
+        """, unsafe_allow_html=True)        
+
+        col1, col2 = st.columns([3, 2], gap="small")
+        
+        with col1:
+            if gdf is not None and not gdf.empty:
+                try:
+                    lat, lon = gdf.geometry.centroid.y.mean(), gdf.geometry.centroid.x.mean()
+                    m = folium.Map(location=[lat, lon], zoom_start=13, tiles="CartoDB dark_matter")
+
+                    api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+                    folium.TileLayer(
+                        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+                        name="Vista Nocturna",
+                        attr='&copy; CARTO',
+                        subdomains="abcd", max_zoom=20, overlay=False, control=True
+                    ).add_to(m)
+                    
+                    folium.GeoJson(
+                        gdf, 
+                        style_function=lambda x: {'fillColor': '#3186cc', 'color': 'white', 'weight': 1, 'fillOpacity': 0.4}
+                    ).add_to(m)
+                    
+                    for i, (_, r) in enumerate(gdf.iterrows()):
+                        if r.geometry:
+                            c = r.geometry.centroid
+                            destino = [c.y + 0.001, c.x + 0.001]
+                            folium.CircleMarker([c.y, c.x], radius=2, color="white", fill=True, fill_color="white").add_to(m)
+                            folium.PolyLine(locations=[[c.y, c.x], destino], color="white", weight=1).add_to(m)
+                            folium.CircleMarker(destino, radius=2, color="white", fill=True, fill_color="white").add_to(m)
+                            folium.Marker(
+                                location=destino,
+                                icon=folium.DivIcon(
+                                    icon_size=(200, 30),
+                                    html=f'<div style="background: rgba(0, 0, 0, 0.9); color: white; padding: 2px 8px; border: 1px solid #FFFFFF; font-size: 10px; font-weight: bold; border-radius: 4px; white-space: nowrap; margin-left: 5px;">{str(r.get("Col_atl", "N/A"))}</div>'
+                                )
+                            ).add_to(m)
+                    
+                    Fullscreen(position='topright').add_to(m)
+                    st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo_original}_{index}")
+                except Exception as e:
+                    st.error(f"Error al renderizar el mapa: {e}")
+            else:
+                st.warning("Sin datos geográficos disponibles.")
+
+        with col2:
+            st.subheader("Tiempo de Atención")
+            estatus = str(row.get('ESTATUS', '')).upper()
+            inicio = pd.to_datetime(row['FECHA_HORA_INICIO']).tz_localize(None).tz_localize(tz_mx)
+            valor_raw = row.get('TIEMPO_ESTIMADO_ATENCION')
+            
+            if pd.notnull(valor_raw):
+                try:
+                    estimado = float(valor_raw)
+                    hora_limite = inicio + pd.Timedelta(hours=estimado)
+                except ValueError:
+                    hora_limite = inicio
+            else:
+                hora_limite = inicio
+            
+            total_seg = (hora_limite - inicio).total_seconds()
+            porcentaje = min(max(0, (ahora_mx - inicio).total_seconds()) / total_seg, 1.0) if total_seg > 0 else 1.0
+            st.progress(porcentaje)
+            
+            data = pd.DataFrame({
+                'Evento': ['Inicio', 'Ahora', 'Límite'], 
+                'Tiempo': [inicio, ahora_mx, hora_limite], 
+                'Color': ['#00CC96', '#1f77b4', '#FF4B4B']
+            })
+            chart = alt.Chart(data).mark_point(shape='triangle-up', size=300).encode(
+                x='Tiempo:T', y=alt.value(0), color=alt.Color('Color', scale=None)
+            ).properties(height=50)
+            st.altair_chart(chart, use_container_width=True)
+            
+            restante = hora_limite - ahora_mx
+            if estatus == 'CERRADA':
+                st.info("✅ Incidencia Cerrada")
+            elif ahora_mx > hora_limite:
+                st.error("🔴 Restante: Excedido")
+            else:
+                st.success(f"✅ Restante: {int(restante.total_seconds()//3600)}h {int((restante.total_seconds()%3600)//60)}m")
+            
+            transcurrido = ahora_mx - inicio
+            dias = transcurrido.days
+            horas = transcurrido.seconds // 3600
+            minutos = (transcurrido.seconds % 3600) // 60
+            st.markdown(f"⏱️ **Duración del evento:** {dias}d {horas}h {minutos}m")
+
+            if gdf is not None and not gdf.empty:
+                sectores = [str(s) for s in gdf['Sector'].unique() if pd.notnull(s)]
+                distritos = [str(d) for d in gdf['Distrito'].unique() if pd.notnull(d)]
+                sector_val = ', '.join(sectores) if sectores else 'N/A'
+                distrito_val = ', '.join(distritos) if distritos else 'N/A'
+            else:
+                sector_val = 'N/A'
+                distrito_val = 'N/A'
+
+            responsable_val = row.get('RESPONSABLE', 'N/A')
+            col_sec, col_dis, col_res = st.columns(3)
+            with col_sec: st.markdown(f"📍 **Sector:** {sector_val}")
+            with col_dis: st.markdown(f"🏢 **Distrito:** {distrito_val}")
+            with col_res: st.markdown(f"👤 **Responsable:** {responsable_val}")
+
+    # --- CARGA Y FILTRADO DE DATOS BASE ---
+    df_incidencias = get_data()
+
+    if isinstance(df_incidencias, pd.DataFrame) and not df_incidencias.empty:
+        df_incidencias['FECHA_HORA_INICIO'] = pd.to_datetime(df_incidencias['FECHA_HORA_INICIO'])
+        df_incidencias['FECHA_HORA_FIN'] = pd.to_datetime(df_incidencias['FECHA_HORA_FIN'], errors='coerce')
+        df_final = df_incidencias.sort_values(by='FECHA_HORA_INICIO', ascending=False)
+        
+        hoy = pd.Timestamp.now(tz=pytz.timezone('America/Mexico_City')).normalize().tz_localize(None)
+        f_inicio_norm = df_final['FECHA_HORA_INICIO'].dt.tz_localize(None).dt.normalize()
+        f_fin_norm = df_final['FECHA_HORA_FIN'].dt.tz_localize(None).dt.normalize()
+        
+        mask_activas = df_final['ESTATUS'].str.upper().isin(['EN PROCESO', 'PENDIENTE'])
+        mask_cerradas_hoy = (df_final['ESTATUS'].str.upper() == 'CERRADA') & ((f_inicio_norm == hoy) | (f_fin_norm == hoy))
+        
+        df_actual = df_final[mask_activas | mask_cerradas_hoy]
+        df_historial = df_final[(df_final['ESTATUS'].str.upper() == 'CERRADA') & (f_fin_norm < hoy) & (f_inicio_norm < hoy)].copy()
+
+        # --- ESTRUCTURA EN DOS COLUMNAS PRINCIPALES (SUPERIOR) ---
+        col_panel_izq, col_panel_der = st.columns([1.1, 2.7], gap="medium")
+
+        # ==============================================================================
+        # COLUMNA IZQUIERDA: SELECTOR DE COLONIAS Y TARJETAS HUD
+        # ==============================================================================
+        with col_panel_izq:
+            st.markdown('<div style="color: #00d4ff; font-weight: bold; font-size: 14px; margin-bottom: 8px; letter-spacing: 1px;">// Colonias Afectadas por incidencias</div>', unsafe_allow_html=True)
+
+            todas_las_colonias_dict = get_todas_las_colonias_diccionario()
+            opciones_selectbox = ["🔍"] + todas_las_colonias_dict
+
+            colonia_seleccionada = st.selectbox("Seleccionar o buscar colonia:", opciones_selectbox, key="select_colonia_hud")
+            
+            filtrar_por_colonia = None if colonia_seleccionada == "🔍" else colonia_seleccionada.strip().upper()
+
+            st.markdown("""
+                <style>
+                .hud-card {
+                    background: linear-gradient(180deg, rgba(13, 27, 42, 0.95) 0%, rgba(6, 14, 24, 1) 100%);
+                    border: 1px solid #1f3a5f;
+                    border-radius: 8px;
+                    padding: 8px 10px;
+                    margin-bottom: 8px;
+                    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+                }
+                .colonias-box-hud {
+                    background-color: rgba(0, 0, 0, 0.4);
+                    border: 1px solid #1b2a38;
+                    border-radius: 5px;
+                    padding: 5px 8px;
+                    max-height: 55px;
+                    overflow-y: auto;
+                    font-size: 10px;
+                    color: #b0c4de;
+                    margin-top: 3px;
+                    line-height: 1.2;
+                }
+                .colonias-box-hud::-webkit-scrollbar { width: 3px; }
+                .colonias-box-hud::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 3px; }
+                </style>
+            """, unsafe_allow_html=True)
+
+            gdf_sec_geo = get_todos_los_sectores_geo()
+            sectores_agrupados = {}
+
+            for _, r_inc in df_actual.iterrows():
+                id_p_inc = normalizar_id(r_inc.get('NUM_POZO'))
+                inicio_inc = pd.to_datetime(r_inc.get('FECHA_HORA_INICIO')).tz_localize(None).tz_localize(tz_mx)
+                estatus_inc = str(r_inc.get('ESTATUS', '')).upper()
+                fin_inc = r_inc.get('FECHA_HORA_FIN')
+
+                if estatus_inc == 'CERRADA' and pd.notnull(fin_inc):
+                    fin_dt = pd.to_datetime(fin_inc).tz_localize(None).tz_localize(tz_mx)
+                    duracion_delta = fin_dt - inicio_inc
+                else:
+                    duracion_delta = ahora_mx - inicio_inc
+
+                segundos_fuera = duracion_delta.total_seconds()
+                
+                dias = duracion_delta.days
+                horas = duracion_delta.seconds // 3600
+                minutos = (duracion_delta.seconds % 3600) // 60
+                
+                if dias > 0:
+                    tiempo_str = f"{dias}d {horas}h"
+                elif horas > 0:
+                    tiempo_str = f"{horas}h {minutos}m" if minutos > 0 else f"{horas}h"
+                else:
+                    tiempo_str = f"{minutos}m"
+                
+                gdf_r = get_geometries(id_p_inc)
+                
+                if gdf_r is not None and not gdf_r.empty:
+                    sector_nombre = str(gdf_r['Sector'].iloc[0]).strip()
+                    nombres_cols = sorted([c.strip() for c in gdf_r['Col_atl'].dropna().unique() if str(c).strip()])
+                else:
+                    sector_nombre = "Sin Sector"
+                    nombres_cols = []
+
+                if sector_nombre not in sectores_agrupados:
+                    props_sec = {}
+                    if gdf_sec_geo is not None and not gdf_sec_geo.empty:
+                        matched = gdf_sec_geo[gdf_sec_geo['Sector'].astype(str).str.strip() == sector_nombre]
+                        if not matched.empty:
+                            props_sec = matched.iloc[0].to_dict()
+
+                    color_afec, val_afec = calcular_color_sector(props_sec, dic_incidencias_activas)
+                    
+                    sectores_agrupados[sector_nombre] = {
+                        'pozo_tiempos': [(id_p_inc, tiempo_str)],
+                        'max_segundos': segundos_fuera,
+                        'colonias': set(nombres_cols),
+                        'color_badge': color_afec,
+                        'val_afectacion': val_afec
+                    }
+                else:
+                    sec = sectores_agrupados[sector_nombre]
+                    sec['pozo_tiempos'].append((id_p_inc, tiempo_str))
+                    if segundos_fuera > sec['max_segundos']:
+                        sec['max_segundos'] = segundos_fuera
+                    sec['colonias'].update(nombres_cols)
+
+            sectores_ordenados = sorted(sectores_agrupados.items(), key=lambda x: x[1]['max_segundos'], reverse=True)
+
+            with st.container(height=780, border=False):
+                tarjetas_renderizadas = 0
+                if sectores_ordenados:
+                    for sec_name, sec_data in sectores_ordenados:
+                        lista_cols_validas = sorted([c for c in sec_data['colonias'] if c])
+                        
+                        if not lista_cols_validas:
+                            continue
+
+                        if filtrar_por_colonia:
+                            coincide = any(filtrar_por_colonia in col.upper() for col in lista_cols_validas)
+                            if not coincide:
+                                continue
+
+                        tarjetas_renderizadas += 1
+                        
+                        desglose_pozos = []
+                        for p_id, t_str in sec_data['pozo_tiempos']:
+                            desglose_pozos.append(f"{p_id}: <b style='color:#ffff00;'>{t_str}</b>")
+                        
+                        tiempos_str = " | ".join(desglose_pozos)
+                        colonias_str = ", ".join(lista_cols_validas)
+                        
+                        pct_val = int(sec_data['val_afectacion']) if sec_data['val_afectacion'] > 0 else 0
+                        
+                        if pct_val > 0:
+                            pct_str = f"{pct_val}% AFECTACIÓN"
+                            bg_badge = "#FF4B4B" if pct_val > 50 else "#F1C40F"
+                        else:
+                            pct_str = "EN RECUPERACIÓN"
+                            bg_badge = "#3498DB"
+
+                        st.markdown(f"""
+                            <div class="hud-card">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="color: #ffffff; font-weight: bold; font-size: 12px;">Sector: <b style="color: #00d4ff;">{sec_name}</b> &nbsp;&nbsp;|&nbsp;&nbsp; Fuera de op: {tiempos_str}</span>
+                                    <span style="background-color: {bg_badge}; color: #000; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">{pct_str}</span>
+                                </div>
+                                <div style="font-size: 11px; color: #a0aec0;">
+                                    <div style="margin-top: 2px;"><b>COLONIAS:</b></div>
+                                    <div class="colonias-box-hud">{colonias_str}</div>
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if tarjetas_renderizadas == 0:
+                        if filtrar_por_colonia:
+                            encontrada_en_historial = False
+                            for _, r_hist in df_historial.iterrows():
+                                gdf_h = get_geometries(normalizar_id(r_hist['NUM_POZO']))
+                                if gdf_h is not None and not gdf_h.empty and 'Col_atl' in gdf_h.columns:
+                                    cols_h = [str(c).upper() for c in gdf_h['Col_atl'].dropna().unique()]
+                                    if any(filtrar_por_colonia in ch for ch in cols_h):
+                                        encontrada_en_historial = True
+                                        break
+                            
+                            if encontrada_en_historial:
+                                st.info(f"ℹ️ La colonia '{colonia_seleccionada}' sí estuvo en incidencia, pero ya se restableció (ayer o días anteriores).")
+                            else:
+                                st.warning(f"No hay incidencias activas ni recientes para '{colonia_seleccionada}'.")
+                        else:
+                            st.info("No hay sectores con colonias registradas afectadas actualmente.")
+                else:
+                    st.info("No hay sectores con incidencias activas.")
+
+        # ==============================================================================
+        # COLUMNA DERECHA: INDICADORES SUPERIORES Y LISTADO DE ACTIVAS
+        # ==============================================================================
+        with col_panel_der:
+            st.markdown('<h3 style="color:white; font-size: 20px; font-weight:bold; margin-bottom:10px;">📋 Incidencias Activas y del día</h3>', unsafe_allow_html=True)
+            
+            total_en_proceso = len(df_actual[df_actual['ESTATUS'].str.upper() == 'EN PROCESO'])
+            total_pendientes = len(df_actual[df_actual['ESTATUS'].str.upper() == 'PENDIENTE'])
+            total_cerradas_hoy = len(df_actual[df_actual['ESTATUS'].str.upper() == 'CERRADA'])
+            total_activas_y_dia = len(df_actual)
+
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                st.markdown(f'<div style="background-color: #111418; border: 1px solid #d4ac0d; border-radius: 8px; padding: 10px; text-align: center;"><div style="font-size: 10px; font-weight: bold; color: #f1c40f;">EN PROCESO</div><div style="font-size: 20px; font-weight: bold; color: white;">{total_en_proceso}</div></div>', unsafe_allow_html=True)
+            with m2:
+                st.markdown(f'<div style="background-color: #111418; border: 1px solid #c0392b; border-radius: 8px; padding: 10px; text-align: center;"><div style="font-size: 10px; font-weight: bold; color: #e74c3c;">PENDIENTES</div><div style="font-size: 20px; font-weight: bold; color: white;">{total_pendientes}</div></div>', unsafe_allow_html=True)
+            with m3:
+                st.markdown(f'<div style="background-color: #111418; border: 1px solid #196f3d; border-radius: 8px; padding: 10px; text-align: center;"><div style="font-size: 10px; font-weight: bold; color: #2ecc71;">CERRADAS</div><div style="font-size: 20px; font-weight: bold; color: white;">{total_cerradas_hoy}</div></div>', unsafe_allow_html=True)
+            with m4:
+                st.markdown(f'<div style="background-color: #111418; border: 1px solid #2e4053; border-radius: 8px; padding: 10px; text-align: center;"><div style="font-size: 10px; font-weight: bold; color: #bdc3c7;">TOTAL ACTIVAS</div><div style="font-size: 20px; font-weight: bold; color: white;">{total_activas_y_dia}</div></div>', unsafe_allow_html=True)
+
+            st.markdown('<div style="margin-top: 15px;"></div>', unsafe_allow_html=True)
+
+            for index, row in df_actual.iterrows():
+                estatus = str(row.get('ESTATUS', 'N/A')).upper()
+                diag = str(row.get('DIAGNOSTICO_FALLA', 'N/A'))
+                inicio_raw = pd.to_datetime(row.get('FECHA_HORA_INICIO')).tz_localize(None).tz_localize(tz_mx)
+                fin_raw = row.get('FECHA_HORA_FIN')
+                inicio_str = inicio_raw.strftime('%H:%M %d de %B de %Y')
+                
+                if pd.notnull(fin_raw):
+                    fin_dt = pd.to_datetime(fin_raw).tz_localize(None).tz_localize(tz_mx)
+                    delta = fin_dt - inicio_raw
+                else:
+                    delta = ahora_mx - inicio_raw
+                    
+                duracion_str = f"{delta.days}d {delta.seconds//3600}h {(delta.seconds//60)%60}m"
+                ind = "🟢" if estatus == 'CERRADA' else ("🔴" if estatus == 'PENDIENTE' else "🟡")
+                
+                titulo = f"{ind}  **Sitio: {row.get('NUM_POZO', 'N/A')}** | ⏱️ Inicio: {inicio_str} | ⚠️ Falla: {diag} | ⏳ Duración: {duracion_str} | 🛠️ Estado: {estatus}"
+                
+                with st.expander(titulo):
+                    renderizar_bloque_incidencia(row, index, "act")
+
+        # ==============================================================================
+        # SECCIÓN INFERIOR A ANCHO COMPLETO: HISTORIAL Y FILTROS EN UNA SOLA HILERA DE 4
+        # ==============================================================================
+        st.markdown("---")
+        
+        df_historial['FECHA_HORA_INICIO'] = pd.to_datetime(df_historial['FECHA_HORA_INICIO'])
+        df_historial['FECHA_HORA_FIN'] = pd.to_datetime(df_historial['FECHA_HORA_FIN'], errors='coerce')
+        df_historial['MES_AÑO'] = df_historial['FECHA_HORA_INICIO'].dt.strftime('%B %Y').str.capitalize()
+        df_historial['PERIODO'] = df_historial['FECHA_HORA_INICIO'].dt.to_period('M')
+        
+        periodos_hist = sorted(df_historial['PERIODO'].unique(), reverse=True)
+        meses = [p.strftime('%B %Y').capitalize() for p in periodos_hist]
+        
+        if meses:
             mes_actual = datetime.now().strftime('%B %Y').capitalize()
             default_index = meses.index(mes_actual) if mes_actual in meses else 0
             
-            mes_sel = st.selectbox(
-                "Seleccionar mes:", 
-                meses, 
-                index=default_index, 
-                key="select_mes_historial"
-            )
-        
-        datos_mes = df_historial[df_historial['MES_AÑO'] == mes_sel]
-        
-        with col_filtro_colonia:
-            colonias_en_mes = []
-            for _, r_hist in datos_mes.iterrows():
-                id_p = normalizar_id(r_hist['NUM_POZO'])
-                gdf_h = get_geometries(id_p)
-                if gdf_h is not None and not gdf_h.empty and 'Col_atl' in gdf_h.columns:
-                    for val in gdf_h['Col_atl'].dropna():
-                        if isinstance(val, str):
-                            for c in val.split(','):
-                                c_limpia = c.strip()
-                                if c_limpia:
-                                    colonias_en_mes.append(c_limpia)
-                        else:
-                            colonias_en_mes.append(str(val).strip())
+            # Pre-cálculos para saber el comportamiento de paginación antes de pintar las columnas
+            # (Lo manejamos de forma segura para alinear los 4 elementos en una sola hilera)
             
-            lista_colonias = ["Todas las colonias"] + sorted(list(set(colonias_en_mes)))
-                
-            colonia_sel = st.selectbox(
-                "Filtrar por colonia afectada (Col_atl):", 
-                lista_colonias, 
-                key="select_colonia_historial"
-            )
+            # Definimos las 4 columnas exactas en una sola hilera horizontal
+            col_f1, col_f2, col_f3, col_f4 = st.columns(4, gap="medium")
             
-        if colonia_sel != "Todas las colonias":
-            pozos_validos = []
-            for _, r_hist in datos_mes.iterrows():
-                id_p = normalizar_id(r_hist['NUM_POZO'])
-                gdf_h = get_geometries(id_p)
-                if gdf_h is not None and not gdf_h.empty and 'Col_atl' in gdf_h.columns:
-                    match = gdf_h['Col_atl'].astype(str).str.contains(colonia_sel, case=False, na=False).any()
-                    if match:
-                        pozos_validos.append(r_hist.name)
-            datos_mes = datos_mes.loc[datos_mes.index.isin(pozos_validos)]
-        
-        if datos_mes.empty:
-            st.info("No hay registros de pozos fuera de servicio para los filtros seleccionados.")
-        else:
-            for index, row in datos_mes.iterrows():
-                inicio_raw = row['FECHA_HORA_INICIO']
-                fin_raw = row['FECHA_HORA_FIN']
-                
-                if pd.notnull(fin_raw):
-                    delta = fin_raw - inicio_raw
-                    dias = delta.days
-                    horas = delta.seconds // 3600
-                    minutos = (delta.seconds % 3600) // 60
-                    duracion_str = f"{dias}d {horas}h {minutos}m"
-                    fin_str = fin_raw.strftime('%H:%M %d de %B de %Y')
+            with col_f1:
+                mes_sel = st.selectbox("Seleccionar mes:", meses, index=default_index, key="select_mes_historial")
+            
+            with col_f2:
+                todas_cols_hist = ["Todas las colonias"] + get_todas_las_colonias_diccionario()
+                colonia_sel = st.selectbox("Filtrar por colonia:", todas_cols_hist, key="select_colonia_historial")
+
+            with col_f3:
+                lista_pozos_global = sorted([str(p).strip().upper() for p in df_historial['NUM_POZO'].dropna().unique() if str(p).strip()])
+                opciones_pozos_hist = ["Todos los pozos"] + lista_pozos_global
+                pozo_hist_sel = st.selectbox("Filtrar por Pozo:", opciones_pozos_hist, key="select_pozo_historial")
+
+            # Determinación de base de datos según si se seleccionó un pozo específico o no
+            if pozo_hist_sel != "Todos los pozos":
+                datos_trabajo = df_historial[df_historial['NUM_POZO'].astype(str).str.strip().str.upper() == pozo_hist_sel].copy()
+                modo_pozo_activo = True
+            else:
+                datos_trabajo = df_historial[df_historial['MES_AÑO'] == mes_sel].copy()
+                modo_pozo_activo = False
+
+            # Aplicar filtro adicional por colonia si está seleccionado
+            if colonia_sel != "Todas las colonias":
+                pozos_validos_col = []
+                for _, rh in datos_trabajo.iterrows():
+                    jp = normalizar_id(rh['NUM_POZO'])
+                    gdf_th = get_geometries(jp)
+                    if gdf_th is not None and not gdf_th.empty and 'Col_atl' in gdf_th.columns:
+                        cols_h = [str(c).strip().upper() for c in gdf_th['Col_atl'].dropna().unique()]
+                        if any(colonia_sel.strip().upper() in ch for ch in cols_h):
+                            pozos_validos_col.append(jp)
+                datos_trabajo = datos_trabajo[datos_trabajo['NUM_POZO'].astype(str).str.strip().str.upper().isin(pozos_validos_col)]
+
+            total_registros_calc = len(datos_trabajo)
+
+            # Cuarta columna: Control de Paginación o indicador de vista global de pozo
+            with col_f4:
+                if modo_pozo_activo:
+                    st.markdown(f"<div style='background-color: rgba(0,212,255,0.1); border: 1px solid #00d4ff; padding: 6px; border-radius: 4px; text-align: center; color: #00d4ff; font-size: 11px; margin-top: 24px; font-weight: bold;'>Modo global pozo (Sin paginación)</div>", unsafe_allow_html=True)
+                    pagina_actual = 1
                 else:
-                    duracion_str = "N/A"
-                    fin_str = "N/A"
+                    tamanio_pagina = 10
+                    total_paginas = max(1, (total_registros_calc + tamanio_pagina - 1) // tamanio_pagina)
+                    if total_paginas > 1:
+                        pagina_actual = st.number_input(f"Página (Total: {total_registros_calc})", min_value=1, max_value=total_paginas, step=1, key="num_pagina_historial")
+                    else:
+                        st.markdown(f"<div style='font-size:11px; color:#8fa4c0; margin-top: 28px;'>Registros en mes: <b>{total_registros_calc}</b></div>", unsafe_allow_html=True)
+                        pagina_actual = 1
+
+            # Tarjeta de cabecera con el indicador de registros integrado
+            st.markdown(f"""
+                <style>
+                .historial-header-container {{
+                    background: linear-gradient(90deg, rgba(13, 27, 42, 0.9) 0%, rgba(6, 14, 24, 0.4) 100%);
+                    border-left: 4px solid #00d4ff;
+                    padding: 10px 15px;
+                    border-radius: 6px;
+                    margin-top: 15px;
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }}
+                [data-testid="stDataFrame"] {{
+                    border: 1px solid #1f3a5f !important;
+                    border-radius: 8px !important;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                }}
+                </style>
+                <div class="historial-header-container">
+                    <div>
+                        <h3 style="color:white; font-size: 20px; font-weight:bold; margin: 0; letter-spacing: 0.5px;">📜 Historial de Incidencias Cerradas</h3>
+                        <p style="color:#8fa4c0; font-size: 11px; margin: 2px 0 0 0;">Registro detallado y consulta de eventos operativos finalizados</p>
+                    </div>
+                    <div style="background-color: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; padding: 4px 12px; border-radius: 20px; color: #00d4ff; font-size: 12px; font-weight: bold; white-space: nowrap;">
+                        Registros Totales: {total_registros_calc}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Selección de datos paginados vs globales
+            if modo_pozo_activo:
+                datos_pagina = datos_trabajo.copy()
+            else:
+                tamanio_pagina = 10
+                total_paginas = max(1, (total_registros_calc + tamanio_pagina - 1) // tamanio_pagina)
+                inicio_idx = (pagina_actual - 1) * tamanio_pagina
+                fin_idx = min(inicio_idx + tamanio_pagina, total_registros_calc)
+                datos_pagina = datos_trabajo.iloc[inicio_idx:fin_idx].copy()
+
+            # ==============================================================================
+            # FILA 1 DE GRÁFICOS: TOP TIPOS DE FALLA Y TOP 5 PEORES SECTORES
+            # ==============================================================================
+            st.markdown('<div style="margin-top: 20px;"></div>', unsafe_allow_html=True)
+            col_g1, col_g2 = st.columns(2, gap="medium")
+
+            with col_g1:
+                with st.container(border=True):
+                    st.markdown(f"""
+                        <div style="color: white; font-weight: bold; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <span>🔺</span> Top Tipos de Falla
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    if not datos_trabajo.empty and 'DIAGNOSTICO_FALLA' in datos_trabajo.columns:
+                        df_tipos_temp = datos_trabajo.copy()
+                        df_tipos_temp['DIAGNOSTICO_FALLA'] = df_tipos_temp['DIAGNOSTICO_FALLA'].fillna('N/A').astype(str).str.strip().str.upper()
+                        
+                        fallas_a_agrupar = ['ALTA DEMANDA', 'EMBOBINADO ABIERTO', 'BOMBA DAÑADA', 'EQUIPO ATERRIZADO', 'DESGASTE MECANICO']
+                        df_tipos_temp['DIAGNOSTICO_FALLA'] = df_tipos_temp['DIAGNOSTICO_FALLA'].apply(
+                            lambda x: 'EQUIPO DE BOMBEO DAÑADO' if x in fallas_a_agrupar else x
+                        )
+                        
+                        df_tipos_mes = df_tipos_temp['DIAGNOSTICO_FALLA'].value_counts().reset_index()
+                        df_tipos_mes.columns = ['Tipo', 'Cantidad']
+                        df_tipos_mes = df_tipos_mes.head(5)
+                    else:
+                        df_tipos_mes = pd.DataFrame({'Tipo': ['Sin datos'], 'Cantidad': [0]})
+
+                    base_tipos = alt.Chart(df_tipos_mes).encode(
+                        x=alt.X('Tipo:N', sort='-y', title=None, axis=alt.Axis(labelAngle=-25, labelColor='white', labelLimit=180)),
+                        y=alt.Y('Cantidad:Q', title=None, axis=alt.Axis(gridColor='#1f3a5f', labelColor='white'))
+                    )
+                    bars_tipos = base_tipos.mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color='#00d4ff')
+                    text_tipos = base_tipos.mark_text(align='center', baseline='bottom', dy=-4, color='white', fontSize=11).encode(text='Cantidad:Q')
+                    
+                    chart_tipos_mes = (bars_tipos + text_tipos).properties(height=220).configure_view(stroke=None).configure(background='transparent')
+
+                    st.altair_chart(chart_tipos_mes, use_container_width=True)
+
+            with col_g2:
+                with st.container(border=True):
+                    st.markdown(f"""
+                        <div style="color: white; font-weight: bold; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <span>📊</span> Top 5 PEORES Sectores con Incidencias
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    sectores_mes_conteo = {}
+                    for _, r_h in datos_trabajo.iterrows():
+                        id_ph = normalizar_id(r_h.get('NUM_POZO'))
+                        gdf_hm = get_geometries(id_ph)
+                        if gdf_hm is not None and not gdf_hm.empty and 'Sector' in gdf_hm.columns:
+                            sec_val = str(gdf_hm['Sector'].iloc[0]).strip()
+                            if sec_val and sec_val.upper() not in ['SIN SECTOR', 'NAN', 'N/A', 'NONE']:
+                                sectores_mes_conteo[sec_val] = sectores_mes_conteo.get(sec_val, 0) + 1
+
+                    if sectores_mes_conteo:
+                        df_sectores_mes = pd.DataFrame(list(sectores_mes_conteo.items()), columns=['Sector', 'Total'])
+                        df_sectores_mes = df_sectores_mes.sort_values(by='Total', ascending=False).head(5)
+                    else:
+                        df_sectores_mes = pd.DataFrame({'Sector': ['Sin datos'], 'Total': [0]})
+
+                    colores_pastel = ['#FF4B4B', '#F1C40F', '#00d4ff', '#9B59B6', '#2ECC71']
+                    
+                    # Reemplazamos el gráfico circular por el Treemap exacto
+                    fig_treemap = px.treemap(
+                        df_sectores_mes,
+                        path=['Sector'],
+                        values='Total',
+                        color='Sector',
+                        color_discrete_map={
+                            'COBANO': '#FF4B4B',
+                            'JESUS TERAN': '#2ECC71',
+                            'DC18': '#F1C40F',
+                            'DO16-DO18': '#00d4ff',
+                            'DS02B': '#9B59B6'
+                        }
+                    )
+
+                    fig_treemap.update_layout(
+                        margin=dict(t=10, l=10, r=10, b=10),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='white', family='sans-serif'),
+                        height=220
+                    )
+
+                    fig_treemap.update_traces(
+                        marker=dict(line=dict(width=2, color='#0b1a29')),
+                        textfont=dict(size=14, color='white')
+                    )
+
+                    st.plotly_chart(fig_treemap, use_container_width=True)
+
+            # ==============================================================================
+            # FILA 2 DE GRÁFICOS: MAPA DE CALOR 2026 + TENDENCIA
+            # ==============================================================================
+            st.markdown('<div style="margin-top: 15px;"></div>', unsafe_allow_html=True)
+            col_g3, col_g4 = st.columns(2, gap="medium")
+
+            with col_g3:
+                with st.container(border=True):
+                    st.markdown("""
+                        <div style="color: white; font-weight: bold; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <span>🔥</span> Mapa de calor 2026
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    df_2026_calor = df_historial[df_historial['FECHA_HORA_INICIO'].dt.year == 2026].copy()
+
+                    if not df_2026_calor.empty and 'NUM_POZO' in df_2026_calor.columns:
+                        df_2026_calor['Pozo'] = df_2026_calor['NUM_POZO'].fillna('N/A').astype(str).str.strip().str.upper()
+                        
+                        meses_es_corto = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+                        df_2026_calor['Mes_Num'] = df_2026_calor['FECHA_HORA_INICIO'].dt.month
+                        df_2026_calor['Mes'] = df_2026_calor['Mes_Num'].map(meses_es_corto)
+
+                        df_heatmap_data = df_2026_calor.groupby(['Pozo', 'Mes_Num', 'Mes']).size().reset_index(name='Eventos')
+                        df_heatmap_data = df_heatmap_data[df_heatmap_data['Eventos'] > 4]
+
+                        pozos_validos = df_heatmap_data['Pozo'].unique().tolist()
+                        df_heatmap_data = df_heatmap_data[df_heatmap_data['Pozo'].isin(pozos_validos)]
+
+                        df_totales_anuales = df_heatmap_data.groupby('Pozo')['Eventos'].sum().reset_index(name='Total_Anual')
+                        df_totales_anuales = df_totales_anuales.sort_values(by='Total_Anual', ascending=False)
+                        orden_pozos = df_totales_anuales['Pozo'].tolist()
+                    else:
+                        df_heatmap_data = pd.DataFrame(columns=['Pozo', 'Mes_Num', 'Mes', 'Eventos'])
+                        orden_pozos = []
+
+                    if not df_heatmap_data.empty:
+                        chart_heatmap = alt.Chart(df_heatmap_data).mark_rect(cornerRadius=3, stroke='#0b1a29', strokeWidth=1).encode(
+                            x=alt.X('Mes:N', sort=['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dec'], title=None, axis=alt.Axis(labelAngle=0, labelColor='white')),
+                            y=alt.Y('Pozo:N', sort=orden_pozos, title=None, axis=alt.Axis(labelColor='white')),
+                            color=alt.Color('Eventos:Q', scale=alt.Scale(range=['#2ecc71', '#f1c40f', '#e74c3c']), legend=alt.Legend(title="Eventos", labelColor='white', titleColor='white')),
+                            tooltip=['Pozo', 'Mes', 'Eventos']
+                        ).properties(height=280).configure_view(stroke=None).configure(background='transparent')
+                    else:
+                        chart_heatmap = alt.Chart(pd.DataFrame({'Mensaje': ['No hay registros con más de 4 incidencias por mes']})).mark_text(color='white').encode(text='Mensaje:N').properties(height=280).configure(background='transparent')
+
+                    st.altair_chart(chart_heatmap, use_container_width=True)
+
+            with col_g4:
+                with st.container(border=True):
+                    st.markdown("""
+                        <div style="color: white; font-weight: bold; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <span>📅</span> Incidencias por Mes - Año en Curso (2026)
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    df_2026 = df_historial[df_historial['FECHA_HORA_INICIO'].dt.year == 2026].copy()
+
+                    if not df_2026.empty:
+                        nombres_meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
+                        df_2026['Mes_Num'] = df_2026['FECHA_HORA_INICIO'].dt.month
+                        df_2026['Mes_Nombre'] = df_2026['Mes_Num'].map(nombres_meses_es)
+                        
+                        df_meses_2026 = df_2026.groupby(['Mes_Num', 'Mes_Nombre']).size().reset_index(name='Cantidad')
+                        df_meses_2026 = df_meses_2026.sort_values('Mes_Num')
+                    else:
+                        df_meses_2026 = pd.DataFrame({'Mes_Nombre': ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'], 'Cantidad': [0]*12})
+
+                    base_mensual = alt.Chart(df_meses_2026).encode(
+                        x=alt.X('Mes_Nombre:N', sort=None, title=None, axis=alt.Axis(labelAngle=-30, labelColor='white')),
+                        y=alt.Y('Cantidad:Q', title=None, axis=alt.Axis(gridColor='#1f3a5f', labelColor='white'))
+                    )
+                    line_mensual = base_mensual.mark_line(color='#00d4ff', strokeWidth=3)
+                    points_mensual = base_mensual.mark_circle(color='#ff4b4b', size=70)
+                    text_mensual = base_mensual.mark_text(align='center', baseline='bottom', dy=-8, color='white', fontSize=10).encode(text='Cantidad:Q')
+
+                    chart_mensual = (line_mensual + points_mensual + text_mensual).properties(height=280).configure_view(stroke=None).configure(background='transparent')
+
+                    st.altair_chart(chart_mensual, use_container_width=True)
+                    
+            # ==============================================================================
+            # TABLA DE HISTORIAL DE INCIDENCIAS CERRADAS
+            # ==============================================================================
+            if datos_pagina.empty:
+                st.info("No hay registros para los filtros seleccionados.")
+            else:
+                df_tabla = pd.DataFrame()
+                df_tabla['Sitio'] = datos_pagina.get('NUM_POZO', 'N/A')
+                df_tabla['Inicio'] = datos_pagina['FECHA_HORA_INICIO'].dt.strftime('%H:%M %d/%m/%Y')
+                df_tabla['Diagnóstico de Falla'] = datos_pagina.get('DIAGNOSTICO_FALLA', 'N/A')
+                df_tabla['Cierre'] = datos_pagina['FECHA_HORA_FIN'].dt.strftime('%H:%M %d/%m/%Y')
                 
-                diag = str(row.get('DIAGNOSTICO_FALLA', 'N/A'))
+                duraciones = []
+                for _, row_t in datos_pagina.iterrows():
+                    if pd.notnull(row_t['FECHA_HORA_FIN']):
+                        delta = row_t['FECHA_HORA_FIN'] - row_t['FECHA_HORA_INICIO']
+                        duraciones.append(f"{delta.days}d {delta.seconds//3600}h {(delta.seconds//60)%60}m")
+                    else:
+                        duraciones.append("N/A")
+                df_tabla['Duración'] = duraciones
+                df_tabla['Estatus'] = datos_pagina.get('ESTATUS', 'CERRADA').str.upper()
+                df_tabla['Responsable'] = datos_pagina.get('RESPONSABLE', 'N/A')
                 
-                titulo_hist = (
-                    f"🟢 **Sitio: {row.get('NUM_POZO', 'N/A')}** | "
-                    f"🕒 Fecha y hora de inicio: {inicio_raw.strftime('%H:%M %d de %B de %Y')} | "
-                    f"⚠️ Diagnostico de la falla: {diag} | "
-                    f"🏁 Fecha y hora de cierre: {fin_str} | "
-                    f"⏳ Duración del evento: {duracion_str} | "
-                    f"🆗 Estatus: {str(row.get('ESTATUS', 'CERRADA')).upper()}"
+                colonias_por_fila = []
+                for _, r_hist in datos_pagina.iterrows():
+                    id_p = normalizar_id(r_hist['NUM_POZO'])
+                    gdf_h = get_geometries(id_p)
+                    if gdf_h is not None and not gdf_h.empty and 'Col_atl' in gdf_h.columns:
+                        cols_unicas = sorted(gdf_h['Col_atl'].dropna().unique().tolist())
+                        colonias_por_fila.append(", ".join(map(str, cols_unicas)))
+                    else:
+                        colonias_por_fila.append("")
+                
+                df_tabla['Colonias Afectadas'] = colonias_por_fila
+                
+                st.dataframe(df_tabla.reset_index(drop=True), use_container_width=True, hide_index=True)
+                    
+# ==============================================================================
+# PESTAÑA 3: MIAA TANQUES (INTEGRACIÓN NATIVA Y COMPLETA)
+# ==============================================================================
+elif tab_activa == "tanques":
+    st.markdown('<div class="titulo-superior">SEGUIMIENTO Y MONITOREO A TANQUES PRINCIPALES </div>', unsafe_allow_html=True)
+    import numpy as np
+    import pandas as pd
+    import plotly.graph_objects as go
+    from html import escape
+
+    TIMEZONE = "America/Mexico_City"
+    DEFAULT_LOAD_DAYS = 7  # Optimizado para carga rápida
+    MAX_AGE_MINUTES = 120
+    EXPECTED_INTERVAL_MINUTES = 5
+    MIN_COMMUNICATION_PCT = 5
+    CATEGORY_COLUMN = "Distrito"
+
+    # Estilos CSS específicos del tablero de tanques
+    st.markdown(
+        """
+        <style>
+        .tq-eyebrow { color: #8fa9c2; letter-spacing: .15em; font-size: .67rem; font-weight: 600; text-transform: uppercase; }
+        .tq-kpi-value { color: #f0f7ff; font-size: clamp(1.3rem, 1.65vw, 1.95rem); font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; margin: 2px 0 4px; }
+        .tm-card-title { color: #edf3fb; font-size: 1.05rem; font-weight: 600; overflow-wrap: anywhere; }
+        .tm-card-title b { margin-right: 8px; color: #63b9df; }
+        .tm-card-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 8px; margin: 10px 0 4px; }
+        .tm-card-metrics .tm-metric { display: grid; grid-template-rows: auto auto; min-width: 0; }
+        .tm-card-metrics .tm-metric span { color: #8fa9c2; font-size: .75rem; line-height: 1.2; }
+        .tm-card-metrics .tm-metric strong { color: #f0f7ff; font-size: .88rem; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 3px; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<h3 style='color: #00d4ff; margin-bottom: 15px;'>// MONITOREO DE TANQUES DE REGULACIÓN - MIAA</h3>", unsafe_allow_html=True)
+
+    # 1. Funciones auxiliares internas de soporte
+    def _number(value: float, unit: str = "", decimals: int = 0) -> str:
+        if pd.isna(value):
+            return "—"
+        return f"{value:,.{decimals}f}{unit}"
+
+    def _render_filters(data, key, catalog, available_start=None, available_end=None):
+        first = available_start if available_start is not None else data["timestamp"].min()
+        last = available_end if available_end is not None else data["timestamp"].max()
+
+        if pd.isna(first) or pd.isna(last):
+            first = pd.Timestamp.now() - pd.Timedelta(days=7)
+            last = pd.Timestamp.now()
+
+        quick_key = f"{key}_quick"
+        dates_key = f"{key}_dates"
+        periods = {"24 h": 1, "7 días": 7, "30 días": 30}
+
+        state = st.session_state
+        state.setdefault(quick_key, "7 días")
+
+        def use_custom_dates():
+            state[quick_key] = None
+
+        quick = state[quick_key]
+        if quick in periods:
+            start = max(first, last - pd.Timedelta(days=periods[quick]))
+            state[dates_key] = (start.date(), last.date())
+        elif dates_key not in state:
+            state[dates_key] = (first.date(), last.date())
+
+        categories = sorted(catalog[CATEGORY_COLUMN].dropna().unique().tolist())
+        if not categories:
+            categories = ["GENERAL"]
+            catalog[CATEGORY_COLUMN] = "GENERAL"
+
+        category_key = f"{key}_category"
+        if state.get(category_key) not in categories:
+            state[category_key] = categories[0]
+
+        with st.container(border=True):
+            date_column, quick_column, category_column = st.columns(
+                [2, 2, 4], gap="medium", vertical_alignment="bottom"
+            )
+            with date_column:
+                st.date_input(
+                    "Periodo",
+                    min_value=first.date(),
+                    max_value=last.date(),
+                    format="DD/MM/YYYY",
+                    key=dates_key,
+                    on_change=use_custom_dates,
                 )
+            with quick_column:
+                st.segmented_control(
+                    "Acceso rápido",
+                    options=list(periods),
+                    key=quick_key,
+                    width="stretch",
+                )
+            with category_column:
+                st.segmented_control(
+                    "Distrito",
+                    options=categories,
+                    selection_mode="single",
+                    required=True,
+                    key=category_key,
+                    width="stretch",
+                )
+
+        dates = state[dates_key]
+        if len(dates) != 2:
+            return None
+
+        start = pd.Timestamp(dates[0])
+        end = min(
+            pd.Timestamp(dates[1]) + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1),
+            last,
+        )
+        return start, end, state[category_key]
+
+    def _summarize(data, catalog, start, end, max_age_minutes, expected_interval_minutes=5, min_communication_pct=80):
+        interval = pd.Timedelta(minutes=expected_interval_minutes)
+        expected_readings = int((end - start) // interval)
+        if expected_readings < 1:
+            expected_readings = 1
+
+        valid = data.loc[data["level_m"].ge(0)]
+        latest = valid.groupby("tank_id", sort=False).tail(1).set_index("tank_id")
+        statistics = data.groupby("tank_id")["level_m"].agg(min_period="min", max_period="max")
+
+        summary = catalog.join(latest[["timestamp", "level_m"]]).join(statistics)
+        usable_geometry = summary["capacity_m3"].gt(0) & summary["max_level_m"].gt(0)
+
+        capacity = summary["capacity_m3"].where(usable_geometry)
+        max_level = summary["max_level_m"].where(usable_geometry)
+        area_m2 = capacity / max_level
+
+        summary["volume_m3"] = area_m2 * summary["level_m"]
+        age = end - summary["timestamp"]
+        recent = age.between(pd.Timedelta(0), pd.Timedelta(minutes=max_age_minutes))
+
+        summary["volume_m3"] = summary["volume_m3"].where(recent)
+        summary["storage_pct"] = 100 * summary["volume_m3"] / capacity
+
+        coverage_end = start + expected_readings * interval
+        received = data.loc[
+            data["timestamp"].ge(start) & data["timestamp"].lt(coverage_end) & data["level_m"].notna(),
+            ["tank_id", "timestamp"],
+        ].copy()
+
+        if not received.empty:
+            received["interval_id"] = (received["timestamp"] - start) // interval
+            received_counts = received.groupby("tank_id")["interval_id"].nunique()
+        else:
+            received_counts = pd.Series(dtype=int)
+
+        summary["expected_readings"] = expected_readings
+        summary["received_readings"] = received_counts.reindex(summary.index, fill_value=0).astype(int)
+        summary["communication_pct"] = 100 * summary["received_readings"] / summary["expected_readings"]
+        summary["communication_ok"] = summary["communication_pct"].ge(min_communication_pct)
+
+        return summary
+
+    def _render_summary(summary, end):
+        available = summary.loc[summary["volume_m3"].notna() & summary["capacity_m3"].gt(0)]
+        capacity = available["capacity_m3"].sum(min_count=1)
+        volume = available["volume_m3"].sum(min_count=1)
+        percent = 100 * volume / capacity if capacity > 0 else np.nan
+
+        insufficient_count = int((~summary["communication_ok"]).sum())
+        communicating = summary.loc[summary["communication_ok"]]
+        expected_total = communicating["expected_readings"].sum()
+        communication_pct = (
+            100 * communicating["received_readings"].sum() / expected_total
+            if expected_total > 0
+            else np.nan
+        )
+
+        kpis = [
+            ("TANQUES TOTALES", str(len(summary)), "Registrados", "tq_kpi_1"),
+            ("COMUNICACIÓN <5%", str(insufficient_count), "Sin reporte activo", "tq_kpi_2"),
+            ("% COMUNICACIÓN", _number(communication_pct, " %", 1), "Promedio global", "tq_kpi_3"),
+            ("CAPACIDAD REGULACIÓN", _number(capacity, " m³"), "Capacidad instalada", "tq_kpi_4"),
+            ("VOLUMEN REGULACIÓN", _number(volume, " m³"), "Volumen actual", "tq_kpi_5"),
+            ("% ALMACENAMIENTO", _number(percent, " %", 1), "Nivel de reserva", "tq_kpi_6"),
+        ]
+
+        cols = st.columns(6)
+        for col, (title, value, caption, key_name) in zip(cols, kpis):
+            with col:
+                with st.container(border=True, key=key_name):
+                    st.html(f'<div class="tq-eyebrow">{escape(title)}</div>')
+                    st.html(f'<div class="tq-kpi-value">{escape(value)}</div>')
+                    st.caption(caption)
+
+        st.caption(f"Corte de información: {end:%d/%m/%Y %H:%M}")
+
+    def _build_level_chart(level_data, tank_info, start, end, gap_minutes=60):
+        level_data = level_data.sort_values("timestamp").copy()
+        fig = go.Figure()
+
+        breaks = (
+            level_data["timestamp"].diff().gt(pd.Timedelta(minutes=gap_minutes))
+            | level_data["level_m"].isna()
+            | level_data["level_m"].shift().isna()
+        )
+        level_data["_segment"] = breaks.cumsum()
+        valid = level_data.dropna(subset=["level_m"])
+
+        for _, block in valid.groupby("_segment"):
+            multiple_points = len(block) > 1
+            fig.add_trace(
+                go.Scatter(
+                    x=block["timestamp"],
+                    y=block["level_m"],
+                    mode="lines+markers" if multiple_points else "markers",
+                    line={"color": "#63b9df", "width": 1.6},
+                    marker={"color": "#63b9df", "size": 4, "symbol": "circle", "opacity": 0.8},
+                    fill="tozeroy" if multiple_points else None,
+                    fillcolor="rgba(99, 185, 223, 0.2)",
+                    name="Nivel",
+                    hovertemplate="<b>%{y:.2f} m</b><br>%{x|%d/%m/%Y %H:%M}<extra></extra>",
+                )
+            )
+
+        fig.add_hline(
+            y=float(tank_info["max_level_m"]),
+            line_color="#ffd18a",
+            line_dash="dash",
+            line_width=1.2,
+        )
+
+        fig.update_layout(
+            yaxis_title="m",
+            template="plotly_dark",
+            height=220,
+            margin={"l": 30, "r": 10, "t": 8, "b": 25},
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            font={"color": "#e4edf7", "size": 11},
+            showlegend=False,
+            hovermode="closest",
+        )
+        fig.update_xaxes(range=[start, end], gridcolor="rgba(35, 55, 74, 0.6)", zerolinecolor="rgba(35, 55, 74, 0.6)")
+        fig.update_yaxes(gridcolor="rgba(35, 55, 74, 0.6)", zerolinecolor="rgba(35, 55, 74, 0.6)")
+        return fig
+
+    def _render_tank(data, tank, start, end, gap_minutes, key):
+        display_name = str(tank["name"]).strip()
+        tank_id = str(tank.name)
+
+        if display_name.startswith(tank_id):
+            display_name = display_name[len(tank_id) :].lstrip(" -")
+
+        st.html(f'<div class="tm-card-title"><b>{escape(tank_id)}</b> {escape(display_name)}</div>')
+
+        metrics_html = f"""
+        <div class="tm-card-metrics">
+            <div class="tm-metric"><span>Máx. per.</span><strong>{escape(_number(tank['max_period'], ' m', 2))}</strong></div>
+            <div class="tm-metric"><span>Mín. per.</span><strong>{escape(_number(tank['min_period'], ' m', 2))}</strong></div>
+            <div class="tm-metric"><span>% Com.</span><strong>{escape(_number(tank['communication_pct'], ' %', 1))}</strong></div>
+            <div class="tm-metric"><span>% Alm.</span><strong>{escape(_number(tank['storage_pct'], ' %', 0))}</strong></div>
+        </div>
+        """
+        st.html(metrics_html)
+
+        if data["level_m"].notna().any():
+            figure = _build_level_chart(data, tank, start, end, gap_minutes)
+            st.plotly_chart(figure, use_container_width=True, theme=None, key=key, config={"displaylogo": False, "displayModeBar": "hover"})
+        else:
+            st.info("Sin niveles disponibles.")
+
+        timestamp = tank["timestamp"]
+        if pd.notna(timestamp):
+            elapsed_minutes = max(0, int((end - timestamp).total_seconds() / 60 + 0.5))
+            days, rem = divmod(elapsed_minutes, 1440)
+            hours, minutes = divmod(rem, 60)
+            parts = []
+            if days: parts.append(f"{days}d")
+            if hours: parts.append(f"{hours}h")
+            if minutes or not parts: parts.append(f"{minutes}m")
+            elapsed_text = " ".join(parts)
+        else:
+            elapsed_text = "Sin datos"
+
+        st.caption(f"Antigüedad de lectura: {elapsed_text}")
+
+    # 2. Capa de datos optimizada utilizando tus motores existentes
+    @st.cache_data(ttl=300, show_spinner=False)
+    def _cargar_datos_tanques_nativo(start_ts_ms, end_ts_ms):
+        engine_telemetria = get_mysql_telemetria_engine()
+        engine_scada = get_mysql_scada_engine()
+        
+        if not engine_telemetria or not engine_scada:
+            return pd.DataFrame(), pd.DataFrame()
+
+        try:
+            df = pd.read_sql("SELECT * FROM Diccionario_de_tanques", engine_telemetria)
+            df_selected = df.copy()
+            df_selected["nivel_tanque"] = df_selected["nivel_tanque"].astype("string").str.strip()
+
+            df_full_tanks = pd.read_sql("SELECT ID_tanque, Sector, Distrito, Tipo, Vol_util FROM TANQUES", engine_telemetria)
+
+            tanks = df_selected[["TQ", "Nombre_tq", "Nivel_max"]].merge(
+                df_full_tanks, left_on="TQ", right_on="ID_tanque", how="left"
+            ).rename(columns={
+                "TQ": "tank_id",
+                "Nombre_tq": "name",
+                "Nivel_max": "max_level_m",
+                "Vol_util": "capacity_m3",
+            }).drop(columns=["ID_tanque"], errors="ignore")
+
+            tanks["max_level_m"] = pd.to_numeric(tanks["max_level_m"], errors="coerce")
+            tanks["capacity_m3"] = pd.to_numeric(tanks["capacity_m3"], errors="coerce")
+
+            tank_tags = df_selected.set_index("TQ")["nivel_tanque"].to_dict()
+            tags_list = [t for t in tank_tags.values() if t and t != "N/A"]
+
+            if not tags_list:
+                return pd.DataFrame(columns=["timestamp", "tank_id", "level_m"]), tanks
+
+            tags_string = "','".join(tags_list)
+            tag_to_tank = {v: k for k, v in tank_tags.items()}
+
+            query_hist = f"""
+                SELECT h.TIME AS raw_time, t.NAME AS tag_name, h.VALUE AS level_m
+                FROM vfitagnumhistory h
+                JOIN VfiTagRef t ON h.GATEID = t.GATEID
+                WHERE t.NAME IN ('{tags_string}')
+                  AND h.TIME >= {start_ts_ms}
+                  AND h.TIME <= {end_ts_ms}
+                ORDER BY h.TIME ASC;
+            """
+            df_readings = pd.read_sql(query_hist, engine_scada)
+
+            if df_readings.empty:
+                return pd.DataFrame(columns=["timestamp", "tank_id", "level_m"]), tanks
+
+            df_readings["timestamp"] = pd.to_datetime(df_readings["raw_time"], unit="ms", errors="coerce")
+            df_readings["tank_id"] = df_readings["tag_name"].map(tag_to_tank)
+
+            return df_readings[["timestamp", "tank_id", "level_m"]].dropna(subset=["tank_id"]), tanks
+        except Exception as e:
+            st.error(f"Error al consultar la base de datos de tanques: {e}")
+            return pd.DataFrame(), pd.DataFrame()
+
+    # 3. Fragmento principal aislado para renderizado fluido
+    @st.fragment
+    def renderizar_pestana_tanques():
+        now = pd.Timestamp.now(tz=TIMEZONE).tz_localize(None)
+        cutoff = now.floor("5min")
+        window_start = cutoff - pd.Timedelta(days=DEFAULT_LOAD_DAYS)
+
+        start_ts_ms = int(window_start.timestamp() * 1000)
+        end_ts_ms = int(cutoff.timestamp() * 1000)
+
+        with st.spinner("Cargando módulos de tanques..."):
+            readings, tanks = _cargar_datos_tanques_nativo(start_ts_ms, end_ts_ms)
+
+        if tanks.empty:
+            st.warning("No se encontró información en el catálogo de tanques.")
+            return
+
+        data = readings.copy()
+        catalog = tanks.copy()
+        catalog["tank_id"] = catalog["tank_id"].astype(str).str.strip()
+        data["tank_id"] = data["tank_id"].astype(str).str.strip()
+
+        for col in ["capacity_m3", "max_level_m"]:
+            catalog[col] = pd.to_numeric(catalog[col], errors="coerce")
+
+        data["timestamp"] = pd.to_datetime(data["timestamp"], errors="coerce")
+        data["level_m"] = pd.to_numeric(data["level_m"], errors="coerce")
+        data = data.drop_duplicates(["tank_id", "timestamp"], keep="last").sort_values(["tank_id", "timestamp"]).reset_index(drop=True)
+        catalog = catalog.set_index("tank_id")
+
+        if CATEGORY_COLUMN not in catalog.columns:
+            catalog[CATEGORY_COLUMN] = "GENERAL"
+
+        period_filters = _render_filters(data, "tq_internal_tab", catalog.reset_index(), window_start, cutoff)
+        if period_filters is None:
+            return
+
+        start, end, category = period_filters
+        catalog_filtered = catalog.loc[catalog[CATEGORY_COLUMN].eq(category)].copy()
+        filtered = data.loc[
+            data["timestamp"].between(start, end) & data["tank_id"].isin(catalog_filtered.index)
+        ].copy()
+
+        summary = _summarize(
+            data=filtered,
+            catalog=catalog_filtered,
+            start=start,
+            end=end,
+            max_age_minutes=MAX_AGE_MINUTES,
+            expected_interval_minutes=EXPECTED_INTERVAL_MINUTES,
+            min_communication_pct=MIN_COMMUNICATION_PCT,
+        )
+
+        _render_summary(summary, end)
+
+        st.markdown("### Detalle por tanque")
+
+        tank_ids = catalog_filtered.index.tolist()
+        columns = 3
+        for offset in range(0, len(tank_ids), columns):
+            row_columns = st.columns(columns)
+            for column, tank_id in zip(row_columns, tank_ids[offset : offset + columns]):
+                with column, st.container(border=True):
+                    try:
+                        _render_tank(
+                            data=filtered.loc[filtered["tank_id"].eq(tank_id)],
+                            tank=summary.loc[tank_id],
+                            start=start,
+                            end=end,
+                            gap_minutes=90,
+                            key=f"tq_chart_tab_{tank_id}",
+                        )
+                    except Exception:
+                        st.error(f"No fue posible mostrar el tanque {tank_id}.")
+
+    renderizar_pestana_tanques()
+
+
+
+# ==============================================================================
+# PESTAÑA 4: SECTORES HIDRÁULICOS (CÓDIGO COMPLETO E INTEGRADO)
+# ==============================================================================
+
+elif tab_activa == "sectores":
+    st.markdown("""
+        <style>
+            :root { color-scheme: dark; }
+            .stApp { background: #081421; color: #e4edf7; }
+            header[data-testid="stHeader"] { background: #081421; }
+            [data-testid="stSidebar"] { background: #0c1c2c; border-right: 1px solid #203348; }
+            .block-container { padding: 3.5rem 2rem 1.4rem; max-width: 1920px; }
+            h1 { font-size: 1.9rem !important; font-weight: 650 !important; letter-spacing: -0.045rem; padding-top: .2rem !important; }
+            h3 { font-size: 1.03rem !important; font-weight: 600 !important; padding: .1rem 0 !important; }
+            [data-testid="stVerticalBlockBorderWrapper"] > div { border-color: #22384d !important; border-radius: 10px !important; background: #0b1a29; }
+            [data-testid="stCaptionContainer"] { color: #91a8bf; font-size: .78rem; }
+            
+            @keyframes pulse-glow {
+                0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(71,175,208,0.4)); }
+                50% { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(71,175,208,0.9)); }
+                100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(71,175,208,0.4)); }
+            }
+            @keyframes radar-spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            @keyframes water-flow {
+                0% { stroke-dashoffset: 24; }
+                100% { stroke-dashoffset: 0; }
+            }
+            @keyframes float-up {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-3px); }
+            }
+            .anim-pulse { animation: pulse-glow 2.5s infinite ease-in-out; transform-origin: center; }
+            .anim-spin { animation: radar-spin 8s infinite linear; transform-origin: center; }
+            .anim-flow { stroke-dasharray: 6; animation: water-flow 1.5s infinite linear; }
+            .anim-float { animation: float-up 3s infinite ease-in-out; }
+
+            .label-inline {
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: #c1d3e5;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                height: 100%;
+                padding-top: 0.5rem;
+                padding-right: 8px;
+            }
+
+            .card-indicador {
+                background: linear-gradient(135deg, #122c42 0%, #0b1c2d 100%);
+                border: 1px solid #27445e;
+                border-top: 2px solid #47afd0;
+                border-radius: 10px;
+                padding: 14px 16px;
+                min-height: 115px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            .label-indicador { font-size: 0.82rem; color: #9ab0c7; margin: 0; font-weight: 500; }
+            .value-indicador { font-size: 1.6rem; color: #f0f7ff; font-weight: 700; margin: 4px 0 0 0; font-variant-numeric: tabular-nums; }
+            .sub-indicador { font-size: 1.12rem; color: #73b3d8; margin: 0; }
+
+            .st-key-dma_operational table { width: 100%; }
+            .st-key-dma_operational td { border-bottom: 1px solid #23374a; padding: .52rem .5rem; vertical-align: middle; font-size: .8rem; width: 33.33%; color: #c1d3e5; font-variant-numeric: tabular-nums; }
+            iframe { border-radius: 8px; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="titulo-superior">Monitoreo de sectores</div>', unsafe_allow_html=True)
+
+    lista_nombres_sectores = sorted([str(s['sector']) for s in sectores]) if sectores else []
+    
+    indice_por_defecto = 0
+    for idx, nombre_sec in enumerate(lista_nombres_sectores):
+        if "DS08B" in str(nombre_sec).upper() or "S-023" in str(nombre_sec).upper() or "DN06" in str(nombre_sec).upper():
+            indice_por_defecto = idx + 1
+            break
+
+    col_bloque_sec, col_bloque_per = st.columns([1, 1], gap="large")
+    
+    with col_bloque_sec:
+        sub_c1, sub_c2 = st.columns([0.12, 0.88], gap="small")
+        with sub_c1:
+            st.markdown('<div class="label-inline">Sector</div>', unsafe_allow_html=True)
+        with sub_c2:
+            sector_elegido = st.selectbox(
+                "Sector", 
+                options=[""] + lista_nombres_sectores, 
+                index=indice_por_defecto if indice_por_defecto > 0 else (1 if lista_nombres_sectores else 0), 
+                key="select_sector_tab_principal",
+                label_visibility="collapsed"
+            )
+            
+    with col_bloque_per:
+        sub_c3, sub_c4 = st.columns([0.12, 0.88], gap="small")
+        with sub_c3:
+            st.markdown('<div class="label-inline">Periodo</div>', unsafe_allow_html=True)
+        with sub_c4:
+            opciones_periodo = [
+                "Hoy", "Ayer", "Últimas 24 horas", "Últimas 48 horas", 
+                "Esta semana", "Últimos 7 días", "Este Mes", 
+                "Último mes", "Últimos 3 meses", "Últimos 6 meses", "Personalizado"
+            ]
+            opcion_periodo_tab = st.selectbox(
+                "Periodo",
+                opciones_periodo,
+                index=2,
+                key="f_sector_periodo_tab",
+                label_visibility="collapsed"
+            )
+
+    st.write("")
+
+    if sector_elegido and sector_elegido != "":
+        sec_id = str(sector_elegido).split('.')[0].strip()
+        sec_id_clean = re.sub(r'^[^\d]*', '', sec_id)
+        datos_s = next((s for s in sectores if str(s['sector']).strip() == sec_id), None)
+
+        if datos_s:
+            hoy_dt = datetime.now()
+            medianoche = hoy_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            f_fin_h = hoy_dt
+
+            if opcion_periodo_tab == "Hoy":
+                f_ini_h = medianoche
+            elif opcion_periodo_tab == "Ayer":
+                f_ini_h = medianoche - timedelta(days=1)
+                f_fin_h = medianoche - timedelta(seconds=1)
+            elif opcion_periodo_tab == "Últimas 24 horas":
+                f_ini_h = hoy_dt - timedelta(hours=24)
+            elif opcion_periodo_tab == "Últimas 48 horas":
+                f_ini_h = hoy_dt - timedelta(hours=48)
+            elif opcion_periodo_tab == "Esta semana":
+                f_ini_h = medianoche - timedelta(days=medianoche.weekday())
+            elif opcion_periodo_tab == "Últimos 7 días":
+                f_ini_h = medianoche - timedelta(days=7)
+            elif opcion_periodo_tab == "Este Mes":
+                f_ini_h = hoy_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            elif opcion_periodo_tab == "Último mes":
+                f_ini_h = medianoche - timedelta(days=30)
+            elif opcion_periodo_tab == "Últimos 3 meses":
+                f_ini_h = medianoche - timedelta(days=90)
+            elif opcion_periodo_tab == "Últimos 6 meses":
+                f_ini_h = medianoche - timedelta(days=180)
+            else:
+                f_ini_h = medianoche - timedelta(days=7)
+
+            def coincide_sector(item_dict):
+                val_sec = str(item_dict.get('Sector') or item_dict.get('sector') or '').strip()
+                return val_sec == str(sec_id).strip() or (sec_id_clean and sec_id_clean in val_sec)
+
+            dict_reg_all = cargar_puntos_de_control_desde_db() 
+            dict_reg = {k: v for k, v in dict_reg_all.items() if coincide_sector(v)}
+            
+            dict_vrp_all = cargar_vrp_desde_db()
+            dict_vrp_sec = {k: v for k, v in dict_vrp_all.items() if coincide_sector(v)}
+
+            mapa_pc_all = cargar_puntos_criticos_desde_db()
+            dict_pc_sec = {k: v for k, v in mapa_pc_all.items() if coincide_sector(v)}
+
+            ids_p = [str(p).strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
+
+            # Recopilar todas las series para consultar BD_MADRE
+            mapa_series_nombres = {}
+            for k, r in dict_reg.items():
+                s_val = r.get('Serie') or r.get('dispositivo') or k
+                if s_val and str(s_val).strip().lower() not in ['none', 'n/a', 'null', '0']:
+                    mapa_series_nombres[str(s_val).strip()] = r.get('nombre', f"Punto Control ({s_val})")
+
+            for k, v in dict_vrp_sec.items():
+                s_val = v.get('Serie') or k
+                if s_val and str(s_val).strip().lower() not in ['none', 'n/a', 'null', '0']:
+                    mapa_series_nombres[str(s_val).strip()] = v.get('nombre', f"VRP ({s_val})")
+
+            for k, pc in dict_pc_sec.items():
+                s_val = pc.get('Serie') or k
+                if s_val and str(s_val).strip().lower() not in ['none', 'n/a', 'null', '0']:
+                    mapa_series_nombres[str(s_val).strip()] = pc.get('Domicilio', f"Punto Crítico ({s_val})")
+
+            tags_para_scada = []
+            tags_caudal_pozos = []
+            tags_agregados_set = set()
+            
+            for id_p in ids_p:
+                if id_p in mapa_pozos_dict:
+                    p_info = mapa_pozos_dict[id_p]
+                    t_pz_q = p_info.get('caudal')
+                    if t_pz_q and str(t_pz_q).strip().lower() not in ['0', 'none', 'n/a', 'null']:
+                        if str(t_pz_q) not in tags_agregados_set:
+                            tags_para_scada.append(str(t_pz_q))
+                            tags_agregados_set.add(str(t_pz_q))
+                        tags_caudal_pozos.append(str(t_pz_q))
+                    for kt in ['presion', 'nivel_tanque']:
+                        t_val = p_info.get(kt)
+                        if t_val and str(t_val).strip().lower() not in ['0', 'none', 'n/a', 'null']:
+                            if str(t_val) not in tags_agregados_set:
+                                tags_para_scada.append(str(t_val))
+                                tags_agregados_set.add(str(t_val))
+
+            scada_res_reg = cargar_datos_scada([str(t) for t in set(tags_para_scada) if t])
+
+            # Cargar últimos valores directamente desde BD_MADRE para los popups del mapa
+            ultimos_valores_mapa = {}
+            if mapa_series_nombres:
+                try:
+                    engine_tel = get_mysql_telemetria_engine()
+                    series_in_sql = "', '".join(list(mapa_series_nombres.keys()))
+                    q_ultimos_directo = f"""
+                        SELECT DISPOSITIVO, VARIABLE, VALOR, FECHA_HORA_LOGGER 
+                        FROM BD_MADRE 
+                        WHERE (DISPOSITIVO, FECHA_HORA_LOGGER) IN (
+                            SELECT DISPOSITIVO, MAX(FECHA_HORA_LOGGER) 
+                            FROM BD_MADRE 
+                            WHERE DISPOSITIVO IN ('{series_in_sql}') 
+                            GROUP BY DISPOSITIVO, VARIABLE
+                        )
+                    """
+                    df_ultimos = pd.read_sql(q_ultimos_directo, engine_tel)
+                    if not df_ultimos.empty:
+                        for _, row in df_ultimos.iterrows():
+                            dev = str(row['DISPOSITIVO']).strip()
+                            var = str(row['VARIABLE']).strip()
+                            if dev not in ultimos_valores_mapa:
+                                ultimos_valores_mapa[dev] = {}
+                            ultimos_valores_mapa[dev][var] = {'valor': row['VALOR'], 'fecha': row['FECHA_HORA_LOGGER']}
+                except Exception:
+                    pass
+
+            caudal_promedio_pozos = 0.0
+            if tags_caudal_pozos:
+                try:
+                    engine_h = get_mysql_scada_engine()
+                    tags_q_pozos_in = "', '".join([str(t) for t in set(tags_caudal_pozos) if t])
+                    if tags_q_pozos_in:
+                        q_prom_pozos_query = f"""
+                            SELECT AVG(suma_instante) as PROMEDIO_TOTAL FROM (
+                                SELECT h.FECHA, SUM(h.VALUE) as suma_instante 
+                                FROM vfitagnumhistory h 
+                                JOIN VfiTagRef r ON h.GATEID = r.GATEID 
+                                WHERE r.NAME IN ('{tags_q_pozos_in}') AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
+                                GROUP BY h.FECHA
+                            ) t
+                        """
+                        df_prom_p = pd.read_sql(q_prom_pozos_query, engine_h)
+                        if not df_prom_p.empty and df_prom_p['PROMEDIO_TOTAL'].iloc[0] is not None:
+                            caudal_promedio_pozos = float(df_prom_p['PROMEDIO_TOTAL'].iloc[0])
+                except Exception:
+                    caudal_promedio_pozos = 0.0
+
+            volumen_medido_val = datos_s.get('Vol_Medid', 0.0)
+            demanda_estimada_val = datos_s.get('Cons_m3', 0.0)
+
+            def fmt_miles(val):
+                try:
+                    return f"{float(val):,.0f}".replace(",", ", ")
+                except:
+                    return "0"
+
+            demanda_fmt = fmt_miles(demanda_estimada_val)
+
+            texto_nivel_tq = "Sin registro de nivel TQ"
+            for id_p in ids_p:
+                if id_p in mapa_pozos_dict:
+                    p_info = mapa_pozos_dict[id_p]
+                    t_niv = p_info.get('nivel_tanque')
+                    if t_niv and str(t_niv).strip().lower() not in ['0', 'none', 'n/a', 'null']:
+                        val_niv, fec_niv = scada_res_reg.get(str(t_niv), (0.0, "N/A"))
+                        fec_str = fec_niv.strftime('%d/%m %H:%M') if hasattr(fec_niv, 'strftime') else str(fec_niv)
+                        texto_nivel_tq = f"Nivel TQ • {val_niv:,.2f} m ({fec_str})"
+                        break
+
+            c1, c2, c3, c4, c5, c6 = st.columns(6)
+            with c1:
+                st.markdown(f'''<div class="card-indicador">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="anim-flow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"></path></svg>
+                        <p class="label-indicador" style="font-size: 13px; margin:0;">Caudal de ingreso</p>
+                    </div>
+                    <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{caudal_promedio_pozos:,.1f} <span style="font-size:0.8rem; font-weight:normal;">L/s</span></p>
+                    <p class="sub-indicador" style="font-size: 11px; text-align: center;">Promedio del periodo (Pozos)</p>
+                </div>''', unsafe_allow_html=True)
+            with c2:
+                st.markdown(f'''<div class="card-indicador">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="anim-float" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                        <p class="label-indicador" style="font-size: 13px; margin:0;">Volumen medido</p>
+                    </div>
+                    <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{volumen_medido_val:,.0f} <span style="font-size:0.8rem; font-weight:normal;">m³</span></p>
+                    <p class="sub-indicador" style="font-size: 11px; text-align: center;">Tabla Sectores_hidr (Vol_Medid)</p>
+                </div>''', unsafe_allow_html=True)
+            with c3:
+                st.markdown(f'''<div class="card-indicador">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="anim-pulse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        <p class="label-indicador" style="font-size: 13px; margin:0;">Demanda estimada</p>
+                    </div>
+                    <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{demanda_fmt} <span style="font-size:0.8rem; font-weight:normal;">L/s</span></p>
+                    <p class="sub-indicador" style="font-size: 11px; text-align: center;">Tabla Sectores_hidr (Cons_m3)</p>
+                </div>''', unsafe_allow_html=True)
+            with c4:
+                st.markdown(f'''<div class="card-indicador">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="anim-float" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                        <p class="label-indicador" style="font-size: 13px; margin:0;">Población estimada</p>
+                    </div>
+                    <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{datos_s.get("Poblacion", 28450):,.0f}</p>
+                    <p class="sub-indicador" style="font-size: 11px; text-align: center;">Referencia del catálogo</p>
+                </div>''', unsafe_allow_html=True)
+            with c5:
+                st.markdown(f'''<div class="card-indicador">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="anim-pulse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        <p class="label-indicador" style="font-size: 13px; margin:0;">Mínimo nocturno</p>
+                    </div>
+                    <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">32,5 <span style="font-size:0.8rem; font-weight:normal;">L/s</span></p>
+                    <p class="sub-indicador" style="font-size: 11px; text-align: center;">Mín. observado • 02:00 - 04:00</p>
+                </div>''', unsafe_allow_html=True)
+            with c6:
+                st.markdown(f'''<div class="card-indicador">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg class="anim-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                        <p class="label-indicador" style="font-size: 13px; margin:0;">Presión de ingreso</p>
+                    </div>
+                    <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">2.35 <span style="font-size:0.8rem; font-weight:normal;">Kg/cm²</span></p>
+                    <p class="sub-indicador" style="font-size: 11px; text-align: center;">Promedio del periodo</p>
+                </div>''', unsafe_allow_html=True)
+            st.write("")
+
+            col_izq, col_der = st.columns([1.0, 1.0])
+            
+            with col_izq:
+                st.markdown(f"""
+                    <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                        <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Sector y puntos de medición</p>
+                        <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">{sector_elegido} - Distrito {datos_s.get('Distrito', 'Oriente')}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=12, tiles=None, height=360)
                 
-                with st.expander(titulo_hist):
-                    renderizar_bloque_incidencia(row, index, "hist")
+                folium.TileLayer(tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google', name='Vista Satélite', overlay=False).add_to(m_sec)
+                
+                api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+                folium.TileLayer(
+                    tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+                    name="Vista Nocturna",
+                    attr='&copy; CARTO',
+                    subdomains="abcd", max_zoom=20, overlay=False, control=True
+                ).add_to(m_sec)
+
+                capa_sector = folium.FeatureGroup(name="Límite del sector", overlay=True, control=True).add_to(m_sec)
+                capa_control = folium.FeatureGroup(name="Puntos de control", overlay=True, control=True).add_to(m_sec)
+                capa_criticos = folium.FeatureGroup(name="Puntos críticos", overlay=True, control=True).add_to(m_sec)
+                capa_vrp = folium.FeatureGroup(name="VRP", overlay=True, control=True).add_to(m_sec)
+                capa_pozos = folium.FeatureGroup(name="Pozos", overlay=True, control=True).add_to(m_sec)
+
+                if datos_s and datos_s.get('geo'):
+                    try:
+                        geo_data = json.loads(datos_s['geo'])
+                        folium_geo = folium.GeoJson(
+                            geo_data, 
+                            style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 2, 'fillOpacity': 0.15},
+                            name="Límite del sector"
+                        ).add_to(capa_sector)
+                        m_sec.fit_bounds(folium_geo.get_bounds(), padding=(30, 30), max_zoom=15)
+                    except: 
+                        pass
+
+                for r_k, r in dict_reg.items():
+                    serie_reg = str(r.get('Serie', r_k)).strip()
+                    vals_dev = ultimos_valores_mapa.get(serie_reg, {})
+                    
+                    html_vars_detalle = ""
+                    for var_name, info_v in vals_dev.items():
+                        val_bruto = info_v.get('valor')
+                        try:
+                            val_num = float(val_bruto) if val_bruto is not None else 0.0
+                        except (ValueError, TypeError):
+                            val_num = 0.0
+
+                        unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("Kg/cm²" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
+                        html_vars_detalle += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
+                    
+                    if not html_vars_detalle:
+                        html_vars_detalle = "Sin registros recientes<br>"
+
+                    html_popup_reg = f"""
+                        <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFFF; width:230px;">
+                            <b style="color:#00FFFF;">{r.get('nombre', 'Punto de Control')}</b><br>
+                            <small style="color:#aaa;">SN: {serie_reg}</small><hr style="border-color:#333; margin:6px 0;">
+                            {html_vars_detalle}
+                        </div>
+                    """
+                    icon_html = """<div style="position: relative; width: 26px; height: 26px;"><div style="width: 18px; height: 18px; background: radial-gradient(circle at 30% 30%, #66ccff, #007bff, #003366); border-radius: 50%; box-shadow: 2px 3px 5px rgba(0,0,0,0.6); position: absolute; top: 0; left: 4px; z-index: 2;"></div></div>"""
+                    folium.Marker(location=r['coord'], icon=folium.DivIcon(icon_size=(26, 30), icon_anchor=(13, 25), html=icon_html), popup=folium.Popup(html_popup_reg, max_width=250)).add_to(capa_control)
+                    folium.Marker(location=r['coord'], icon=folium.features.DivIcon(icon_size=(250,30), icon_anchor=(-12, 30), html=f'<div style="font-size: 8.5pt; color: #00FFFF; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(0,255,255,0.4);">SN: {serie_reg} • Registrador</div>')).add_to(capa_control)
+
+                for id_pc, pc in dict_pc_sec.items():
+                    domicilio_texto = pc.get('Domicilio', 'S/D')
+                    serie_pc = str(pc.get('Serie', id_pc)).strip()
+                    vals_pc = ultimos_valores_mapa.get(serie_pc, {})
+                    
+                    html_vars_pc = ""
+                    for var_name, info_v in vals_pc.items():
+                        val_bruto = info_v.get('valor')
+                        try:
+                            val_num = float(val_bruto) if val_bruto is not None else 0.0
+                        except (ValueError, TypeError):
+                            val_num = 0.0
+                        unidad_v = "Kg/cm²" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else "")
+                        html_vars_pc += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
+                    
+                    if not html_vars_pc:
+                        html_vars_pc = "Sin registros recientes<br>"
+
+                    html_pc = f"""
+                        <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #FF00FF; width:200px;">
+                            <b style="color:#FF00FF;">PUNTO CRÍTICO</b><br><small>{domicilio_texto}</small><hr style="border-color:#333; margin:6px 0;">
+                            {html_vars_pc}
+                        </div>
+                    """
+                    icon_html_pc = """<div style="position: relative; width: 26px; height: 26px;"><div style="width: 18px; height: 18px; background: radial-gradient(circle at 30% 30%, #ff4d4d, #ff0000, #800000); border-radius: 50%; box-shadow: 2px 3px 5px rgba(0,0,0,0.6); position: absolute; top: 0; left: 4px; z-index: 2;"></div></div>"""
+                    folium.Marker(location=pc['coord'], icon=folium.DivIcon(icon_size=(26, 30), icon_anchor=(13, 25), html=icon_html_pc), popup=folium.Popup(html_pc, max_width=250)).add_to(capa_criticos)
+                    folium.Marker(location=pc['coord'], icon=folium.features.DivIcon(icon_size=(250,30), icon_anchor=(-12, 30), html=f'<div style="font-size: 8.5pt; color: #FF00FF; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,0,255,0.4);">NS: {serie_pc} • Punto critico</div>')).add_to(capa_criticos)
+
+                for id_vrp, vrp in dict_vrp_sec.items():
+                    serie_vrp = str(vrp.get('Serie', id_vrp)).strip()
+                    vals_vrp = ultimos_valores_mapa.get(serie_vrp, {})
+                    
+                    html_vars_vrp = ""
+                    for var_name, info_v in vals_vrp.items():
+                        val_bruto = info_v.get('valor')
+                        try:
+                            val_num = float(val_bruto) if val_bruto is not None else 0.0
+                        except (ValueError, TypeError):
+                            val_num = 0.0
+                        unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("Kg/cm²" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
+                        html_vars_vrp += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
+                    
+                    if not html_vars_vrp:
+                        html_vars_vrp = "Sin registros recientes<br>"
+
+                    html_vrp = f"""
+                        <div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid #00FFCC; width:220px;">
+                            <b style="color:#00FFCC;">VALVULA VRP</b><br><small>{vrp.get('nombre', 'VRP')}</small><br><small style="color:#aaa;">SN: {serie_vrp}</small><hr style="border-color:#333; margin:6px 0;">
+                            {html_vars_vrp}
+                        </div>
+                    """
+                    icon_html_vrp = """<div style="position: relative; width: 26px; height: 26px;"><div style="width: 18px; height: 18px; background: radial-gradient(circle at 30% 30%, #a1ffce, #28a745, #004d1a); border-radius: 50%; box-shadow: 2px 3px 5px rgba(0,0,0,0.6); position: absolute; top: 0; left: 4px; z-index: 2;"></div></div>"""
+                    folium.Marker(location=vrp['coord'], icon=folium.DivIcon(icon_size=(26, 30), icon_anchor=(13, 25), html=icon_html_vrp), popup=folium.Popup(html_vrp, max_width=250)).add_to(capa_vrp)
+                    folium.Marker(location=vrp['coord'], icon=folium.features.DivIcon(icon_size=(250,30), icon_anchor=(-12, 30), html=f'<div style="font-size: 8.5pt; color: #00FFCC; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(0,255,204,0.4);">SN: {serie_vrp} • Vrp</div>')).add_to(capa_vrp)
+
+                # ==============================================================================
+                # LÓGICA DE POZOS EN EL MAPA (CONSULTANDO ESTADO DE BOMBA Y "Sin telemetria")
+                # ==============================================================================
+                tags_bomba_mapa = []
+                for id_p in ids_p:
+                    if id_p in mapa_pozos_dict:
+                        p_info = mapa_pozos_dict[id_p]
+                        t_bomba = p_info.get('bomba')
+                        if t_bomba and str(t_bomba).strip().lower() not in ['0', 'none', 'n/a', 'null']:
+                            if str(t_bomba).strip().lower() != 'sin telemetria':
+                                if str(t_bomba) not in tags_bomba_mapa:
+                                    tags_bomba_mapa.append(str(t_bomba))
+
+                scada_res_bombas = cargar_datos_scada([str(t) for t in set(tags_bomba_mapa) if t]) if tags_bomba_mapa else {}
+
+                for id_p in ids_p:
+                    if id_p in mapa_pozos_dict:
+                        p_info = mapa_pozos_dict[id_p]
+                        coord_pz = p_info.get('coord')
+                        if coord_pz:
+                            val_bomba_str = str(p_info.get('bomba', '')).strip()
+                            t_pz_q = p_info.get('caudal')
+                            val_q_pz, _ = scada_res_reg.get(str(t_pz_q), (0.0, "N/A")) if t_pz_q else (0.0, "N/A")
+
+                            if val_bomba_str.lower() == 'sin telemetria' or not val_bomba_str or val_bomba_str.lower() in ['none', 'n/a', 'null', '0']:
+                                color_pz = "#808080"
+                                estado_txt = "Sin Telemetría"
+                            else:
+                                val_bomba_scada, _ = scada_res_bombas.get(val_bomba_str, (0.0, "N/A"))
+                                es_encendido = val_bomba_scada > 0.5
+                                color_pz = "#00ff00" if es_encendido else "#ff4d4d"
+                                estado_txt = 'Encendido' if es_encendido else 'Apagado'
+                            
+                            html_popup_pz = f"""<div style="background:#000; color:white; padding:10px; border-radius:8px; border:1px solid {color_pz}; width:200px;"><b style="color:{color_pz};">POZO {id_p}</b><br>Estado Bomba: {estado_txt}<br>Caudal: {val_q_pz:.2f} L/s</div>"""
+                            icon_html_pz = f"""<div style="position: relative; width: 26px; height: 26px;"><div style="width: 16px; height: 16px; background: {color_pz}; border-radius: 50%; box-shadow: 0 0 8px {color_pz}; position: absolute; top: 5px; left: 5px; z-index: 2;"></div></div>"""
+                            folium.Marker(location=coord_pz, icon=folium.DivIcon(icon_size=(26, 26), icon_anchor=(13, 13), html=icon_html_pz), popup=folium.Popup(html_popup_pz, max_width=250)).add_to(capa_pozos)
+                            folium.Marker(location=coord_pz, icon=folium.features.DivIcon(icon_size=(200,30), icon_anchor=(-12, 15), html=f'<div style="font-size: 8.5pt; color: {color_pz}; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: {color_pz};">P{id_p}</div>')).add_to(capa_pozos)
+
+                folium.LayerControl(collapsed=True).add_to(m_sec)
+                Fullscreen(position='topleft').add_to(m_sec)
+                folium_static(m_sec, width=None, height=360)
+                
+            with col_der:
+                st.markdown(f"""
+                    <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                        <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Comportamiento hidráulico</p>
+                        <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Caudal a la izquierda • Presión a la derecha • Franja nocturna 02:00 - 04:00</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                fig = go.Figure()
+
+                dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+
+                f_ini_dia = f_ini_h.replace(hour=0, minute=0, second=0, microsecond=0)
+                f_fin_dia = f_fin_h.replace(hour=23, minute=59, second=59, microsecond=0)
+                fechas_lineas = pd.date_range(start=f_ini_dia, end=f_fin_dia, freq='D')
+                num_dias = len(fechas_lineas)
+                paso = 1 if num_dias <= 15 else (2 if num_dias <= 30 else 5)
+                ticks_filtrados = fechas_lineas[::paso]
+
+                etiquetas_filtradas = [
+                    f"{d.strftime('%H:%M')}<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                    for d in ticks_filtrados
+                ]
+
+                idx_q = 0
+                idx_p = 0
+                colores_azules_pc = ["#8acbf5", "#0088ff", "#3399ff", "#1a75ff"]
+                colores_verdes_pc = ["#73e6b0", "#00ffaa", "#00cc66", "#33ff99"]
+
+                # ==============================================================================
+                # 1. GRÁFICO COMPORTAMIENTO: BD_MADRE (PUNTOS DE CONTROL - EXCLUYENDO Volt_bateria)
+                # ==============================================================================
+                series_puntos_control = [str(r.get('Serie', k)).strip() for k, r in dict_reg.items() if r.get('Serie') or k]
+                if series_puntos_control:
+                    try:
+                        engine_tel = get_mysql_telemetria_engine()
+                        series_in_sql = "', '".join(series_puntos_control)
+                        q_madre_sector = f"""
+                            SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
+                            FROM BD_MADRE 
+                            WHERE DISPOSITIVO IN ('{series_in_sql}')
+                              AND VARIABLE != 'Volt_bateria'
+                              AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h}' AND '{f_fin_h}'
+                        """
+                        df_madre_sector = pd.read_sql(q_madre_sector, engine_tel)
+                        
+                        if not df_madre_sector.empty:
+                            df_madre_sector['FECHA'] = pd.to_datetime(df_madre_sector['Fecha'])
+                            df_madre_sector['Serie_str'] = df_madre_sector['Serie'].astype(str).str.strip()
+
+                            for r_k, r_info in dict_reg.items():
+                                serie_raw = str(r_info.get('Serie', r_k)).strip()
+                                nombre_reg = r_info.get('nombre', f"SN:{serie_raw}")
+                                df_temp_s = df_madre_sector[df_madre_sector['Serie_str'] == serie_raw]
+
+                                if not df_temp_s.empty:
+                                    for var_name, df_v_group in df_temp_s.groupby('VARIABLE'):
+                                        if df_v_group['VALOR'].notna().any():
+                                            is_caudal = 'CAUDAL' in str(var_name).upper()
+                                            
+                                            if is_caudal:
+                                                color_q = colores_azules_pc[idx_q % len(colores_azules_pc)]
+                                                idx_q += 1
+                                                fig.add_trace(go.Scatter(
+                                                    x=df_v_group['FECHA'], y=df_v_group['VALOR'],
+                                                    name=f"{nombre_reg} - {var_name}",
+                                                    yaxis="y1", mode='lines+markers',
+                                                    line=dict(width=2, color=color_q),
+                                                    marker=dict(size=3, symbol='circle'),
+                                                    fill='tozeroy',
+                                                    fillcolor="rgba(138, 203, 245, 0.15)",
+                                                    hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} L/s<extra></extra>'
+                                                ))
+                                            else:
+                                                color_p = colores_verdes_pc[idx_p % len(colores_verdes_pc)]
+                                                idx_p += 1
+                                                fig.add_trace(go.Scatter(
+                                                    x=df_v_group['FECHA'], y=df_v_group['VALOR'],
+                                                    name=f"{nombre_reg} - {var_name}",
+                                                    yaxis="y2", mode='lines+markers',
+                                                    line=dict(width=2, color=color_p),
+                                                    marker=dict(size=3, symbol='circle'),
+                                                    hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} Kg/cm²<extra></extra>'
+                                                ))
+                    except Exception:
+                        pass
+
+                # ==============================================================================
+                # 2. GRÁFICO COMPORTAMIENTO: SCADA TRADICIONAL (POZOS Y NIVELES) - ¡INTACTO!
+                # ==============================================================================
+                tags_pozos_visualizar = []
+                mapeo_pozos_config = {}
+                for id_p in ids_p:
+                    if id_p in mapa_pozos_dict:
+                        p_info = mapa_pozos_dict[id_p]
+                        conf_pz = [
+                            ('caudal', f"Pozo {id_p} - Q", False),
+                            ('presion', f"Pozo {id_p} - P", True),
+                            ('nivel_tanque', "Nivel TQ", True)
+                        ]
+                        for key_t, lb, sec in conf_pz:
+                            tag_v = p_info.get(key_t)
+                            if tag_v and str(tag_v).strip().lower() not in ['0', 'none', 'n/a', 'null']:
+                                if str(tag_v) not in tags_pozos_visualizar:
+                                    tags_pozos_visualizar.append(str(tag_v))
+                                    mapeo_pozos_config[str(tag_v)] = {'label': lb, 'sec': sec}
+
+                if tags_pozos_visualizar:
+                    try:
+                        engine_h = get_mysql_scada_engine()
+                        tags_unicos_query = "', '".join([str(t) for t in set(tags_pozos_visualizar) if t])
+                        if tags_unicos_query:
+                            q_hist = f"SELECT h.FECHA, h.VALUE, r.NAME as TAG FROM vfitagnumhistory h JOIN VfiTagRef r ON h.GATEID = r.GATEID WHERE r.NAME IN ('{tags_unicos_query}') AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}' ORDER BY h.FECHA ASC"
+                            df_h = pd.read_sql(q_hist, engine_h)
+
+                            if not df_h.empty:
+                                df_h['FECHA'] = pd.to_datetime(df_h['FECHA'])
+                                for tag_name in tags_pozos_visualizar:
+                                    df_tag = df_h[df_h['TAG'] == tag_name]
+                                    if not df_tag.empty:
+                                        cfg = mapeo_pozos_config[tag_name]
+                                        es_caudal = not cfg['sec']
+                                        label_u = cfg['label'].upper()
+
+                                        if es_caudal: unidad_pc = "L/s"
+                                        elif "NIVEL" in label_u or "TANQUE" in label_u or "MTS" in label_u: unidad_pc = "m"
+                                        else: unidad_pc = "Kg/cm²"
+
+                                        if "NIVEL" in label_u or "TANQUE" in label_u:
+                                            color_base = "#d400ff"
+                                        elif es_caudal:
+                                            color_base = "#00d4ff"
+                                        else:
+                                            color_base = "#00ff00"
+
+                                        fig.add_trace(go.Scatter(
+                                            x=df_tag['FECHA'], y=df_tag['VALUE'], name=cfg['label'], 
+                                            yaxis="y2" if cfg['sec'] else "y1", mode='lines+markers',
+                                            line=dict(width=2, color=color_base),
+                                            marker=dict(size=3, symbol='circle'),
+                                            fill='tozeroy' if es_caudal else None,
+                                            fillcolor="rgba(0, 212, 255, 0.15)" if es_caudal else None,
+                                            hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} ' + unidad_pc + '<extra></extra>'
+                                        ))
+                    except Exception:
+                        pass
+
+                delta = pd.Timedelta(hours=1)
+                for d in fechas_lineas:
+                    es_lunes = (d.dayofweek == 0)
+                    fig.add_vrect(x0=d - delta, x1=d + delta, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
+                    fig.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
+
+                fig.update_layout(
+                    paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=360, 
+                    margin=dict(l=40, r=40, t=10, b=10), hovermode="x unified", 
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.5, xanchor="center", font=dict(color="white", size=10)),
+                    xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0),
+                    yaxis=dict(title="L/s", color="#00d4ff", showgrid=True, gridcolor="#16304a"),
+                    yaxis2=dict(title="Kg/cm²", side="right", overlaying="y", color="#00ff00", showgrid=False)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            # ==============================================================================
+            # FILA INFERIOR: PUNTOS CRÍTICOS (SIN CAUDAL Y SIN Volt_bateria) Y VRPs
+            # ==============================================================================
+            col_pc, col_vrp_g = st.columns([1.0, 1.0])
+            
+            with col_pc:
+                st.markdown(f"""
+                    <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                        <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Puntos críticos</p>
+                        <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Presión real en los puntos críticos del sector (Diccionario_puntos_criticos)</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                fig_pc = go.Figure()
+                if dict_pc_sec:
+                    try:
+                        engine_tel = get_mysql_telemetria_engine()
+                        series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
+                        if series_pc_list:
+                            series_pc_in = "', '".join(series_pc_list)
+                            q_madre_pc = f"""
+                                SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
+                                FROM BD_MADRE 
+                                WHERE DISPOSITIVO IN ('{series_pc_in}')
+                                  AND VARIABLE != 'Volt_bateria'
+                                  AND VARIABLE NOT LIKE '%CAUDAL%'
+                                  AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                            """
+                            df_madre_pc = pd.read_sql(q_madre_pc, engine_tel)
+                            if not df_madre_pc.empty:
+                                df_madre_pc['FECHA'] = pd.to_datetime(df_madre_pc['Fecha'])
+                                df_madre_pc['Serie_str'] = df_madre_pc['Serie'].astype(str).str.strip()
+
+                                dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                                meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+
+                                f_ini_dia = f_ini_h.replace(hour=0, minute=0, second=0, microsecond=0)
+                                f_fin_dia = f_fin_h.replace(hour=23, minute=59, second=59, microsecond=0)
+                                fechas_lineas_pc = pd.date_range(start=f_ini_dia, end=f_fin_dia, freq='D')
+                                ticks_pc = fechas_lineas_pc[::1]
+                                etiquetas_pc = [
+                                    f"00:00<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                                    for d in ticks_pc
+                                ]
+
+                                colores_azules = ["#8acbf5", "#0088ff", "#3399ff", "#1a75ff"]
+                                idx_pc_c = 0
+
+                                for pc_key, pc_info in dict_pc_sec.items():
+                                    serie_raw = str(pc_info.get('Serie', pc_key)).strip()
+                                    domicilio_nombre = pc_info.get('Domicilio', pc_info.get('nombre', f'Serie {serie_raw}'))
+
+                                    df_temp = df_madre_pc[df_madre_pc['Serie_str'] == serie_raw]
+                                    if not df_temp.empty:
+                                        for var_name, df_v_group in df_temp.groupby('VARIABLE'):
+                                            if df_v_group['VALOR'].notna().any():
+                                                color_trace_pc = colores_azules[idx_pc_c % len(colores_azules)]
+                                                idx_pc_c += 1
+
+                                                fig_pc.add_trace(go.Scatter(
+                                                    x=df_v_group['FECHA'], y=df_v_group['VALOR'], 
+                                                    name=f"{domicilio_nombre} - {var_name}", 
+                                                    mode='lines+markers',
+                                                    showlegend=True,
+                                                    marker=dict(size=3.5, symbol='circle'), 
+                                                    line=dict(width=2, color=color_trace_pc),
+                                                    hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f}<extra></extra>'
+                                                ))
+
+                                delta_h = pd.Timedelta(hours=1)
+                                for d in fechas_lineas_pc:
+                                    es_lunes = (d.dayofweek == 0)
+                                    fig_pc.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.18, layer="below", line_width=0)
+                                    fig_pc.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.4, layer="above")
+                    except Exception:
+                        pass
+
+                fig_pc.update_layout(
+                    paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
+                    margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
+                    legend=dict(
+                        orientation="h", 
+                        yanchor="bottom", 
+                        y=1.12, 
+                        x=0.5, 
+                        xanchor="center", 
+                        font=dict(color="white", size=9)
+                    ),
+                    xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_pc if 'ticks_pc' in locals() else None, ticktext=etiquetas_pc if 'etiquetas_pc' in locals() else None, tickangle=0),
+                    yaxis=dict(tickformat=".2f", color="#8acbf5", showgrid=True, gridcolor="#16304a", title="Valor")
+                )
+                st.plotly_chart(fig_pc, use_container_width=True)
+
+            with col_vrp_g:
+                st.markdown(f"""
+                    <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                        <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Válvulas reductoras de presión (VRP)</p>
+                        <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Variables registradas en BD_MADRE (Diccionario_vrp del sector)</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                fig_vrp = go.Figure()
+                if dict_vrp_sec:
+                    try:
+                        engine_tel = get_mysql_telemetria_engine()
+                        series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
+                        if series_vrp_list:
+                            series_vrp_in = "', '".join(series_vrp_list)
+                            
+                            q_madre_vrp = f"""
+                                SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
+                                FROM BD_MADRE 
+                                WHERE DISPOSITIVO IN ('{series_vrp_in}')
+                                  AND VARIABLE != 'Volt_bateria'
+                                  AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                            """
+                            df_madre_vrp = pd.read_sql(q_madre_vrp, engine_tel)
+                            
+                            if not df_madre_vrp.empty:
+                                df_madre_vrp['FECHA'] = pd.to_datetime(df_madre_vrp['Fecha'])
+                                df_madre_vrp['Serie_str'] = df_madre_vrp['Serie'].astype(str).str.strip()
+
+                                dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                                meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+
+                                f_ini_dia = f_ini_h.replace(hour=0, minute=0, second=0, microsecond=0)
+                                f_fin_dia = f_fin_h.replace(hour=23, minute=59, second=59, microsecond=0)
+                                fechas_lineas_vrp = pd.date_range(start=f_ini_dia, end=f_fin_dia, freq='D')
+                                ticks_vrp = fechas_lineas_vrp[::1]
+                                etiquetas_vrp = [
+                                    f"00:00<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
+                                    for d in ticks_vrp
+                                ]
+
+                                colores_vrp = ["#00ffcc", "#28a745", "#a1ffce", "#00cc66"]
+                                idx_vrp_c = 0
+
+                                for v_key, v_info in dict_vrp_sec.items():
+                                    serie_raw = str(v_info.get('Serie', v_key)).strip()
+                                    nombre_vrp = v_info.get('nombre', f'VRP {serie_raw}')
+
+                                    df_temp = df_madre_vrp[df_madre_vrp['Serie_str'] == serie_raw]
+                                    if not df_temp.empty:
+                                        for var_name, df_v_group in df_temp.groupby('VARIABLE'):
+                                            if df_v_group['VALOR'].notna().any():
+                                                color_trace_vrp = colores_vrp[idx_vrp_c % len(colores_vrp)]
+                                                idx_vrp_c += 1
+
+                                                fig_vrp.add_trace(go.Scatter(
+                                                    x=df_v_group['FECHA'], y=df_v_group['VALOR'], 
+                                                    name=f"{nombre_vrp} - {var_name}", 
+                                                    mode='lines+markers',
+                                                    showlegend=True,
+                                                    marker=dict(size=3.5, symbol='circle'), 
+                                                    line=dict(width=2, color=color_trace_vrp),
+                                                    hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f}<extra></extra>'
+                                                ))
+
+                                delta_h = pd.Timedelta(hours=1)
+                                for d in fechas_lineas_vrp:
+                                    es_lunes = (d.dayofweek == 0)
+                                    fig_vrp.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.18, layer="below", line_width=0)
+                                    fig_vrp.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.4, layer="above")
+                    except Exception:
+                        pass
+
+                fig_vrp.update_layout(
+                    paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
+                    margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
+                    legend=dict(
+                        orientation="h", 
+                        yanchor="bottom", 
+                        y=1.12, 
+                        x=0.5, 
+                        xanchor="center", 
+                        font=dict(color="white", size=9)
+                    ),
+                    xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_vrp if 'ticks_vrp' in locals() else None, ticktext=etiquetas_vrp if 'etiquetas_vrp' in locals() else None, tickangle=0),
+                    yaxis=dict(tickformat=".2f", color="#00ffcc", showgrid=True, gridcolor="#16304a", title="Valor")
+                )
+                st.plotly_chart(fig_vrp, use_container_width=True)
+
+            st.write("")
+            st.markdown(f"""
+                <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                    <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Datos operativos</p>
+                    <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Ficha técnica del sector y métricas operativas del catálogo</p>
+                </div>
+                <div class="st-key-dma_operational" style="background: #0b1a29; border: 1px solid #1f4068; border-top: none; border-radius: 0 0 8px 8px; padding: 15px;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td>🏢 <b>Distrito:</b> Distrito {datos_s.get('Distrito', 'Oriente')}</td>
+                            <td>🚰 <b>Cantidad de pozos:</b> {datos_s.get('Cantidad_Pozos', len(ids_p)):,.0f}</td>
+                            <td>📐 <b>Superficie:</b> {datos_s.get('Superficie', 0.0):,.2f} ha</td>
+                        </tr>
+                        <tr>
+                            <td>📏 <b>Longitud de red:</b> {datos_s.get('Long_Red', 42.6):,.1f} km</td>
+                            <td>🏠 <b>Tomas domésticas:</b> {datos_s.get('U_Domesticos', 0):,.0f}</td>
+                            <td>🏢 <b>Tomas no domésticas:</b> {datos_s.get('U_NoDom', 0):,.0f}</td>
+                        </tr>
+                        <tr>
+                            <td>📦 <b>Volumen producido:</b> {datos_s.get('Vol_Prod', 0):,.0f} m³</td>
+                            <td>📋 <b>Volumen facturado:</b> {datos_s.get('Vol_Fact', 0):,.0f} m³</td>
+                            <td>⚖️ <b>Balance estimado:</b> {datos_s.get('Balance_Estimado', 0):,.1f}%</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">🔵 <b>Nivel TQ asociado:</b> {texto_nivel_tq}</td>
+                        </tr>
+                    </table>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("👆 Seleccione un sector en el menú desplegable superior para cargar el análisis integral.")
