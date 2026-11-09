@@ -4744,7 +4744,7 @@ elif tab_activa == "tanques":
 
 
 # ==============================================================================
-# PESTAÑA 4: SECTORES HIDRÁULICOS (CÓDIGO COMPLETO CON SOLUCIÓN DE LÍNEA ERRÓNEA)
+# PESTAÑA 4: SECTORES HIDRÁULICOS (CÓDIGO COMPLETO CON DISEÑO DINÁMICO CRUZADO)
 # ==============================================================================
 
 elif tab_activa == "sectores":
@@ -4909,7 +4909,6 @@ elif tab_activa == "sectores":
 
             ids_p = [str(p).strip() for p in datos_s.get('Pozos_Sector', '').split(',')] if datos_s.get('Pozos_Sector') else []
 
-            # Recopilar todas las series para consultar BD_MADRE
             mapa_series_nombres = {}
             for k, r in dict_reg.items():
                 s_val = r.get('Serie') or r.get('dispositivo') or k
@@ -4948,7 +4947,6 @@ elif tab_activa == "sectores":
 
             scada_res_reg = cargar_datos_scada([str(t) for t in set(tags_para_scada) if t])
 
-            # Cargar últimos valores directamente desde BD_MADRE para los popups del mapa
             ultimos_valores_mapa = {}
             if mapa_series_nombres:
                 try:
@@ -5199,7 +5197,6 @@ elif tab_activa == "sectores":
                     folium.Marker(location=vrp['coord'], icon=folium.DivIcon(icon_size=(26, 30), icon_anchor=(13, 25), html=icon_html_vrp), popup=folium.Popup(html_vrp, max_width=250)).add_to(capa_vrp)
                     folium.Marker(location=vrp['coord'], icon=folium.features.DivIcon(icon_size=(250,30), icon_anchor=(-12, 30), html=f'<div style="font-size: 8.5pt; color: #00FFCC; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(0,255,204,0.4);">SN: {serie_vrp} • Vrp</div>')).add_to(capa_vrp)
 
-                # Pozos en el mapa
                 tags_bomba_mapa = []
                 for id_p in ids_p:
                     if id_p in mapa_pozos_dict:
@@ -5269,7 +5266,6 @@ elif tab_activa == "sectores":
                 colores_azules_pc = ["#8acbf5", "#0088ff", "#3399ff", "#1a75ff"]
                 colores_verdes_pc = ["#73e6b0", "#00ffaa", "#00cc66", "#33ff99"]
 
-                # 1. GRÁFICO COMPORTAMIENTO: BD_MADRE (PUNTOS DE CONTROL)
                 series_puntos_control = [str(r.get('Serie', k)).strip() for k, r in dict_reg.items() if r.get('Serie') or k]
                 if series_puntos_control:
                     try:
@@ -5296,7 +5292,7 @@ elif tab_activa == "sectores":
 
                                 if not df_temp_s.empty:
                                     for var_name, df_v_group in df_temp_s.groupby('VARIABLE'):
-                                        df_v_group = df_v_group.sort_values('FECHA') # ORDENAMIENTO TEMPORAL
+                                        df_v_group = df_v_group.sort_values('FECHA')
                                         if df_v_group['VALOR'].notna().any():
                                             is_caudal = 'CAUDAL' in str(var_name).upper()
                                             
@@ -5327,7 +5323,6 @@ elif tab_activa == "sectores":
                     except Exception:
                         pass
 
-                # 2. GRÁFICO COMPORTAMIENTO: SCADA TRADICIONAL (POZOS Y NIVELES)
                 tags_pozos_visualizar = []
                 mapeo_pozos_config = {}
                 for id_p in ids_p:
@@ -5356,7 +5351,7 @@ elif tab_activa == "sectores":
                             if not df_h.empty:
                                 df_h['FECHA'] = pd.to_datetime(df_h['FECHA'])
                                 for tag_name in tags_pozos_visualizar:
-                                    df_tag = df_h[df_h['TAG'] == tag_name].sort_values('FECHA') # ORDENAMIENTO TEMPORAL
+                                    df_tag = df_h[df_h['TAG'] == tag_name].sort_values('FECHA')
                                     if not df_tag.empty:
                                         cfg = mapeo_pozos_config[tag_name]
                                         es_caudal = not cfg['sec']
@@ -5402,25 +5397,73 @@ elif tab_activa == "sectores":
                 st.plotly_chart(fig, use_container_width=True)
 
             # ==============================================================================
-            # FILA INFERIOR: PUNTOS CRÍTICOS Y VRPs (CORREGIDOS ORDENANDO FECHAS)
+            # FILA INFERIOR: CONDICIONAL DINÁMICO CRUZADO (PUNTOS CRÍTICOS Y VRPs)
             # ==============================================================================
-            col_pc, col_vrp_g = st.columns([1.0, 1.0])
             
-            with col_pc:
-                st.markdown(f"""
-                    <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
-                        <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Puntos críticos</p>
-                        <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Presión real en los puntos críticos del sector (Diccionario_puntos_criticos)</p>
-                    </div>
-                """, unsafe_allow_html=True)
-                
-                fig_pc = go.Figure()
-                if dict_pc_sec:
-                    try:
-                        engine_tel = get_mysql_telemetria_engine()
-                        series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
-                        if series_pc_list:
-                            series_pc_in = "', '".join(series_pc_list)
+            tiene_datos_pc = False
+            series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
+            
+            if dict_pc_sec and series_pc_list:
+                try:
+                    engine_tel = get_mysql_telemetria_engine()
+                    series_pc_in = "', '".join(series_pc_list)
+                    q_check_pc = f"""
+                        SELECT 1 FROM BD_MADRE 
+                        WHERE DISPOSITIVO IN ('{series_pc_in}')
+                          AND VARIABLE != 'Volt_bateria'
+                          AND VARIABLE NOT LIKE '%CAUDAL%'
+                          AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                        LIMIT 1
+                    """
+                    df_chk_pc = pd.read_sql(q_check_pc, engine_tel)
+                    if not df_chk_pc.empty:
+                        tiene_datos_pc = True
+                except Exception:
+                    pass
+
+            tiene_vrps_disponibles = False
+            series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
+            
+            if dict_vrp_sec and series_vrp_list:
+                try:
+                    engine_tel = get_mysql_telemetria_engine()
+                    series_vrp_in = "', '".join(series_vrp_list)
+                    q_check_vrp = f"""
+                        SELECT 1 FROM BD_MADRE 
+                        WHERE DISPOSITIVO IN ('{series_vrp_in}')
+                          AND VARIABLE != 'Volt_bateria'
+                          AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                        LIMIT 1
+                    """
+                    df_chk_vrp = pd.read_sql(q_check_vrp, engine_tel)
+                    if not df_chk_vrp.empty:
+                        tiene_vrps_disponibles = True
+                except Exception:
+                    pass
+
+            if tiene_datos_pc and tiene_vrps_disponibles:
+                col_pc, col_vrp_g = st.columns([1.0, 1.0], gap="medium")
+            elif tiene_datos_pc and not tiene_vrps_disponibles:
+                col_pc = st.container()
+                col_vrp_g = None
+            elif not tiene_datos_pc and tiene_vrps_disponibles:
+                col_pc = None
+                col_vrp_g = st.container()
+            else:
+                col_pc, col_vrp_g = None, None
+
+            if col_pc is not None:
+                with col_pc:
+                    st.markdown(f"""
+                        <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                            <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Puntos críticos</p>
+                            <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Presión real en los puntos críticos del sector (Diccionario_puntos_criticos)</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    fig_pc = go.Figure()
+                    if tiene_datos_pc:
+                        try:
                             q_madre_pc = f"""
                                 SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
                                 FROM BD_MADRE 
@@ -5457,7 +5500,6 @@ elif tab_activa == "sectores":
                                     df_temp = df_madre_pc[df_madre_pc['Serie_str'] == serie_raw]
                                     if not df_temp.empty:
                                         for var_name, df_v_group in df_temp.groupby('VARIABLE'):
-                                            # CORRECCIÓN PRINCIPAL AQUÍ: Ordenar por FECHA cronológicamente
                                             df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
                                             
                                             if not df_v_group.empty:
@@ -5469,7 +5511,7 @@ elif tab_activa == "sectores":
                                                     y=df_v_group['VALOR'], 
                                                     name=f"{domicilio_nombre} - {var_name}", 
                                                     mode='lines+markers',
-                                                    connectgaps=False,  # EVITA RELLENAR HUECOS O CONECTAR CON LÍNEAS RECTAS DIAGONALES
+                                                    connectgaps=False,
                                                     showlegend=True,
                                                     marker=dict(size=3.5, symbol='circle'), 
                                                     line=dict(width=2, color=color_trace_pc),
@@ -5481,41 +5523,31 @@ elif tab_activa == "sectores":
                                     es_lunes = (d.dayofweek == 0)
                                     fig_pc.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.18, layer="below", line_width=0)
                                     fig_pc.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.4, layer="above")
-                    except Exception:
-                        pass
+                        except Exception:
+                            pass
 
-                fig_pc.update_layout(
-                    paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
-                    margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
-                    legend=dict(
-                        orientation="h", 
-                        yanchor="bottom", 
-                        y=1.12, 
-                        x=0.5, 
-                        xanchor="center", 
-                        font=dict(color="white", size=9)
-                    ),
-                    xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_pc if 'ticks_pc' in locals() else None, ticktext=etiquetas_pc if 'etiquetas_pc' in locals() else None, tickangle=0),
-                    yaxis=dict(tickformat=".2f", color="#8acbf5", showgrid=True, gridcolor="#16304a", title="Valor")
-                )
-                st.plotly_chart(fig_pc, use_container_width=True)
+                    fig_pc.update_layout(
+                        paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
+                        margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.12, x=0.5, xanchor="center", font=dict(color="white", size=9)),
+                        xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_pc if 'ticks_pc' in locals() else None, ticktext=etiquetas_pc if 'etiquetas_pc' in locals() else None, tickangle=0),
+                        yaxis=dict(tickformat=".2f", color="#8acbf5", showgrid=True, gridcolor="#16304a", title="Valor")
+                    )
+                    st.plotly_chart(fig_pc, use_container_width=True)
 
-            with col_vrp_g:
-                st.markdown(f"""
-                    <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
-                        <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Válvulas reductoras de presión (VRP)</p>
-                        <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Variables registradas en BD_MADRE (Diccionario_vrp del sector)</p>
-                    </div>
-                """, unsafe_allow_html=True)
+            if col_vrp_g is not None:
+                with col_vrp_g:
+                    st.markdown(f"""
+                        <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                            <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Válvulas reductoras de presión (VRP)</p>
+                            <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Variables registradas en BD_MADRE (Diccionario_vrp del sector)</p>
+                        </div>
+                    """, unsafe_allow_html=True)
 
-                fig_vrp = go.Figure()
-                if dict_vrp_sec:
-                    try:
-                        engine_tel = get_mysql_telemetria_engine()
-                        series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
-                        if series_vrp_list:
+                    fig_vrp = go.Figure()
+                    if tiene_vrps_disponibles:
+                        try:
                             series_vrp_in = "', '".join(series_vrp_list)
-                            
                             q_madre_vrp = f"""
                                 SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
                                 FROM BD_MADRE 
@@ -5552,7 +5584,6 @@ elif tab_activa == "sectores":
                                     df_temp = df_madre_vrp[df_madre_vrp['Serie_str'] == serie_raw]
                                     if not df_temp.empty:
                                         for var_name, df_v_group in df_temp.groupby('VARIABLE'):
-                                            # CORRECCIÓN PRINCIPAL AQUÍ: Ordenar por FECHA cronológicamente
                                             df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
                                             
                                             if not df_v_group.empty:
@@ -5564,7 +5595,7 @@ elif tab_activa == "sectores":
                                                     y=df_v_group['VALOR'], 
                                                     name=f"{nombre_vrp} - {var_name}", 
                                                     mode='lines+markers',
-                                                    connectgaps=False,  # EVITA RELLENAR HUECOS O CONECTAR CON LÍNEAS RECTAS DIAGONALES
+                                                    connectgaps=False,
                                                     showlegend=True,
                                                     marker=dict(size=3.5, symbol='circle'), 
                                                     line=dict(width=2, color=color_trace_vrp),
@@ -5576,24 +5607,17 @@ elif tab_activa == "sectores":
                                     es_lunes = (d.dayofweek == 0)
                                     fig_vrp.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.18, layer="below", line_width=0)
                                     fig_vrp.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.4, layer="above")
-                    except Exception:
-                        pass
+                        except Exception:
+                            pass
 
-                fig_vrp.update_layout(
-                    paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
-                    margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
-                    legend=dict(
-                        orientation="h", 
-                        yanchor="bottom", 
-                        y=1.12, 
-                        x=0.5, 
-                        xanchor="center", 
-                        font=dict(color="white", size=9)
-                    ),
-                    xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_vrp if 'ticks_vrp' in locals() else None, ticktext=etiquetas_vrp if 'etiquetas_vrp' in locals() else None, tickangle=0),
-                    yaxis=dict(tickformat=".2f", color="#00ffcc", showgrid=True, gridcolor="#16304a", title="Valor")
-                )
-                st.plotly_chart(fig_vrp, use_container_width=True)
+                    fig_vrp.update_layout(
+                        paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
+                        margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.12, x=0.5, xanchor="center", font=dict(color="white", size=9)),
+                        xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_vrp if 'ticks_vrp' in locals() else None, ticktext=etiquetas_vrp if 'etiquetas_vrp' in locals() else None, tickangle=0),
+                        yaxis=dict(tickformat=".2f", color="#00ffcc", showgrid=True, gridcolor="#16304a", title="Valor")
+                    )
+                    st.plotly_chart(fig_vrp, use_container_width=True)
 
             st.write("")
             st.markdown(f"""
