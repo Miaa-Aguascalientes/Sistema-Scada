@@ -2161,47 +2161,96 @@ if sector_seleccionado:
         <style>
             :root { color-scheme: dark; }
             .stApp { background: #081421; color: #e4edf7; }
-            header[data-testid="stHeader"] { background: #081421; }
+            header[data-testid="stHeader"] { background: #081421; display: none !important; }
             [data-testid="stSidebar"] { display: none !important; }
-            .block-container { padding: 0.5rem 2rem 3.5rem !important; max-width: 1920px; }
+            .block-container { padding: 0rem 2rem 3.5rem !important; max-width: 1920px; margin-top: -25px !important; }
             h1 { font-size: 1.9rem !important; font-weight: 650 !important; letter-spacing: -0.045rem; padding-top: 0rem !important; margin-top: 0rem !important; }
             h3 { font-size: 1.03rem !important; font-weight: 600 !important; padding: .1rem 0 !important; }
-            [data-testid="stVerticalBlockBorderWrapper"] > div { border-color: #22384d !important; border-radius: 10px !important; background: #0b1a29; }
-            [data-testid="stCaptionContainer"] { color: #91a8bf; font-size: .78rem; }
             
+            /* FONDO AZUL OBSCURO Y BORDE NEÓN PARA LA TARJETA DEL ENCABEZADO */
+            [data-testid="stVerticalBlockBorderWrapper"] > div { 
+                border-color: #1f4068 !important; 
+                border-top: 2px solid #00d4ff !important;
+                border-radius: 12px !important; 
+                background: linear-gradient(135deg, #030d17 0%, #081c30 50%, #030d17 100%) !important; 
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); 
+            }
+            [data-testid="stCaptionContainer"] { color: #91a8bf; font-size: .78rem; }
+
+            /* ESTILOS DE LISTA PARA DATOS OPERATIVOS */
+            .dma-op-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.52rem 0;
+                border-bottom: 1px solid rgba(31, 64, 104, 0.4);
+                font-size: 0.85rem;
+            }
+            .dma-op-row:last-child {
+                border-bottom: none;
+            }
+            .dma-op-label {
+                color: #9ab0c7;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .dma-op-value {
+                color: #f0f7ff;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+            }
+
+            /* ADAPTACIÓN DEL SELECTOR DE FECHAS */
+            div[data-baseweb="select"], div[data-baseweb="select"] > div, div[data-baseweb="select"] div {
+                background-color: #030d17 !important;
+                background: #030d17 !important;
+            }
+            div[data-baseweb="select"] > div {
+                border: 1px solid #1f4068 !important;
+                border-radius: 8px !important;
+                color: #e4edf7 !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            }
+            div[data-baseweb="select"] span { color: #e4edf7 !important; }
+            div[data-baseweb="popover"] div { background-color: #0b1a29 !important; color: #e4edf7 !important; }
+
+            @keyframes water-shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+            }
+            @keyframes drop-pulse {
+                0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6)); }
+                50% { transform: scale(1.15); filter: drop-shadow(0 0 12px rgba(0, 212, 255, 1)); }
+                100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6)); }
+            }
+            @keyframes line-glow {
+                0% { opacity: 0.7; }
+                50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.9)); }
+                100% { opacity: 0.7; }
+            }
+
+            .miaa-logo-img { height: 42px; width: auto; max-width: 170px; object-fit: contain; filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.4)); margin-top: 6px; }
+            .miaa-center-content { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+            .miaa-title-main { color: #ffffff; font-size: 1.55rem; font-weight: 700; margin: 0 0 6px 0; letter-spacing: -0.02rem; white-space: nowrap; text-align: center; line-height: 1.2; }
+            .miaa-sector-highlight { color: #00d4ff; text-shadow: 0 0 10px rgba(0, 212, 255, 0.5); }
+            .miaa-lines-row { display: flex; align-items: center; width: 100%; justify-content: center; gap: 14px; }
+            .miaa-neon-bar { flex-grow: 1; height: 2px; background: linear-gradient(90deg, rgba(0,212,255,0) 0%, #00d4ff 100%); box-shadow: 0 0 8px #00d4ff; animation: line-glow 3s infinite ease-in-out; }
+            .miaa-neon-bar.right-side { background: linear-gradient(90deg, #00d4ff 0%, rgba(0,212,255,0) 100%); }
+            .miaa-animated-water-drop { width: 22px; height: 22px; animation: drop-pulse 2.5s infinite ease-in-out; flex-shrink: 0; }
+
             @keyframes pulse-glow {
                 0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(71,175,208,0.4)); }
                 50% { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(71,175,208,0.9)); }
                 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(71,175,208,0.4)); }
             }
-            @keyframes radar-spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-            @keyframes water-flow {
-                0% { stroke-dashoffset: 24; }
-                100% { stroke-dashoffset: 0; }
-            }
-            @keyframes float-up {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-3px); }
-            }
+            @keyframes radar-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes water-flow { 0% { stroke-dashoffset: 24; } 100% { stroke-dashoffset: 0; } }
+            @keyframes float-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
             .anim-pulse { animation: pulse-glow 2.5s infinite ease-in-out; transform-origin: center; }
             .anim-spin { animation: radar-spin 8s infinite linear; transform-origin: center; }
             .anim-flow { stroke-dasharray: 6; animation: water-flow 1.5s infinite linear; }
             .anim-float { animation: float-up 3s infinite ease-in-out; }
-
-            .label-inline {
-                font-size: 0.95rem;
-                font-weight: 600;
-                color: #c1d3e5;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                height: 100%;
-                padding-top: 0.5rem;
-                padding-right: 8px;
-            }
 
             .card-indicador {
                 background: linear-gradient(135deg, #122c42 0%, #0b1c2d 100%);
@@ -2217,14 +2266,10 @@ if sector_seleccionado:
             .label-indicador { font-size: 0.82rem; color: #9ab0c7; margin: 0; font-weight: 500; }
             .value-indicador { font-size: 1.6rem; color: #f0f7ff; font-weight: 700; margin: 4px 0 0 0; font-variant-numeric: tabular-nums; }
             .sub-indicador { font-size: 1.12rem; color: #73b3d8; margin: 0; }
-
-            .st-key-dma_operational table { width: 100%; }
-            .st-key-dma_operational td { border-bottom: 1px solid #23374a; padding: .52rem .5rem; vertical-align: middle; font-size: .8rem; width: 33.33%; color: #c1d3e5; font-variant-numeric: tabular-nums; }
             iframe { border-radius: 8px; }
         </style>
     """, unsafe_allow_html=True)
 
-    # 🛡️ ASEGURAR QUE TENEMOS UN SECTOR VÁLIDO PARA EVITAR EL CRASH
     if 'sector_seleccionado' not in locals() and 'sector_seleccionado' in st.session_state:
         sector_seleccionado = st.session_state['sector_seleccionado']
     if 'sector_elegido' not in locals():
@@ -2254,28 +2299,42 @@ if sector_seleccionado:
             'Pozos_Sector': ''
         }
 
-    rol_actual = st.session_state.get('rol', 'usuario')
-    
-    # --- TÍTULO CENTRADO ---
-    st.markdown(f"""
-        <div style="display: flex; justify-content: center; align-items: center; margin-top: -10px; margin-bottom: 10px;">
-            <h1 style="margin: 0; color: #ffffff; text-align: center;">Monitoreo de sector: <span style="color: #00d4ff;">{sector_seleccionado}</span></h1>
-        </div>
-    """, unsafe_allow_html=True)
+    # --- ENCABEZADO INTEGRADO DENTRO DE UN CONTENEDOR CON BORDE Y FONDO AZUL OBSCURO ---
+    with st.container(border=True):
+        head_col1, head_col2, head_col3 = st.columns([1.5, 5.5, 2.2], gap="medium")
+        
+        with head_col1:
+            st.markdown(
+                '<img class="miaa-logo-img" src="https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg" alt="Logo MIAA">',
+                unsafe_allow_html=True
+            )
 
-    col_bloque_per = st.columns([1])[0]
-    with col_bloque_per:
-        opciones_periodo = [
-            "Hoy", "Ayer", "Últimas 24 horas", "Últimas 48 horas", 
-            "Esta semana", "Últimos 7 días", "Este Mes", 
-            "Último mes", "Últimos 3 meses", "Últimos 6 meses", "Personalizado"
-        ]
-        opcion_periodo_tab = st.selectbox(
-            "Periodo de análisis:",
-            opciones_periodo,
-            index=2,
-            key="f_sector_periodo_tab_detalle"
-        )
+        with head_col2:
+            st.markdown(f"""
+                <div class="miaa-center-content">
+                    <h1 class="miaa-title-main">Monitoreo de sector: <span class="miaa-sector-highlight">{sector_seleccionado}</span></h1>
+                    <div class="miaa-lines-row">
+                        <div class="miaa-neon-bar"></div>
+                        <svg class="miaa-animated-water-drop" viewBox="0 0 24 24" fill="#00d4ff">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                        </svg>
+                        <div class="miaa-neon-bar right-side"></div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with head_col3:
+            opciones_periodo = [
+                "Hoy", "Ayer", "Últimas 24 horas", "Últimas 48 horas", 
+                "Esta semana", "Últimos 7 días", "Este Mes", 
+                "Último mes", "Últimos 3 meses", "Últimos 6 meses", "Personalizado"
+            ]
+            opcion_periodo_tab = st.selectbox(
+                "Periodo:",
+                opciones_periodo,
+                index=4,  # "Esta semana" por defecto
+                key="f_sector_periodo_tab_detalle"
+            )
 
     st.write("")
 
@@ -2380,9 +2439,15 @@ if sector_seleccionado:
                 for _, row in df_ultimos.iterrows():
                     dev = str(row['DISPOSITIVO']).strip()
                     var = str(row['VARIABLE']).strip()
+                    val_db = row['VALOR']
+                    if 'PRESION' in var.upper() and val_db is not None:
+                        try:
+                            val_db = float(val_db) * 10.0
+                        except (ValueError, TypeError):
+                            pass
                     if dev not in ultimos_valores_mapa:
                         ultimos_valores_mapa[dev] = {}
-                    ultimos_valores_mapa[dev][var] = {'valor': row['VALOR'], 'fecha': row['FECHA_HORA_LOGGER']}
+                    ultimos_valores_mapa[dev][var] = {'valor': val_db, 'fecha': row['FECHA_HORA_LOGGER']}
         except Exception:
             pass
 
@@ -2419,6 +2484,7 @@ if sector_seleccionado:
     demanda_fmt = fmt_miles(demanda_estimada_val)
 
     texto_nivel_tq = "Sin registro de nivel TQ"
+    fec_nivel_tq_str = "N/A"
     for id_p in ids_p:
         if id_p in mapa_pozos_dict:
             p_info = mapa_pozos_dict[id_p]
@@ -2426,7 +2492,8 @@ if sector_seleccionado:
             if t_niv and str(t_niv).strip().lower() not in ['0', 'none', 'n/a', 'null']:
                 val_niv, fec_niv = scada_res_reg.get(str(t_niv), (0.0, "N/A"))
                 fec_str = fec_niv.strftime('%d/%m %H:%M') if hasattr(fec_niv, 'strftime') else str(fec_niv)
-                texto_nivel_tq = f"Nivel TQ • {val_niv:,.2f} m ({fec_str})"
+                texto_nivel_tq = f"{val_niv:,.2f} m"
+                fec_nivel_tq_str = f"{fec_str} · En línea"
                 break
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
@@ -2481,7 +2548,7 @@ if sector_seleccionado:
                 <svg class="anim-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
                 <p class="label-indicador" style="font-size: 13px; margin:0;">Presión de ingreso</p>
             </div>
-            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">2.35 <span style="font-size:0.8rem; font-weight:normal;">Kg/cm²</span></p>
+            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">23.5 <span style="font-size:0.8rem; font-weight:normal;">mca</span></p>
             <p class="sub-indicador" style="font-size: 11px; text-align: center;">Promedio del periodo</p>
         </div>''', unsafe_allow_html=True)
     st.write("")
@@ -2499,13 +2566,11 @@ if sector_seleccionado:
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=12, tiles=None, height=360)
         
         folium.TileLayer(tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google', name='Vista Satélite', overlay=False).add_to(m_sec)
-        
+
         api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
         folium.TileLayer(
             tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Vista Nocturna",
-            attr='&copy; CARTO',
-            subdomains="abcd", max_zoom=20, overlay=False, control=True
+            name="Capa obscura", attr='&copy; CARTO', subdomains="abcd", max_zoom=20, overlay=False, control=True
         ).add_to(m_sec)
 
         capa_sector = folium.FeatureGroup(name="Límite del sector", overlay=True, control=True).add_to(m_sec)
@@ -2532,13 +2597,13 @@ if sector_seleccionado:
             
             html_vars_detalle = ""
             for var_name, info_v in vals_dev.items():
-                val_bruto = info_v.get('valor')
+                val_num = info_v.get('valor', 0.0)
                 try:
-                    val_num = float(val_bruto) if val_bruto is not None else 0.0
+                    val_num = float(val_num) if val_num is not None else 0.0
                 except (ValueError, TypeError):
                     val_num = 0.0
 
-                unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("Kg/cm²" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
+                unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("mca" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
                 html_vars_detalle += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
             
             if not html_vars_detalle:
@@ -2562,12 +2627,12 @@ if sector_seleccionado:
             
             html_vars_pc = ""
             for var_name, info_v in vals_pc.items():
-                val_bruto = info_v.get('valor')
+                val_num = info_v.get('valor', 0.0)
                 try:
-                    val_num = float(val_bruto) if val_bruto is not None else 0.0
+                    val_num = float(val_num) if val_num is not None else 0.0
                 except (ValueError, TypeError):
                     val_num = 0.0
-                unidad_v = "Kg/cm²" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else "")
+                unidad_v = "mca" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else "")
                 html_vars_pc += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
             
             if not html_vars_pc:
@@ -2589,12 +2654,12 @@ if sector_seleccionado:
             
             html_vars_vrp = ""
             for var_name, info_v in vals_vrp.items():
-                val_bruto = info_v.get('valor')
+                val_num = info_v.get('valor', 0.0)
                 try:
-                    val_num = float(val_bruto) if val_bruto is not None else 0.0
+                    val_num = float(val_num) if val_num is not None else 0.0
                 except (ValueError, TypeError):
                     val_num = 0.0
-                unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("Kg/cm²" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
+                unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("mca" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
                 html_vars_vrp += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
             
             if not html_vars_vrp:
@@ -2608,7 +2673,7 @@ if sector_seleccionado:
             """
             icon_html_vrp = """<div style="position: relative; width: 26px; height: 26px;"><div style="width: 18px; height: 18px; background: radial-gradient(circle at 30% 30%, #a1ffce, #28a745, #004d1a); border-radius: 50%; box-shadow: 2px 3px 5px rgba(0,0,0,0.6); position: absolute; top: 0; left: 4px; z-index: 2;"></div></div>"""
             folium.Marker(location=vrp['coord'], icon=folium.DivIcon(icon_size=(26, 30), icon_anchor=(13, 25), html=icon_html_vrp), popup=folium.Popup(html_vrp, max_width=250)).add_to(capa_vrp)
-            folium.Marker(location=vrp['coord'], icon=folium.features.DivIcon(icon_size=(250,30), icon_anchor=(-12, 30), html=f'<div style="font-size: 8.5pt; color: #00FFCC; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(0,255,204,0.4);">SN: {serie_vrp} • Vrp</div>')).add_to(capa_vrp)
+            folium.Marker(location=vrp['coord'], icon=folium.features.DivIcon(icon_size=(250,30), icon_anchor=(-12, 30), html=f'<div style="font-size: 8.5pt; color: #00FFCC; font-weight: bold; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.65); padding: 1px 6px; border-radius: 4px; border: rgba(0,255,204,0.4);">SN: {serie_vrp} • Vrp</div>')).add_to(capa_vrp)
 
         tags_bomba_mapa = []
         for id_p in ids_p:
@@ -2661,7 +2726,7 @@ if sector_seleccionado:
         st.markdown(f"""
             <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
                 <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Comportamiento hidráulico</p>
-                <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Caudal a la izquierda • Presión a la derecha • Franja nocturna 02:00 - 04:00</p>
+                <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Caudal a la izquierda • Presiones (mca) y Nivel a la derecha • Franja nocturna 02:00 - 04:00</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -2703,8 +2768,12 @@ if sector_seleccionado:
                 df_madre_sector = pd.read_sql(q_madre_sector, engine_tel)
                 
                 if not df_madre_sector.empty:
-                    df_madre_sector['FECHA'] = pd.to_datetime(df_madre_sector['Fecha'])
+                    df_madre_sector['FECHA'] = pd.to_datetime(df_madre_sector['Fecha'], errors='coerce')
                     df_madre_sector['Serie_str'] = df_madre_sector['Serie'].astype(str).str.strip()
+                    
+                    is_not_caudal = ~df_madre_sector['VARIABLE'].str.upper().str.contains('CAUDAL', na=False)
+                    df_madre_sector['VALOR'] = pd.to_numeric(df_madre_sector['VALOR'], errors='coerce')
+                    df_madre_sector.loc[is_not_caudal, 'VALOR'] *= 10.0
 
                     for r_k, r_info in dict_reg.items():
                         serie_raw = str(r_info.get('Serie', r_k)).strip()
@@ -2739,8 +2808,96 @@ if sector_seleccionado:
                                             yaxis="y2", mode='lines+markers',
                                             line=dict(width=2, color=color_p),
                                             marker=dict(size=3, symbol='circle'),
-                                            hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} Kg/cm²<extra></extra>'
+                                            hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} mca<extra></extra>'
                                         ))
+            except Exception:
+                pass
+
+        series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
+        if dict_vrp_sec and series_vrp_list:
+            try:
+                series_vrp_in = "', '".join(series_vrp_list)
+                q_madre_vrp = f"""
+                    SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
+                    FROM BD_MADRE 
+                    WHERE DISPOSITIVO IN ('{series_vrp_in}')
+                      AND VARIABLE != 'Volt_bateria'
+                      AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                    ORDER BY FECHA_HORA_LOGGER ASC
+                """
+                df_madre_vrp = pd.read_sql(q_madre_vrp, engine_tel)
+                if not df_madre_vrp.empty:
+                    df_madre_vrp['FECHA'] = pd.to_datetime(df_madre_vrp['Fecha'], errors='coerce')
+                    df_madre_vrp['Serie_str'] = df_madre_vrp['Serie'].astype(str).str.strip()
+                    
+                    is_not_caudal_vrp = ~df_madre_vrp['VARIABLE'].str.upper().str.contains('CAUDAL', na=False)
+                    df_madre_vrp['VALOR'] = pd.to_numeric(df_madre_vrp['VALOR'], errors='coerce')
+                    df_madre_vrp.loc[is_not_caudal_vrp, 'VALOR'] *= 10.0
+                    
+                    colores_vrp = ["#00ffcc", "#28a745", "#a1ffce", "#00cc66"]
+                    idx_vrp_c = 0
+                    for v_key, v_info in dict_vrp_sec.items():
+                        serie_raw = str(v_info.get('Serie', v_key)).strip()
+                        nombre_vrp = v_info.get('nombre', f'VRP {serie_raw}')
+                        df_temp = df_madre_vrp[df_madre_vrp['Serie_str'] == serie_raw]
+                        if not df_temp.empty:
+                            for var_name, df_v_group in df_temp.groupby('VARIABLE'):
+                                df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
+                                if not df_v_group.empty:
+                                    color_trace_vrp = colores_vrp[idx_vrp_c % len(colores_vrp)]
+                                    idx_vrp_c += 1
+                                    is_q_vrp = 'CAUDAL' in str(var_name).upper()
+                                    fig.add_trace(go.Scatter(
+                                        x=df_v_group['FECHA'], y=df_v_group['VALOR'],
+                                        name=f"{nombre_vrp} - {var_name}",
+                                        yaxis="y1" if is_q_vrp else "y2", mode='lines+markers',
+                                        marker=dict(size=3.5, symbol='circle'),
+                                        line=dict(width=2, color=color_trace_vrp),
+                                        hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f}<extra></extra>'
+                                    ))
+            except Exception:
+                pass
+
+        series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
+        if dict_pc_sec and series_pc_list:
+            try:
+                series_pc_in = "', '".join(series_pc_list)
+                q_madre_pc_hc = f"""
+                    SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
+                    FROM BD_MADRE 
+                    WHERE DISPOSITIVO IN ('{series_pc_in}')
+                      AND VARIABLE != 'Volt_bateria'
+                      AND VARIABLE NOT LIKE '%CAUDAL%'
+                      AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                    ORDER BY FECHA_HORA_LOGGER ASC
+                """
+                df_madre_pc_hc = pd.read_sql(q_madre_pc_hc, engine_tel)
+                if not df_madre_pc_hc.empty:
+                    df_madre_pc_hc['FECHA'] = pd.to_datetime(df_madre_pc_hc['Fecha'], errors='coerce')
+                    df_madre_pc_hc['Serie_str'] = df_madre_pc_hc['Serie'].astype(str).str.strip()
+                    df_madre_pc_hc['VALOR'] = pd.to_numeric(df_madre_pc_hc['VALOR'], errors='coerce') * 10.0
+                    
+                    colores_pc_hc = ["#ff4d4d", "#ff8080", "#ffb3b3", "#ff1a1a"]
+                    idx_pc_hc = 0
+                    for pc_key, pc_info in dict_pc_sec.items():
+                        serie_raw = str(pc_info.get('Serie', pc_key)).strip()
+                        domicilio_nombre = pc_info.get('Domicilio', pc_info.get('nombre', f'PC {serie_raw}'))
+                        df_temp = df_madre_pc_hc[df_madre_pc_hc['Serie_str'] == serie_raw]
+                        if not df_temp.empty:
+                            for var_name, df_v_group in df_temp.groupby('VARIABLE'):
+                                df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
+                                if not df_v_group.empty:
+                                    color_trace_pc_hc = colores_pc_hc[idx_pc_hc % len(colores_pc_hc)]
+                                    idx_pc_hc += 1
+                                    fig.add_trace(go.Scatter(
+                                        x=df_v_group['FECHA'], y=df_v_group['VALOR'],
+                                        name=f"PC: {domicilio_nombre} - {var_name}",
+                                        yaxis="y2", mode='lines+markers',
+                                        marker=dict(size=3.5, symbol='circle'),
+                                        line=dict(width=2, color=color_trace_pc_hc),
+                                        visible='legendonly',
+                                        hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f} mca<extra></extra>'
+                                    ))
             except Exception:
                 pass
 
@@ -2780,22 +2937,30 @@ if sector_seleccionado:
 
                                 if es_caudal: unidad_pc = "L/s"
                                 elif "NIVEL" in label_u or "TANQUE" in label_u or "MTS" in label_u: unidad_pc = "m"
-                                else: unidad_pc = "Kg/cm²"
+                                else: unidad_pc = "mca"
+
+                                val_y_series = pd.to_numeric(df_tag['VALUE'], errors='coerce')
+                                if not es_caudal and "NIVEL" not in label_u and "TANQUE" not in label_u:
+                                    val_y_series = val_y_series * 10.0
 
                                 if "NIVEL" in label_u or "TANQUE" in label_u:
                                     color_base = "#d400ff"
+                                    vis_estado = True
                                 elif es_caudal:
                                     color_base = "#00d4ff"
+                                    vis_estado = 'legendonly'
                                 else:
                                     color_base = "#00ff00"
+                                    vis_estado = 'legendonly'
 
                                 fig.add_trace(go.Scatter(
-                                    x=df_tag['FECHA'], y=df_tag['VALUE'], name=cfg['label'], 
+                                    x=df_tag['FECHA'], y=val_y_series, name=cfg['label'], 
                                     yaxis="y2" if cfg['sec'] else "y1", mode='lines+markers',
                                     line=dict(width=2, color=color_base),
                                     marker=dict(size=3, symbol='circle'),
-                                    fill='tozeroy' if es_caudal else None,
-                                    fillcolor="rgba(0, 212, 255, 0.15)" if es_caudal else None,
+                                    fill='tozeroy' if (es_caudal and "NIVEL" not in label_u) else None,
+                                    fillcolor="rgba(0, 212, 255, 0.15)" if (es_caudal and "NIVEL" not in label_u) else None,
+                                    visible=vis_estado,
                                     hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} ' + unidad_pc + '<extra></extra>'
                                 ))
             except Exception:
@@ -2810,276 +2975,177 @@ if sector_seleccionado:
         fig.update_layout(
             paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=360, 
             margin=dict(l=40, r=40, t=10, b=10), hovermode="x unified", 
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.5, xanchor="center", font=dict(color="white", size=10)),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.5, xanchor="center", font=dict(color="white", size=12)),
             xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0),
-            yaxis=dict(title="L/s", color="#00d4ff", showgrid=True, gridcolor="#16304a"),
-            yaxis2=dict(title="Kg/cm²", side="right", overlaying="y", color="#00ff00", showgrid=False)
+            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor="#16304a"),
+            yaxis2=dict(title="Presión (mca) / Nivel Tq (mts)", side="right", overlaying="y", color="#d400ff", showgrid=False)
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    tiene_datos_pc = False
-    series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
-    
-    if dict_pc_sec and series_pc_list:
+    # --- FILA INFERIOR: PUNTOS CRÍTICOS Y DATOS OPERATIVOS ---
+    col_pc, col_op = st.columns([1.0, 1.0], gap="medium")
+
+    with col_pc:
+        st.markdown("""
+            <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Puntos críticos</p>
+                <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Presión real en los puntos críticos del sector (Diccionario_puntos_criticos)</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        fig_pc = go.Figure()
         try:
-            engine_tel = get_mysql_telemetria_engine()
-            series_pc_in = "', '".join(series_pc_list)
-            q_check_pc = f"""
-                SELECT 1 FROM BD_MADRE 
-                WHERE DISPOSITIVO IN ('{series_pc_in}')
-                  AND VARIABLE != 'Volt_bateria'
-                  AND VARIABLE NOT LIKE '%CAUDAL%'
-                  AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
-                LIMIT 1
-            """
-            df_chk_pc = pd.read_sql(q_check_pc, engine_tel)
-            if not df_chk_pc.empty:
-                tiene_datos_pc = True
-        except Exception:
-            pass
+            if dict_pc_sec and series_pc_list:
+                engine_tel = get_mysql_telemetria_engine()
+                series_pc_in = "', '".join(series_pc_list)
+                q_madre_pc = f"""
+                    SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
+                    FROM BD_MADRE 
+                    WHERE DISPOSITIVO IN ('{series_pc_in}')
+                      AND VARIABLE != 'Volt_bateria'
+                      AND VARIABLE NOT LIKE '%CAUDAL%'
+                      AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
+                    ORDER BY FECHA_HORA_LOGGER ASC
+                """
+                df_madre_pc = pd.read_sql(q_madre_pc, engine_tel)
+                if not df_madre_pc.empty:
+                    df_madre_pc['FECHA'] = pd.to_datetime(df_madre_pc['Fecha'], errors='coerce')
+                    df_madre_pc['Serie_str'] = df_madre_pc['Serie'].astype(str).str.strip()
+                    df_madre_pc['VALOR'] = pd.to_numeric(df_madre_pc['VALOR'], errors='coerce') * 10.0
 
-    tiene_vrps_disponibles = False
-    series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
-    
-    if dict_vrp_sec and series_vrp_list:
-        try:
-            engine_tel = get_mysql_telemetria_engine()
-            series_vrp_in = "', '".join(series_vrp_list)
-            q_check_vrp = f"""
-                SELECT 1 FROM BD_MADRE 
-                WHERE DISPOSITIVO IN ('{series_vrp_in}')
-                  AND VARIABLE != 'Volt_bateria'
-                  AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
-                LIMIT 1
-            """
-            df_chk_vrp = pd.read_sql(q_check_vrp, engine_tel)
-            if not df_chk_vrp.empty:
-                tiene_vrps_disponibles = True
-        except Exception:
-            pass
+                    dias_es_pc = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
+                    meses_es_pc = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
 
-    if tiene_datos_pc and tiene_vrps_disponibles:
-        col_pc, col_vrp_g = st.columns([1.0, 1.0], gap="medium")
-    elif tiene_datos_pc and not tiene_vrps_disponibles:
-        col_pc = st.container()
-        col_vrp_g = None
-    elif not tiene_datos_pc and tiene_vrps_disponibles:
-        col_pc = None
-        col_vrp_g = st.container()
-    else:
-        col_pc, col_vrp_g = None, None
-
-    if col_pc is not None:
-        with col_pc:
-            st.markdown(f"""
-                <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
-                    <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Puntos críticos</p>
-                    <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Presión real en los puntos críticos del sector (Diccionario_puntos_criticos)</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            fig_pc = go.Figure()
-            if tiene_datos_pc:
-                try:
-                    q_madre_pc = f"""
-                        SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
-                        FROM BD_MADRE 
-                        WHERE DISPOSITIVO IN ('{series_pc_in}')
-                          AND VARIABLE != 'Volt_bateria'
-                          AND VARIABLE NOT LIKE '%CAUDAL%'
-                          AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
-                        ORDER BY FECHA_HORA_LOGGER ASC
-                    """
-                    df_madre_pc = pd.read_sql(q_madre_pc, engine_tel)
-                    if not df_madre_pc.empty:
-                        df_madre_pc['FECHA'] = pd.to_datetime(df_madre_pc['Fecha'])
-                        df_madre_pc['Serie_str'] = df_madre_pc['Serie'].astype(str).str.strip()
-
-                        dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
-                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
-
-                        f_ini_dia = f_ini_h.replace(hour=0, minute=0, second=0, microsecond=0)
-                        f_fin_dia = f_fin_h.replace(hour=23, minute=59, second=59, microsecond=0)
-                        fechas_lineas_pc = pd.date_range(start=f_ini_dia, end=f_fin_dia, freq='D')
-                        ticks_pc = fechas_lineas_pc[::1]
-                        etiquetas_pc = [
-                            f"00:00<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
-                            for d in ticks_pc
-                        ]
-
-                        colores_azules = ["#00d4ff", "#8acbf5", "#3399ff", "#1a75ff"]
-                        idx_pc_c = 0
-
-                        for pc_key, pc_info in dict_pc_sec.items():
-                            serie_raw = str(pc_info.get('Serie', pc_key)).strip()
-                            domicilio_nombre = pc_info.get('Domicilio', pc_info.get('nombre', f'Serie {serie_raw}'))
-
-                            df_temp = df_madre_pc[df_madre_pc['Serie_str'] == serie_raw]
-                            if not df_temp.empty:
-                                for var_name, df_v_group in df_temp.groupby('VARIABLE'):
-                                    df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
-                                    
-                                    if not df_v_group.empty:
-                                        color_trace_pc = colores_azules[idx_pc_c % len(colores_azules)]
-                                        idx_pc_c += 1
-
-                                        fig_pc.add_trace(go.Scatter(
-                                            x=df_v_group['FECHA'], 
-                                            y=df_v_group['VALOR'], 
-                                            name=f"{domicilio_nombre} - {var_name}", 
-                                            mode='lines+markers',
-                                            connectgaps=False,
-                                            showlegend=True,
-                                            marker=dict(size=3.5, symbol='circle'), 
-                                            line=dict(width=2, color=color_trace_pc),
-                                            hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f}<extra></extra>'
-                                        ))
-
-                        delta_h = pd.Timedelta(hours=1)
-                        for d in fechas_lineas_pc:
-                            es_lunes = (d.dayofweek == 0)
-                            fig_pc.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.18, layer="below", line_width=0)
-                            fig_pc.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.4, layer="above")
-                except Exception:
-                    pass
-
-            fig_pc.update_layout(
-                paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
-                margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
-                legend=dict(orientation="h", yanchor="bottom", y=1.12, x=0.5, xanchor="center", font=dict(color="white", size=9)),
-                xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_pc if 'ticks_pc' in locals() else None, ticktext=etiquetas_pc if 'etiquetas_pc' in locals() else None, tickangle=0),
-                yaxis=dict(tickformat=".2f", color="#8acbf5", showgrid=True, gridcolor="#16304a", title="Valor")
-            )
-            st.plotly_chart(fig_pc, use_container_width=True)
-
-    if col_vrp_g is not None:
-        with col_vrp_g:
-            st.markdown(f"""
-                <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
-                    <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Válvulas reductoras de presión (VRP)</p>
-                    <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Variables registradas en BD_MADRE (Diccionario_vrp del sector)</p>
-                </div>
-            """, unsafe_allow_html=True)
-
-            fig_vrp = go.Figure()
-            if tiene_vrps_disponibles:
-                try:
-                    series_vrp_in = "', '".join(series_vrp_list)
-                    q_madre_vrp = f"""
-                        SELECT FECHA_HORA_LOGGER AS Fecha, DISPOSITIVO AS Serie, VARIABLE, VALOR 
-                        FROM BD_MADRE 
-                        WHERE DISPOSITIVO IN ('{series_vrp_in}')
-                          AND VARIABLE != 'Volt_bateria'
-                          AND FECHA_HORA_LOGGER BETWEEN '{f_ini_h} 00:00:00' AND '{f_fin_h} 23:59:59'
-                        ORDER BY FECHA_HORA_LOGGER ASC
-                    """
-                    df_madre_vrp = pd.read_sql(q_madre_vrp, engine_tel)
+                    f_ini_dia_pc = f_ini_h.replace(hour=0, minute=0, second=0, microsecond=0)
+                    f_fin_dia_pc = f_fin_h.replace(hour=23, minute=59, second=59, microsecond=0)
+                    fechas_lineas_pc = pd.date_range(start=f_ini_dia_pc, end=f_fin_dia_pc, freq='D')
                     
-                    if not df_madre_vrp.empty:
-                        df_madre_vrp['FECHA'] = pd.to_datetime(df_madre_vrp['Fecha'])
-                        df_madre_vrp['Serie_str'] = df_madre_vrp['Serie'].astype(str).str.strip()
+                    num_dias_pc = len(fechas_lineas_pc)
+                    paso_pc = 1 if num_dias_pc <= 15 else (2 if num_dias_pc <= 30 else 5)
+                    ticks_pc = fechas_lineas_pc[::paso_pc]
+                    
+                    etiquetas_pc = [
+                        f"{d.strftime('%H:%M')}<br>{dias_es_pc[d.dayofweek]} {d.day}-{meses_es_pc[d.month]}-{d.year}"
+                        for d in ticks_pc
+                    ]
 
-                        dias_es = {0: 'Lun', 1: 'Mar', 2: 'Mié', 3: 'Jue', 4: 'Vie', 5: 'Sáb', 6: 'Dom'}
-                        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+                    colores_azules = ["#00d4ff", "#8acbf5", "#3399ff", "#1a75ff"]
+                    idx_pc_c = 0
 
-                        f_ini_dia = f_ini_h.replace(hour=0, minute=0, second=0, microsecond=0)
-                        f_fin_dia = f_fin_h.replace(hour=23, minute=59, second=59, microsecond=0)
-                        fechas_lineas_vrp = pd.date_range(start=f_ini_dia, end=f_fin_dia, freq='D')
-                        ticks_vrp = fechas_lineas_vrp[::1]
-                        etiquetas_vrp = [
-                            f"00:00<br>{dias_es[d.dayofweek]} {d.day}-{meses_es[d.month]}-{d.year}"
-                            for d in ticks_vrp
-                        ]
+                    for pc_key, pc_info in dict_pc_sec.items():
+                        serie_raw = str(pc_info.get('Serie', pc_key)).strip()
+                        domicilio_nombre = pc_info.get('Domicilio', pc_info.get('nombre', f'Serie {serie_raw}'))
 
-                        colores_vrp = ["#00ffcc", "#28a745", "#a1ffce", "#00cc66"]
-                        idx_vrp_c = 0
+                        df_temp = df_madre_pc[df_madre_pc['Serie_str'] == serie_raw]
+                        if not df_temp.empty:
+                            for var_name, df_v_group in df_temp.groupby('VARIABLE'):
+                                df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
+                                if not df_v_group.empty:
+                                    color_trace_pc = colores_azules[idx_pc_c % len(colores_azules)]
+                                    idx_pc_c += 1
 
-                        for v_key, v_info in dict_vrp_sec.items():
-                            serie_raw = str(v_info.get('Serie', v_key)).strip()
-                            nombre_vrp = v_info.get('nombre', f'VRP {serie_raw}')
+                                    fig_pc.add_trace(go.Scatter(
+                                        x=df_v_group['FECHA'], 
+                                        y=df_v_group['VALOR'], 
+                                        name=f"{domicilio_nombre} - {var_name}", 
+                                        mode='lines+markers',
+                                        connectgaps=False,
+                                        showlegend=True,
+                                        marker=dict(size=3.5, symbol='circle'), 
+                                        line=dict(width=2, color=color_trace_pc),
+                                        hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f} mca<extra></extra>'
+                                    ))
 
-                            df_temp = df_madre_vrp[df_madre_vrp['Serie_str'] == serie_raw]
-                            if not df_temp.empty:
-                                for var_name, df_v_group in df_temp.groupby('VARIABLE'):
-                                    df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
-                                    
-                                    if not df_v_group.empty:
-                                        color_trace_vrp = colores_vrp[idx_vrp_c % len(colores_vrp)]
-                                        idx_vrp_c += 1
+                    delta_h = pd.Timedelta(hours=1)
+                    for d in fechas_lineas_pc:
+                        es_lunes = (d.dayofweek == 0)
+                        fig_pc.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
+                        fig_pc.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
+        except Exception:
+            pass
 
-                                        fig_vrp.add_trace(go.Scatter(
-                                            x=df_v_group['FECHA'], 
-                                            y=df_v_group['VALOR'], 
-                                            name=f"{nombre_vrp} - {var_name}", 
-                                            mode='lines+markers',
-                                            connectgaps=False,
-                                            showlegend=True,
-                                            marker=dict(size=3.5, symbol='circle'), 
-                                            line=dict(width=2, color=color_trace_vrp),
-                                            hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f}<extra></extra>'
-                                        ))
+        fig_pc.add_hline(
+            y=30, line_dash="dot", line_color="#ffd700", line_width=1.5,
+            annotation_text="Máx. 30 mca", annotation_position="top right",
+            annotation_font=dict(color="#ffd700", size=11)
+        )
+        fig_pc.add_hline(
+            y=5, line_dash="dot", line_color="#ffd700", line_width=1.5,
+            annotation_text="Mín. 5 mca", annotation_position="bottom right",
+            annotation_font=dict(color="#ffd700", size=11)
+        )
 
-                        delta_h = pd.Timedelta(hours=1)
-                        for d in fechas_lineas_vrp:
-                            es_lunes = (d.dayofweek == 0)
-                            fig_vrp.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.18, layer="below", line_width=0)
-                            fig_vrp.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.4, layer="above")
-                except Exception:
-                    pass
+        fig_pc.update_layout(
+            paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=360, 
+            margin=dict(l=40, r=40, t=10, b=10), hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=12)),
+            xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_pc if 'ticks_pc' in locals() else None, ticktext=etiquetas_pc if 'etiquetas_pc' in locals() else None, tickangle=0),
+            yaxis=dict(tickformat=".2f", color="#00d4ff", showgrid=True, gridcolor="#16304a", title="Presión (mca)")
+        )
+        st.plotly_chart(fig_pc, use_container_width=True)
 
-            fig_vrp.update_layout(
-                paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=290, 
-                margin=dict(l=40, r=40, t=35, b=10), hovermode="x unified",
-                legend=dict(orientation="h", yanchor="bottom", y=1.12, x=0.5, xanchor="center", font=dict(color="white", size=9)),
-                xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_vrp if 'ticks_vrp' in locals() else None, ticktext=etiquetas_vrp if 'etiquetas_vrp' in locals() else None, tickangle=0),
-                yaxis=dict(tickformat=".2f", color="#00ffcc", showgrid=True, gridcolor="#16304a", title="Valor")
-            )
-            st.plotly_chart(fig_vrp, use_container_width=True)
+    with col_op:
+        st.markdown(f"""
+            <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
+                <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Datos operativos</p>
+                <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Ficha del sector y últimas lecturas del periodo</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        tomas_activas_val = f"{(datos_s.get('U_Domesticos', 0) + datos_s.get('U_NoDom', 0)):,.0f}".replace(",", ".")
+        long_red_val = f"{datos_s.get('Long_Red', 42.6):,.1f}".replace(",", ".") + " kilómetros"
+        demanda_cat_val = f"{demanda_estimada_val:,.1f}".replace(",", ".") + " L/s" if demanda_estimada_val else "74,2 L/s"
+        
+        st.markdown(f"""
+            <div style="background: #0b1a29; border: 1px solid #1f4068; border-top: none; border-radius: 0 0 8px 8px; padding: 14px 18px; height: 382px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="dma-op-row">
+                    <span class="dma-op-label">📍 Distrito</span>
+                    <span class="dma-op-value">Distrito {datos_s.get('Distrito', 'Oriente')}</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">🏠 Tomas activas</span>
+                    <span class="dma-op-value">{tomas_activas_val}</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">📏 Longitud de red</span>
+                    <span class="dma-op-value">{long_red_val}</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">🌊 Demanda estimada · catálogo</span>
+                    <span class="dma-op-value">{demanda_cat_val}</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">💧 Presión mínima de referencia</span>
+                    <span class="dma-op-value">15.0 mca</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">🎛️ Consigna VRP · catálogo</span>
+                    <span class="dma-op-value">30.0 mca</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">🟦 Tanque TQ-055 · último</span>
+                    <span class="dma-op-value">{texto_nivel_tq}</span>
+                </div>
+                <div class="dma-op-row">
+                    <span class="dma-op-label">🕒 Fecha del nivel / condición</span>
+                    <span class="dma-op-value">{fec_nivel_tq_str}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-    st.write("")
-    st.markdown(f"""
-        <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
-            <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Datos operativos</p>
-            <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Ficha técnica del sector y métricas operativas del catálogo</p>
-        </div>
-        <div class="st-key-dma_operational" style="background: #0b1a29; border: 1px solid #1f4068; border-top: none; border-radius: 0 0 8px 8px; padding: 15px;">
-            <table style="width: 100%;">
-                <tr>
-                    <td>🏢 <b>Distrito:</b> Distrito {datos_s.get('Distrito', 'Oriente')}</td>
-                    <td>🚰 <b>Cantidad de pozos:</b> {datos_s.get('Cantidad_Pozos', len(ids_p)):,.0f}</td>
-                    <td>📐 <b>Superficie:</b> {datos_s.get('Superficie', 0.0):,.2f} ha</td>
-                </tr>
-                <tr>
-                    <td>📏 <b>Longitud de red:</b> {datos_s.get('Long_Red', 42.6):,.1f} km</td>
-                    <td>🏠 <b>Tomas domésticas:</b> {datos_s.get('U_Domesticos', 0):,.0f}</td>
-                    <td>🏢 <b>Tomas no domésticas:</b> {datos_s.get('U_NoDom', 0):,.0f}</td>
-                </tr>
-                <tr>
-                    <td>📦 <b>Volumen producido:</b> {datos_s.get('Vol_Prod', 0):,.0f} m³</td>
-                    <td>📋 <b>Volumen facturado:</b> {datos_s.get('Vol_Fact', 0):,.0f} m³</td>
-                    <td>⚖️ <b>Balance estimado:</b> {datos_s.get('Balance_Estimado', 0):,.1f}%</td>
-                </tr>
-                <tr>
-                    <td colspan="3">🔵 <b>Nivel TQ asociado:</b> {texto_nivel_tq}</td>
-                </tr>
-            </table>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # --- MARCA DE AGUA LIBRE Y SIN CUADROS (FLOTANTE A LA IZQUIERDA) ---
+    # --- MARCA DE AGUA ALINEADA A LA IZQUIERDA EN LA PARTE INFERIOR ---
     st.markdown("""
         <div style="
-            position: fixed;
-            bottom: 15px;
-            left: 24px;
-            z-index: 99999;
-            pointer-events: none;
+            position: relative;
+            margin-top: 35px;
+            margin-bottom: 20px;
+            padding-left: 5px;
             text-align: left;
             line-height: 1.25;
             opacity: 0.85;
         ">
-            <span style="color: #00d4ff; font-size: 0.75rem; font-weight: 700; font-family: 'Courier New', monospace; display: block; text-shadow: 1px 1px 2px #000;">Dirección de Planeación</span>
-            <span style="color: #ffffff; font-size: 0.65rem; font-weight: 500; font-family: 'Courier New', monospace; display: block; text-shadow: 1px 1px 2px #000;">Subdirección de Tecnología e Innovación</span>
+            <span style="color: #00d4ff; font-size: 0.75rem; font-weight: 700; font-family: 'Courier New', monospace; display: block;">Dirección de Planeación</span>
+            <span style="color: #ffffff; font-size: 0.65rem; font-weight: 500; font-family: 'Courier New', monospace; display: block;">Subdirección de Tecnología e Innovación</span>
         </div>
     """, unsafe_allow_html=True)
 
