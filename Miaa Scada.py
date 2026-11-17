@@ -30,6 +30,7 @@ from sqlalchemy import create_engine, text
 from cryptography.fernet import Fernet
 import altair as alt
 
+
 st.set_page_config(
     page_title="Sistema Scada", 
     page_icon="https://www.miaa.mx/favicon.ico", 
@@ -2167,17 +2168,9 @@ if sector_seleccionado:
             h1 { font-size: 1.9rem !important; font-weight: 650 !important; letter-spacing: -0.045rem; padding-top: 0rem !important; margin-top: 0rem !important; }
             h3 { font-size: 1.03rem !important; font-weight: 600 !important; padding: .1rem 0 !important; }
             
-            /* FONDO AZUL OBSCURO Y BORDE NEÓN PARA LA TARJETA DEL ENCABEZADO */
-            [data-testid="stVerticalBlockBorderWrapper"] > div { 
-                border-color: #1f4068 !important; 
-                border-top: 2px solid #00d4ff !important;
-                border-radius: 12px !important; 
-                background: linear-gradient(135deg, #030d17 0%, #081c30 50%, #030d17 100%) !important; 
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); 
-            }
+            [data-testid="stVerticalBlockBorderWrapper"] > div { border-color: #22384d !important; border-radius: 12px !important; background: linear-gradient(135deg, #030d17 0%, #081c30 50%, #030d17 100%) !important; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
             [data-testid="stCaptionContainer"] { color: #91a8bf; font-size: .78rem; }
 
-            /* ESTILOS DE LISTA PARA DATOS OPERATIVOS */
             .dma-op-row {
                 display: flex;
                 justify-content: space-between;
@@ -2186,39 +2179,19 @@ if sector_seleccionado:
                 border-bottom: 1px solid rgba(31, 64, 104, 0.4);
                 font-size: 0.85rem;
             }
-            .dma-op-row:last-child {
-                border-bottom: none;
-            }
-            .dma-op-label {
-                color: #9ab0c7;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .dma-op-value {
-                color: #f0f7ff;
-                font-weight: 600;
-                font-variant-numeric: tabular-nums;
-            }
+            .dma-op-row:last-child { border-bottom: none; }
+            .dma-op-label { color: #9ab0c7; display: flex; align-items: center; gap: 8px; }
+            .dma-op-value { color: #f0f7ff; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-            /* ADAPTACIÓN DEL SELECTOR DE FECHAS */
             div[data-baseweb="select"], div[data-baseweb="select"] > div, div[data-baseweb="select"] div {
-                background-color: #030d17 !important;
-                background: #030d17 !important;
+                background-color: #030d17 !important; background: #030d17 !important;
             }
             div[data-baseweb="select"] > div {
-                border: 1px solid #1f4068 !important;
-                border-radius: 8px !important;
-                color: #e4edf7 !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+                border: 1px solid #1f4068 !important; border-radius: 8px !important; color: #e4edf7 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
             }
             div[data-baseweb="select"] span { color: #e4edf7 !important; }
             div[data-baseweb="popover"] div { background-color: #0b1a29 !important; color: #e4edf7 !important; }
 
-            @keyframes water-shimmer {
-                0% { background-position: -200% 0; }
-                100% { background-position: 200% 0; }
-            }
             @keyframes drop-pulse {
                 0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6)); }
                 50% { transform: scale(1.15); filter: drop-shadow(0 0 12px rgba(0, 212, 255, 1)); }
@@ -2299,7 +2272,73 @@ if sector_seleccionado:
             'Pozos_Sector': ''
         }
 
-    # --- ENCABEZADO INTEGRADO DENTRO DE UN CONTENEDOR CON BORDE Y FONDO AZUL OBSCURO ---
+    # --- CONSULTA DE INDICADORES DESDE GOOGLE SHEETS (HOJA: Indicadores) ---
+    @st.cache_data(ttl=300)
+    def cargar_indicadores_google_sheets():
+        sheet_id = "1Ovj2DZ19Y8H4BtamnVwB71c2dyHC3dyVmau-tMbWre8"
+        gid = "1820360811"
+        url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+        try:
+            df = pd.read_csv(url_csv)
+            return df
+        except Exception:
+            return pd.DataFrame()
+
+    df_ind_gs = cargar_indicadores_google_sheets()
+
+    val_ef = "N/D"
+    val_anf = "N/D"
+    val_dotacion = "N/D"
+    val_perd_us_mes = "N/D"
+    val_fugas_km = "N/D"
+
+    if not df_ind_gs.empty and df_ind_gs.shape[1] >= 28:
+        # Buscamos el sector en la columna B (índice 1: SECTOR)
+        sec_buscar = str(sec_val_actual).strip().upper()
+        sec_buscar_limpio = ''.join(c for c in sec_buscar if c.isalnum())
+        
+        fila_encontrada = None
+        for _, row in df_ind_gs.iterrows():
+            val_col_b = str(row.iloc[1]).strip().upper()
+            val_col_b_limpio = ''.join(c for c in val_col_b if c.isalnum())
+            if val_col_b == sec_buscar or val_col_b_limpio == sec_buscar_limpio or (sec_buscar in val_col_b and len(sec_buscar) >= 3):
+                fila_encontrada = row
+                break
+        
+        if fila_encontrada is not None:
+            # Columna U (índice 20): EF
+            raw_ef = fila_encontrada.iloc[20]
+            val_ef = str(raw_ef).strip() if pd.notna(raw_ef) else "N/D"
+            
+            # Columna V (índice 21): ANF
+            raw_anf = fila_encontrada.iloc[21]
+            val_anf = str(raw_anf).strip() if pd.notna(raw_anf) else "N/D"
+            
+            # Columna S (índice 18): DOTACION
+            raw_dot = fila_encontrada.iloc[18]
+            if pd.notna(raw_dot):
+                try:
+                    val_dotacion = f"{float(str(raw_dot).replace(',', '')):,.0f}"
+                except ValueError:
+                    val_dotacion = str(raw_dot).strip()
+            
+            # Columna X (índice 23): PERD_US-MES
+            raw_perd = fila_encontrada.iloc[23]
+            if pd.notna(raw_perd):
+                try:
+                    val_perd_us_mes = f"{float(str(raw_perd).replace(',', '')):,.2f}"
+                except ValueError:
+                    val_perd_us_mes = str(raw_perd).strip()
+            
+            # Columna AB (índice 27): FUGAS-KM
+            raw_fugas = fila_encontrada.iloc[27]
+            if pd.notna(raw_fugas):
+                try:
+                    val_fugas_km = f"{float(str(raw_fugas).replace(',', '')):,.2f}"
+                except ValueError:
+                    val_fugas_km = str(raw_fugas).strip()
+
+    # --- ENCABEZADO INTEGRADO ---
     with st.container(border=True):
         head_col1, head_col2, head_col3 = st.columns([1.5, 5.5, 2.2], gap="medium")
         
@@ -2332,7 +2371,7 @@ if sector_seleccionado:
             opcion_periodo_tab = st.selectbox(
                 "Periodo:",
                 opciones_periodo,
-                index=4,  # "Esta semana" por defecto
+                index=4,
                 key="f_sector_periodo_tab_detalle"
             )
 
@@ -2368,7 +2407,9 @@ if sector_seleccionado:
 
     def coincide_sector(item_dict):
         val_sec = str(item_dict.get('Sector') or item_dict.get('sector') or '').strip()
-        return val_sec == str(sec_id).strip() or (sec_id_clean and sec_id_clean in val_sec)
+        s_actual_limpio = ''.join(c for c in str(sec_val_actual).upper() if c.isalnum())
+        s_item_limpio = ''.join(c for c in val_sec.upper() if c.isalnum())
+        return s_item_limpio == s_actual_limpio or val_sec.upper() == str(sec_val_actual).upper()
 
     dict_reg_all = cargar_puntos_de_control_desde_db() 
     dict_reg = {k: v for k, v in dict_reg_all.items() if coincide_sector(v)}
@@ -2398,19 +2439,12 @@ if sector_seleccionado:
             mapa_series_nombres[str(s_val).strip()] = pc.get('Domicilio', f"Punto Crítico ({s_val})")
 
     tags_para_scada = []
-    tags_caudal_pozos = []
     tags_agregados_set = set()
     
     for id_p in ids_p:
         if id_p in mapa_pozos_dict:
             p_info = mapa_pozos_dict[id_p]
-            t_pz_q = p_info.get('caudal')
-            if t_pz_q and str(t_pz_q).strip().lower() not in ['0', 'none', 'n/a', 'null']:
-                if str(t_pz_q) not in tags_agregados_set:
-                    tags_para_scada.append(str(t_pz_q))
-                    tags_agregados_set.add(str(t_pz_q))
-                tags_caudal_pozos.append(str(t_pz_q))
-            for kt in ['presion', 'nivel_tanque']:
+            for kt in ['caudal', 'presion', 'nivel_tanque']:
                 t_val = p_info.get(kt)
                 if t_val and str(t_val).strip().lower() not in ['0', 'none', 'n/a', 'null']:
                     if str(t_val) not in tags_agregados_set:
@@ -2451,37 +2485,7 @@ if sector_seleccionado:
         except Exception:
             pass
 
-    caudal_promedio_pozos = 0.0
-    if tags_caudal_pozos:
-        try:
-            engine_h = get_mysql_scada_engine()
-            tags_q_pozos_in = "', '".join([str(t) for t in set(tags_caudal_pozos) if t])
-            if tags_q_pozos_in:
-                q_prom_pozos_query = f"""
-                    SELECT AVG(suma_instante) as PROMEDIO_TOTAL FROM (
-                        SELECT h.FECHA, SUM(h.VALUE) as suma_instante 
-                        FROM vfitagnumhistory h 
-                        JOIN VfiTagRef r ON h.GATEID = r.GATEID 
-                        WHERE r.NAME IN ('{tags_q_pozos_in}') AND h.FECHA BETWEEN '{f_ini_h}' AND '{f_fin_h}'
-                        GROUP BY h.FECHA
-                    ) t
-                """
-                df_prom_p = pd.read_sql(q_prom_pozos_query, engine_h)
-                if not df_prom_p.empty and df_prom_p['PROMEDIO_TOTAL'].iloc[0] is not None:
-                    caudal_promedio_pozos = float(df_prom_p['PROMEDIO_TOTAL'].iloc[0])
-        except Exception:
-            caudal_promedio_pozos = 0.0
-
-    volumen_medido_val = datos_s.get('Vol_Medid', 0.0)
     demanda_estimada_val = datos_s.get('Cons_m3', 0.0)
-
-    def fmt_miles(val):
-        try:
-            return f"{float(val):,.0f}".replace(",", ", ")
-        except:
-            return "0"
-
-    demanda_fmt = fmt_miles(demanda_estimada_val)
 
     texto_nivel_tq = "Sin registro de nivel TQ"
     fec_nivel_tq_str = "N/A"
@@ -2496,44 +2500,54 @@ if sector_seleccionado:
                 fec_nivel_tq_str = f"{fec_str} · En línea"
                 break
 
+    # --- TARJETAS INDICADORAS (1-5 DESDE GOOGLE SHEETS, 6 MÍNIMO NOCTURNO) ---
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     with c1:
         st.markdown(f'''<div class="card-indicador">
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg class="anim-flow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"></path></svg>
-                <p class="label-indicador" style="font-size: 13px; margin:0;">Caudal de ingreso</p>
+                <p class="label-indicador" style="font-size: 13px; margin:0;">Eficiencia Física (EF)</p>
             </div>
-            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{caudal_promedio_pozos:,.1f} <span style="font-size:0.8rem; font-weight:normal;">L/s</span></p>
-            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Promedio del periodo (Pozos)</p>
+            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{val_ef}</p>
+            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Hoja Indicadores (Col. U)</p>
         </div>''', unsafe_allow_html=True)
     with c2:
         st.markdown(f'''<div class="card-indicador">
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg class="anim-float" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                <p class="label-indicador" style="font-size: 13px; margin:0;">Volumen medido</p>
+                <p class="label-indicador" style="font-size: 13px; margin:0;">Agua No Facturada (ANF)</p>
             </div>
-            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{volumen_medido_val:,.0f} <span style="font-size:0.8rem; font-weight:normal;">m³</span></p>
-            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Tabla Sectores_hidr (Vol_Medid)</p>
+            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{val_anf}</p>
+            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Hoja Indicadores (Col. V)</p>
         </div>''', unsafe_allow_html=True)
     with c3:
         st.markdown(f'''<div class="card-indicador">
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg class="anim-pulse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-                <p class="label-indicador" style="font-size: 13px; margin:0;">Demanda estimada</p>
+                <p class="label-indicador" style="font-size: 13px; margin:0;">Dotación</p>
             </div>
-            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{demanda_fmt} <span style="font-size:0.8rem; font-weight:normal;">L/s</span></p>
-            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Tabla Sectores_hidr (Cons_m3)</p>
+            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{val_dotacion} <span style="font-size:0.8rem; font-weight:normal;">L/hab/d</span></p>
+            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Hoja Indicadores (Col. S)</p>
         </div>''', unsafe_allow_html=True)
     with c4:
         st.markdown(f'''<div class="card-indicador">
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg class="anim-float" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-                <p class="label-indicador" style="font-size: 13px; margin:0;">Población estimada</p>
+                <p class="label-indicador" style="font-size: 13px; margin:0;">Pérd. Usuario-Mes</p>
             </div>
-            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{datos_s.get("Poblacion", 28450):,.0f}</p>
-            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Referencia del catálogo</p>
+            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{val_perd_us_mes} <span style="font-size:0.8rem; font-weight:normal;">m³</span></p>
+            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Hoja Indicadores (Col. X)</p>
         </div>''', unsafe_allow_html=True)
     with c5:
+        st.markdown(f'''<div class="card-indicador">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg class="anim-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                <p class="label-indicador" style="font-size: 13px; margin:0;">Fugas por Km</p>
+            </div>
+            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">{val_fugas_km} <span style="font-size:0.8rem; font-weight:normal;">fugas/km</span></p>
+            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Hoja Indicadores (Col. AB)</p>
+        </div>''', unsafe_allow_html=True)
+    with c6:
         st.markdown(f'''<div class="card-indicador">
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg class="anim-pulse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
@@ -2542,18 +2556,10 @@ if sector_seleccionado:
             <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">32,5 <span style="font-size:0.8rem; font-weight:normal;">L/s</span></p>
             <p class="sub-indicador" style="font-size: 11px; text-align: center;">Mín. observado • 02:00 - 04:00</p>
         </div>''', unsafe_allow_html=True)
-    with c6:
-        st.markdown(f'''<div class="card-indicador">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <svg class="anim-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47afd0" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
-                <p class="label-indicador" style="font-size: 13px; margin:0;">Presión de ingreso</p>
-            </div>
-            <p class="value-indicador" style="font-size: 1.35rem; text-align: center;">23.5 <span style="font-size:0.8rem; font-weight:normal;">mca</span></p>
-            <p class="sub-indicador" style="font-size: 11px; text-align: center;">Promedio del periodo</p>
-        </div>''', unsafe_allow_html=True)
     st.write("")
 
-    col_izq, col_der = st.columns([1.0, 1.0])
+    # --- FILA SUPERIOR: MAPA Y GRÁFICO DE COMPORTAMIENTO HIDRÁULICO ---
+    col_izq, col_der = st.columns([0.7, 1.3])
     
     with col_izq:
         st.markdown(f"""
@@ -2603,8 +2609,14 @@ if sector_seleccionado:
                 except (ValueError, TypeError):
                     val_num = 0.0
 
+                var_label_display = var_name
+                if var_label_display in ["Presion1", "Presion2"]:
+                    var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                elif var_label_display == "Caudal1":
+                    var_label_display = "Q1"
+
                 unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("mca" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
-                html_vars_detalle += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
+                html_vars_detalle += f"&bull; {var_label_display}: <b>{val_num:.2f} {unidad_v}</b><br>"
             
             if not html_vars_detalle:
                 html_vars_detalle = "Sin registros recientes<br>"
@@ -2632,8 +2644,15 @@ if sector_seleccionado:
                     val_num = float(val_num) if val_num is not None else 0.0
                 except (ValueError, TypeError):
                     val_num = 0.0
+
+                var_label_display = var_name
+                if var_label_display in ["Presion1", "Presion2"]:
+                    var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                elif var_label_display == "Caudal1":
+                    var_label_display = "Q1"
+
                 unidad_v = "mca" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else "")
-                html_vars_pc += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
+                html_vars_pc += f"&bull; {var_label_display}: <b>{val_num:.2f} {unidad_v}</b><br>"
             
             if not html_vars_pc:
                 html_vars_pc = "Sin registros recientes<br>"
@@ -2659,8 +2678,15 @@ if sector_seleccionado:
                     val_num = float(val_num) if val_num is not None else 0.0
                 except (ValueError, TypeError):
                     val_num = 0.0
+
+                var_label_display = var_name
+                if var_label_display in ["Presion1", "Presion2"]:
+                    var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                elif var_label_display == "Caudal1":
+                    var_label_display = "Q1"
+
                 unidad_v = "L/s" if "CAUDAL" in var_name.upper() else ("mca" if "PRESION" in var_name.upper() else ("V" if "VOLT" in var_name.upper() else ""))
-                html_vars_vrp += f"&bull; {var_name}: <b>{val_num:.2f} {unidad_v}</b><br>"
+                html_vars_vrp += f"&bull; {var_label_display}: <b>{val_num:.2f} {unidad_v}</b><br>"
             
             if not html_vars_vrp:
                 html_vars_vrp = "Sin registros recientes<br>"
@@ -2720,13 +2746,53 @@ if sector_seleccionado:
 
         folium.LayerControl(collapsed=True).add_to(m_sec)
         Fullscreen(position='topleft').add_to(m_sec)
+
         folium_static(m_sec, width=None, height=360)
-        
+
+        st.markdown("""
+            <div style="
+                position: relative;
+                margin-top: -175px;
+                margin-left: 12px;
+                width: 190px;
+                background: rgba(11, 26, 41, 0.95);
+                backdrop-filter: blur(4px);
+                border: 1px solid #1f4068;
+                border-radius: 6px;
+                padding: 6px 9px;
+                font-family: sans-serif;
+                font-size: 11px;
+                color: #ffffff;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+                z-index: 99;
+                pointer-events: none;
+            ">
+                <div style="font-weight: bold; margin-bottom: 3px; color: #00d4ff; border-bottom: 1px solid #1f4068; padding-bottom: 2px;">Leyenda</div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                    <span style="width: 10px; height: 10px; background-color: #ff4d4d; border-radius: 50%; display: inline-block;"></span>
+                    <span>Punto crítico</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                    <span style="width: 10px; height: 10px; background-color: #00ff00; border-radius: 50%; display: inline-block;"></span>
+                    <span>Pozos</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                    <span style="width: 10px; height: 10px; background-color: #007bff; border-radius: 50%; display: inline-block;"></span>
+                    <span>Punto de control</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="width: 10px; height: 10px; background-color: #a1ffce; border-radius: 50%; display: inline-block;"></span>
+                    <span>Vrp</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+# ==================================================================================== columna derecha ==================================================================================================
+    
     with col_der:
         st.markdown(f"""
             <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
                 <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Comportamiento hidráulico</p>
-                <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Caudal a la izquierda • Presiones (mca) y Nivel a la derecha • Franja nocturna 02:00 - 04:00</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -2752,6 +2818,7 @@ if sector_seleccionado:
         colores_azules_pc = ["#8acbf5", "#0088ff", "#3399ff", "#1a75ff"]
         colores_verdes_pc = ["#73e6b0", "#00ffaa", "#00cc66", "#33ff99"]
 
+        # --- 1. GRAFICAR SOLO PUNTOS DE CONTROL DEL SECTOR ---
         series_puntos_control = [str(r.get('Serie', k)).strip() for k, r in dict_reg.items() if r.get('Serie') or k]
         if series_puntos_control:
             try:
@@ -2786,33 +2853,40 @@ if sector_seleccionado:
                                 if df_v_group['VALOR'].notna().any():
                                     is_caudal = 'CAUDAL' in str(var_name).upper()
                                     
+                                    var_label_display = str(var_name)
+                                    if var_label_display in ["Presion1", "Presion2"]:
+                                        var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                                    elif var_label_display == "Caudal1":
+                                        var_label_display = "Q1"
+
                                     if is_caudal:
                                         color_q = colores_azules_pc[idx_q % len(colores_azules_pc)]
                                         idx_q += 1
                                         fig.add_trace(go.Scatter(
                                             x=df_v_group['FECHA'], y=df_v_group['VALOR'],
-                                            name=f"{nombre_reg} - {var_name}",
+                                            name=f"{nombre_reg} - {var_label_display}",
                                             yaxis="y1", mode='lines+markers',
                                             line=dict(width=2, color=color_q),
                                             marker=dict(size=3, symbol='circle'),
                                             fill='tozeroy',
                                             fillcolor="rgba(138, 203, 245, 0.15)",
-                                            hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} L/s<extra></extra>'
+                                            hovertemplate=f'<b>{nombre_reg} - {var_label_display}</b>: %{{y:.2f}} L/s<extra></extra>'
                                         ))
                                     else:
                                         color_p = colores_verdes_pc[idx_p % len(colores_verdes_pc)]
                                         idx_p += 1
                                         fig.add_trace(go.Scatter(
                                             x=df_v_group['FECHA'], y=df_v_group['VALOR'],
-                                            name=f"{nombre_reg} - {var_name}",
+                                            name=f"{nombre_reg} - {var_label_display}",
                                             yaxis="y2", mode='lines+markers',
                                             line=dict(width=2, color=color_p),
                                             marker=dict(size=3, symbol='circle'),
-                                            hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} mca<extra></extra>'
+                                            hovertemplate=f'<b>{nombre_reg} - {var_label_display}</b>: %{{y:.2f}} mca<extra></extra>'
                                         ))
             except Exception:
                 pass
 
+        # --- 2. GRAFICAR SOLO VRPs DEL SECTOR ---
         series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
         if dict_vrp_sec and series_vrp_list:
             try:
@@ -2847,17 +2921,25 @@ if sector_seleccionado:
                                     color_trace_vrp = colores_vrp[idx_vrp_c % len(colores_vrp)]
                                     idx_vrp_c += 1
                                     is_q_vrp = 'CAUDAL' in str(var_name).upper()
+
+                                    var_label_display = str(var_name)
+                                    if var_label_display in ["Presion1", "Presion2"]:
+                                        var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                                    elif var_label_display == "Caudal1":
+                                        var_label_display = "Q1"
+
                                     fig.add_trace(go.Scatter(
                                         x=df_v_group['FECHA'], y=df_v_group['VALOR'],
-                                        name=f"{nombre_vrp} - {var_name}",
+                                        name=f"{nombre_vrp} - {var_label_display}",
                                         yaxis="y1" if is_q_vrp else "y2", mode='lines+markers',
                                         marker=dict(size=3.5, symbol='circle'),
                                         line=dict(width=2, color=color_trace_vrp),
-                                        hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f}<extra></extra>'
+                                        hovertemplate=f'<b>{nombre_vrp} - {var_label_display}</b><br>Valor: %{{y:.2f}}<extra></extra>'
                                     ))
             except Exception:
                 pass
 
+        # --- 3. GRAFICAR SOLO PUNTOS CRÍTICOS DEL SECTOR ---
         series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
         if dict_pc_sec and series_pc_list:
             try:
@@ -2889,34 +2971,42 @@ if sector_seleccionado:
                                 if not df_v_group.empty:
                                     color_trace_pc_hc = colores_pc_hc[idx_pc_hc % len(colores_pc_hc)]
                                     idx_pc_hc += 1
+
+                                    var_label_display = str(var_name)
+                                    if var_label_display in ["Presion1", "Presion2"]:
+                                        var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                                    elif var_label_display == "Caudal1":
+                                        var_label_display = "Q1"
+
                                     fig.add_trace(go.Scatter(
                                         x=df_v_group['FECHA'], y=df_v_group['VALOR'],
-                                        name=f"PC: {domicilio_nombre} - {var_name}",
+                                        name=f"PC: {domicilio_nombre} - {var_label_display}",
                                         yaxis="y2", mode='lines+markers',
                                         marker=dict(size=3.5, symbol='circle'),
                                         line=dict(width=2, color=color_trace_pc_hc),
                                         visible='legendonly',
-                                        hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f} mca<extra></extra>'
+                                        hovertemplate=f'<b>PC: {domicilio_nombre} - {var_label_display}</b><br>Valor: %{{y:.2f}} mca<extra></extra>'
                                     ))
             except Exception:
                 pass
 
+        # --- 4. GRAFICAR SOLO POZOS DEL SECTOR ---
         tags_pozos_visualizar = []
         mapeo_pozos_config = {}
         for id_p in ids_p:
             if id_p in mapa_pozos_dict:
                 p_info = mapa_pozos_dict[id_p]
                 conf_pz = [
-                    ('caudal', f"Pozo {id_p} - Q", False),
-                    ('presion', f"Pozo {id_p} - P", True),
-                    ('nivel_tanque', "Nivel TQ", True)
+                    ('caudal', f"Pozo {id_p} - Q", "y1"),
+                    ('presion', f"Pozo {id_p} - P", "y2"),
+                    ('nivel_tanque', "Nivel TQ", "y3")
                 ]
-                for key_t, lb, sec in conf_pz:
+                for key_t, lb, axis_target in conf_pz:
                     tag_v = p_info.get(key_t)
                     if tag_v and str(tag_v).strip().lower() not in ['0', 'none', 'n/a', 'null']:
                         if str(tag_v) not in tags_pozos_visualizar:
                             tags_pozos_visualizar.append(str(tag_v))
-                            mapeo_pozos_config[str(tag_v)] = {'label': lb, 'sec': sec}
+                            mapeo_pozos_config[str(tag_v)] = {'label': lb, 'axis': axis_target}
 
         if tags_pozos_visualizar:
             try:
@@ -2932,21 +3022,20 @@ if sector_seleccionado:
                             df_tag = df_h[df_h['TAG'] == tag_name].sort_values('FECHA')
                             if not df_tag.empty:
                                 cfg = mapeo_pozos_config[tag_name]
-                                es_caudal = not cfg['sec']
-                                label_u = cfg['label'].upper()
+                                target_axis = cfg['axis']
 
-                                if es_caudal: unidad_pc = "L/s"
-                                elif "NIVEL" in label_u or "TANQUE" in label_u or "MTS" in label_u: unidad_pc = "m"
+                                if target_axis == "y1": unidad_pc = "L/s"
+                                elif target_axis == "y3": unidad_pc = "m"
                                 else: unidad_pc = "mca"
 
                                 val_y_series = pd.to_numeric(df_tag['VALUE'], errors='coerce')
-                                if not es_caudal and "NIVEL" not in label_u and "TANQUE" not in label_u:
+                                if target_axis == "y2":
                                     val_y_series = val_y_series * 10.0
 
-                                if "NIVEL" in label_u or "TANQUE" in label_u:
+                                if target_axis == "y3":
                                     color_base = "#d400ff"
                                     vis_estado = True
-                                elif es_caudal:
+                                elif target_axis == "y1":
                                     color_base = "#00d4ff"
                                     vis_estado = 'legendonly'
                                 else:
@@ -2955,30 +3044,67 @@ if sector_seleccionado:
 
                                 fig.add_trace(go.Scatter(
                                     x=df_tag['FECHA'], y=val_y_series, name=cfg['label'], 
-                                    yaxis="y2" if cfg['sec'] else "y1", mode='lines+markers',
+                                    yaxis=target_axis, mode='lines+markers',
                                     line=dict(width=2, color=color_base),
                                     marker=dict(size=3, symbol='circle'),
-                                    fill='tozeroy' if (es_caudal and "NIVEL" not in label_u) else None,
-                                    fillcolor="rgba(0, 212, 255, 0.15)" if (es_caudal and "NIVEL" not in label_u) else None,
+                                    fill='tozeroy' if (target_axis == "y1") else None,
+                                    fillcolor="rgba(0, 212, 255, 0.15)" if (target_axis == "y1") else None,
                                     visible=vis_estado,
                                     hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} ' + unidad_pc + '<extra></extra>'
                                 ))
             except Exception:
                 pass
 
-        delta = pd.Timedelta(hours=1)
+        delta = pd.Timedelta(minutes=7.5)
         for d in fechas_lineas:
             es_lunes = (d.dayofweek == 0)
             fig.add_vrect(x0=d - delta, x1=d + delta, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
             fig.add_vline(x=d, line_width=1.5, line_dash="dash", line_color="#fffb00" if es_lunes else "white", opacity=0.5, layer="above")
 
         fig.update_layout(
-            paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=360, 
-            margin=dict(l=40, r=40, t=10, b=10), hovermode="x unified", 
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.5, xanchor="center", font=dict(color="white", size=12)),
-            xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0),
-            yaxis=dict(title="Caudal (L/s)", color="#00d4ff", showgrid=True, gridcolor="#16304a"),
-            yaxis2=dict(title="Presión (mca) / Nivel Tq (mts)", side="right", overlaying="y", color="#d400ff", showgrid=False)
+            paper_bgcolor='rgba(11,26,41,1)', plot_bgcolor='rgba(11,26,41,1)', height=380, 
+            margin=dict(l=40, r=20, t=25, b=10), hovermode="x unified", 
+            legend=dict(
+                orientation="h", 
+                yanchor="bottom", 
+                y=1.04, 
+                x=0.5, 
+                xanchor="center", 
+                font=dict(color="white", size=11),
+                itemwidth=30
+            ),
+            xaxis=dict(domain=[0, 0.90], range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0),
+            yaxis=dict(
+                title=dict(text="Caudal (L/s)", font=dict(color="#00d4ff")),
+                tickfont=dict(color="#00d4ff"),
+                color="#00d4ff",
+                showgrid=True, 
+                gridcolor="#16304a"
+            ),
+            yaxis2=dict(
+                title=dict(text="Presión (mca)", font=dict(color="#00ff00"), standoff=15), 
+                tickfont=dict(color="#00ff00"),
+                side="right", 
+                overlaying="y", 
+                anchor="free", 
+                position=0.94, 
+                color="#00ff00", 
+                showgrid=False,
+                rangemode="tozero",
+                tickformat="d"
+            ),
+            yaxis3=dict(
+                title=dict(text="Nivel Tq (mts)", font=dict(color="#d400ff"), standoff=15), 
+                tickfont=dict(color="#d400ff"),
+                side="right", 
+                overlaying="y", 
+                anchor="free", 
+                position=1.0, 
+                color="#d400ff", 
+                showgrid=False,
+                rangemode="tozero",
+                tickformat="d"
+            )
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -3044,19 +3170,25 @@ if sector_seleccionado:
                                     color_trace_pc = colores_azules[idx_pc_c % len(colores_azules)]
                                     idx_pc_c += 1
 
+                                    var_label_display = str(var_name)
+                                    if var_label_display in ["Presion1", "Presion2"]:
+                                        var_label_display = "P1" if var_label_display == "Presion1" else "P2"
+                                    elif var_label_display == "Caudal1":
+                                        var_label_display = "Q1"
+
                                     fig_pc.add_trace(go.Scatter(
                                         x=df_v_group['FECHA'], 
                                         y=df_v_group['VALOR'], 
-                                        name=f"{domicilio_nombre} - {var_name}", 
+                                        name=f"{domicilio_nombre} - {var_label_display}", 
                                         mode='lines+markers',
                                         connectgaps=False,
                                         showlegend=True,
                                         marker=dict(size=3.5, symbol='circle'), 
                                         line=dict(width=2, color=color_trace_pc),
-                                        hovertemplate='<b>%{fullData.name}</b><br>Valor: %{y:.2f} mca<extra></extra>'
+                                        hovertemplate=f'<b>{domicilio_nombre} - {var_label_display}</b><br>Valor: %{{y:.2f}} mca<extra></extra>'
                                     ))
 
-                    delta_h = pd.Timedelta(hours=1)
+                    delta_h = pd.Timedelta(minutes=7.5)
                     for d in fechas_lineas_pc:
                         es_lunes = (d.dayofweek == 0)
                         fig_pc.add_vrect(x0=d - delta_h, x1=d + delta_h, fillcolor="gray", opacity=0.2, layer="below", line_width=0)
