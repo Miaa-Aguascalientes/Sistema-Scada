@@ -2586,7 +2586,7 @@ if sector_seleccionado:
         </div>''', unsafe_allow_html=True)
     st.write("")
 
-    # --- FILA SUPERIOR: MAPA Y GRÁFICO DE COMPORTAMIENTO HIDRÁULICO ---
+    # --- FILA SUPERIOR: MAPA Y GRÁFICO DE COMPORTAMIENTO HIDRÁULICO -----------------------------------------------------------------------------------------------------------------------------------------
     col_izq, col_der = st.columns([0.7, 1.3])
     
     with col_izq:
@@ -2599,12 +2599,30 @@ if sector_seleccionado:
 
         m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=12, tiles=None, height=360)
         
-        folium.TileLayer(tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google', name='Vista Satélite', overlay=False).add_to(m_sec)
+        folium.TileLayer(
+            tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 
+            attr='Google', 
+            name='Vista Satélite', 
+            overlay=False
+        ).add_to(m_sec)
+        
+        folium.TileLayer(
+            tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            attr='Esri',
+            name='Satélite (Esri)',
+            overlay=False,
+            control=True
+        ).add_to(m_sec)
 
         api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
         folium.TileLayer(
             tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Capa obscura", attr='&copy; CARTO', subdomains="abcd", max_zoom=20, overlay=False, control=True
+            name="Vista Nocturna",
+            attr='&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
         ).add_to(m_sec)
 
         capa_sector = folium.FeatureGroup(name="Límite del sector", overlay=True, control=True).add_to(m_sec)
@@ -3083,6 +3101,8 @@ if sector_seleccionado:
             except Exception:
                 pass
 
+# ==================================================================================== grafico de puntos de medicion con dos ejes a la derecha ============================================================================        
+
         delta = pd.Timedelta(minutes=7.5)
         for d in fechas_lineas:
             es_lunes = (d.dayofweek == 0)
@@ -3102,6 +3122,8 @@ if sector_seleccionado:
                 itemwidth=30
             ),
             xaxis=dict(domain=[0, 0.90], range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0),
+            
+            # 1. Eje Caudal (Izquierda) -> Azul
             yaxis=dict(
                 title=dict(text="Caudal (L/s)", font=dict(color="#00d4ff")),
                 tickfont=dict(color="#00d4ff"),
@@ -3109,6 +3131,8 @@ if sector_seleccionado:
                 showgrid=True, 
                 gridcolor="#16304a"
             ),
+            
+            # 2. Eje Presión (Derecha 1) -> Verde con línea divisoria en gris oscuro y delgada
             yaxis2=dict(
                 title=dict(text="Presión (mca)", font=dict(color="#00ff00"), standoff=15), 
                 tickfont=dict(color="#00ff00"),
@@ -3119,8 +3143,13 @@ if sector_seleccionado:
                 color="#00ff00", 
                 showgrid=False,
                 rangemode="tozero",
-                tickformat="d"
+                tickformat="d",
+                showline=True,
+                linecolor="#22384d",  # Gris oscuro elegante
+                linewidth=1           # Más delgada
             ),
+            
+            # 3. Eje Nivel Tq (Derecha 2) -> Morado con línea divisoria en gris oscuro y delgada
             yaxis3=dict(
                 title=dict(text="Nivel Tq (mts)", font=dict(color="#d400ff"), standoff=15), 
                 tickfont=dict(color="#d400ff"),
@@ -3131,12 +3160,15 @@ if sector_seleccionado:
                 color="#d400ff", 
                 showgrid=False,
                 rangemode="tozero",
-                tickformat="d"
+                tickformat="d",
+                showline=True,
+                linecolor="#22384d",  # Gris oscuro elegante
+                linewidth=1           # Más delgada
             )
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- FILA INFERIOR: PUNTOS CRÍTICOS Y DATOS OPERATIVOS ---
+    # --- FILA INFERIOR: PUNTOS CRÍTICOS Y DATOS OPERATIVOS ------------------------------------------------------------------------------------------------------------------------------------------------------------
     col_pc, col_op = st.columns([1.0, 1.0], gap="medium")
 
     with col_pc:
