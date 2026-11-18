@@ -2239,6 +2239,11 @@ if sector_seleccionado:
             .label-indicador { font-size: 0.82rem; color: #9ab0c7; margin: 0; font-weight: 500; }
             .value-indicador { font-size: 1.6rem; color: #f0f7ff; font-weight: 700; margin: 4px 0 0 0; font-variant-numeric: tabular-nums; }
             iframe { border-radius: 8px; }
+
+            /* Ocultar barra de atribución de Leaflet */
+            .leaflet-control-attribution {
+                display: none !important;
+            }
         </style>
     """, unsafe_allow_html=True)
 
@@ -2271,7 +2276,6 @@ if sector_seleccionado:
             'Pozos_Sector': ''
         }
 
-    # --- CONSULTA DE INDICADORES DESDE GOOGLE SHEETS (HOJA: Indicadores) ---
     @st.cache_data(ttl=300)
     def cargar_indicadores_google_sheets():
         sheet_id = "1Ovj2DZ19Y8H4BtamnVwB71c2dyHC3dyVmau-tMbWre8"
@@ -2331,7 +2335,6 @@ if sector_seleccionado:
                 except ValueError:
                     val_fugas_km = str(raw_fugas).strip()
 
-    # --- ENCABEZADO INTEGRADO ---
     with st.container(border=True):
         head_col1, head_col2, head_col3 = st.columns([1.5, 5.5, 2.2], gap="medium")
         
@@ -2488,7 +2491,6 @@ if sector_seleccionado:
         except Exception:
             pass
 
-    # --- CÁLCULO DINÁMICO DEL MÍNIMO NOCTURNO (22:00 a 06:00 h) ---
     min_nocturno_str = "-"
 
     if series_caudal_sector:
@@ -2534,7 +2536,6 @@ if sector_seleccionado:
                 fec_nivel_tq_str = f"{fec_str} · En línea"
                 break
 
-    # --- TARJETAS INDICADORAS (SIN TEXTOS SECUNDARIOS) ---
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     with c1:
         st.markdown(f'''<div class="card-indicador">
@@ -2586,8 +2587,9 @@ if sector_seleccionado:
         </div>''', unsafe_allow_html=True)
     st.write("")
 
-    # --- FILA SUPERIOR: MAPA Y GRÁFICO DE COMPORTAMIENTO HIDRÁULICO -----------------------------------------------------------------------------------------------------------------------------------------
     col_izq, col_der = st.columns([0.7, 1.3])
+
+# =========================================================================== INICIO DE MAPA SECTORES ============================================================================================================
     
     with col_izq:
         st.markdown(f"""
@@ -2597,7 +2599,7 @@ if sector_seleccionado:
             </div>
         """, unsafe_allow_html=True)
 
-        m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=12, tiles=None, height=360)
+        m_sec = folium.Map(location=[21.8820, -102.2800], zoom_start=12, tiles=None, height=360, attribution_control=False)
         
         folium.TileLayer(
             tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 
@@ -2833,7 +2835,6 @@ if sector_seleccionado:
             </div>
         """, unsafe_allow_html=True)
 
-# ==================================================================================== columna derecha ==================================================================================================
     
     with col_der:
         st.markdown(f"""
@@ -2864,7 +2865,7 @@ if sector_seleccionado:
         colores_azules_pc = ["#8acbf5", "#0088ff", "#3399ff", "#1a75ff"]
         colores_verdes_pc = ["#73e6b0", "#00ffaa", "#00cc66", "#33ff99"]
 
-        # --- 1. GRAFICAR SOLO PUNTOS DE CONTROL DEL SECTOR ---
+        # --- 1. GRAFICAR PUNTOS DE CONTROL (Caudal tipo área, Presión normal) ---
         series_puntos_control = [str(r.get('Serie', k)).strip() for k, r in dict_reg.items() if r.get('Serie') or k]
         if series_puntos_control:
             try:
@@ -2913,8 +2914,8 @@ if sector_seleccionado:
                                             name=f"{nombre_reg} - {var_label_display}",
                                             yaxis="y1", mode='lines+markers',
                                             line=dict(width=2, color=color_q),
-                                            marker=dict(size=3, symbol='circle'),
-                                            fill='tozeroy',
+                                            marker=dict(size=4, symbol='circle'),
+                                            fill='tozeroy',  # Caudal / Q de tipo área
                                             fillcolor="rgba(138, 203, 245, 0.15)",
                                             hovertemplate=f'<b>{nombre_reg} - {var_label_display}</b>: %{{y:.2f}} L/s<extra></extra>'
                                         ))
@@ -2926,13 +2927,14 @@ if sector_seleccionado:
                                             name=f"{nombre_reg} - {var_label_display}",
                                             yaxis="y2", mode='lines+markers',
                                             line=dict(width=2, color=color_p),
-                                            marker=dict(size=3, symbol='circle'),
+                                            marker=dict(size=4, symbol='circle'),
+                                            fill=None,  # Presión normal sin área
                                             hovertemplate=f'<b>{nombre_reg} - {var_label_display}</b>: %{{y:.2f}} mca<extra></extra>'
                                         ))
             except Exception:
                 pass
 
-        # --- 2. GRAFICAR SOLO VRPs DEL SECTOR ---
+        # --- 2. GRAFICAR VRPs ---
         series_vrp_list = [str(v_info.get('Serie', v_key)) for v_key, v_info in dict_vrp_sec.items() if v_info.get('Serie') or v_key]
         if dict_vrp_sec and series_vrp_list:
             try:
@@ -2978,14 +2980,16 @@ if sector_seleccionado:
                                         x=df_v_group['FECHA'], y=df_v_group['VALOR'],
                                         name=f"{nombre_vrp} - {var_label_display}",
                                         yaxis="y1" if is_q_vrp else "y2", mode='lines+markers',
-                                        marker=dict(size=3.5, symbol='circle'),
+                                        marker=dict(size=4, symbol='circle'),
                                         line=dict(width=2, color=color_trace_vrp),
+                                        fill='tozeroy' if is_q_vrp else None,  # Si es Q en VRP, tipo área
+                                        fillcolor="rgba(0, 255, 204, 0.15)" if is_q_vrp else None,
                                         hovertemplate=f'<b>{nombre_vrp} - {var_label_display}</b><br>Valor: %{{y:.2f}}<extra></extra>'
                                     ))
             except Exception:
                 pass
 
-        # --- 3. GRAFICAR SOLO PUNTOS CRÍTICOS DEL SECTOR ---
+        # --- 3. GRAFICAR PUNTOS CRÍTICOS ---
         series_pc_list = [str(pc_info.get('Serie', pc_key)) for pc_key, pc_info in dict_pc_sec.items() if pc_info.get('Serie') or pc_key]
         if dict_pc_sec and series_pc_list:
             try:
@@ -3028,15 +3032,16 @@ if sector_seleccionado:
                                         x=df_v_group['FECHA'], y=df_v_group['VALOR'],
                                         name=f"PC: {domicilio_nombre} - {var_label_display}",
                                         yaxis="y2", mode='lines+markers',
-                                        marker=dict(size=3.5, symbol='circle'),
+                                        marker=dict(size=4, symbol='circle'),
                                         line=dict(width=2, color=color_trace_pc_hc),
+                                        fill=None,
                                         visible='legendonly',
                                         hovertemplate=f'<b>PC: {domicilio_nombre} - {var_label_display}</b><br>Valor: %{{y:.2f}} mca<extra></extra>'
                                     ))
             except Exception:
                 pass
 
-        # --- 4. GRAFICAR SOLO POZOS DEL SECTOR ---
+        # --- 4. GRAFICAR POZOS DEL SECTOR (Caudal tipo área, Nivel TQ normal sin área) ---
         tags_pozos_visualizar = []
         mapeo_pozos_config = {}
         for id_p in ids_p:
@@ -3081,27 +3086,28 @@ if sector_seleccionado:
                                 if target_axis == "y3":
                                     color_base = "#d400ff"
                                     vis_estado = True
+                                    fill_mode = None  # El Nivel del Tanque (TQ) se muestra normal, sin área
                                 elif target_axis == "y1":
                                     color_base = "#00d4ff"
                                     vis_estado = 'legendonly'
+                                    fill_mode = 'tozeroy'  # Caudal / Q de tipo área
                                 else:
                                     color_base = "#00ff00"
                                     vis_estado = 'legendonly'
+                                    fill_mode = None
 
                                 fig.add_trace(go.Scatter(
                                     x=df_tag['FECHA'], y=val_y_series, name=cfg['label'], 
                                     yaxis=target_axis, mode='lines+markers',
                                     line=dict(width=2, color=color_base),
-                                    marker=dict(size=3, symbol='circle'),
-                                    fill='tozeroy' if (target_axis == "y1") else None,
-                                    fillcolor="rgba(0, 212, 255, 0.15)" if (target_axis == "y1") else None,
+                                    marker=dict(size=4, symbol='circle'),
+                                    fill=fill_mode,
+                                    fillcolor="rgba(0, 212, 255, 0.15)" if fill_mode else None,
                                     visible=vis_estado,
                                     hovertemplate='<b>%{fullData.name}</b>: %{y:.2f} ' + unidad_pc + '<extra></extra>'
                                 ))
             except Exception:
                 pass
-
-# ==================================================================================== grafico de puntos de medicion con dos ejes a la derecha ============================================================================        
 
         delta = pd.Timedelta(minutes=7.5)
         for d in fechas_lineas:
@@ -3123,7 +3129,6 @@ if sector_seleccionado:
             ),
             xaxis=dict(domain=[0, 0.90], range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_filtrados, ticktext=etiquetas_filtradas, tickangle=0),
             
-            # 1. Eje Caudal (Izquierda) -> Azul
             yaxis=dict(
                 title=dict(text="Caudal (L/s)", font=dict(color="#00d4ff")),
                 tickfont=dict(color="#00d4ff"),
@@ -3132,7 +3137,6 @@ if sector_seleccionado:
                 gridcolor="#16304a"
             ),
             
-            # 2. Eje Presión (Derecha 1) -> Verde con línea divisoria en gris oscuro y delgada
             yaxis2=dict(
                 title=dict(text="Presión (mca)", font=dict(color="#00ff00"), standoff=15), 
                 tickfont=dict(color="#00ff00"),
@@ -3145,11 +3149,13 @@ if sector_seleccionado:
                 rangemode="tozero",
                 tickformat="d",
                 showline=True,
-                linecolor="#22384d",  # Gris oscuro elegante
-                linewidth=1           # Más delgada
+                linecolor="#22384d",
+                linewidth=1,
+                ticks="outside",
+                ticklen=6,
+                tickwidth=1
             ),
             
-            # 3. Eje Nivel Tq (Derecha 2) -> Morado con línea divisoria en gris oscuro y delgada
             yaxis3=dict(
                 title=dict(text="Nivel Tq (mts)", font=dict(color="#d400ff"), standoff=15), 
                 tickfont=dict(color="#d400ff"),
@@ -3162,13 +3168,16 @@ if sector_seleccionado:
                 rangemode="tozero",
                 tickformat="d",
                 showline=True,
-                linecolor="#22384d",  # Gris oscuro elegante
-                linewidth=1           # Más delgada
+                linecolor="#22384d",
+                linewidth=1,
+                ticks="outside",
+                ticklen=6,
+                tickwidth=1
             )
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- FILA INFERIOR: PUNTOS CRÍTICOS Y DATOS OPERATIVOS ------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # --- FILA INFERIOR: PUNTOS CRÍTICOS (EN TONOS VERDES DIFERENTES) Y DATOS OPERATIVOS ---
     col_pc, col_op = st.columns([1.0, 1.0], gap="medium")
 
     with col_pc:
@@ -3215,7 +3224,8 @@ if sector_seleccionado:
                         for d in ticks_pc
                     ]
 
-                    colores_azules = ["#00d4ff", "#8acbf5", "#3399ff", "#1a75ff"]
+                    # Tonos verdes diferentes para los puntos críticos
+                    colores_verdes_distintos = ["#2ecc71", "#1abc9c", "#27ae60", "#16a085", "#58d68d", "#48c9b0", "#52be80"]
                     idx_pc_c = 0
 
                     for pc_key, pc_info in dict_pc_sec.items():
@@ -3227,7 +3237,7 @@ if sector_seleccionado:
                             for var_name, df_v_group in df_temp.groupby('VARIABLE'):
                                 df_v_group = df_v_group.sort_values('FECHA').dropna(subset=['VALOR'])
                                 if not df_v_group.empty:
-                                    color_trace_pc = colores_azules[idx_pc_c % len(colores_azules)]
+                                    color_trace_pc = colores_verdes_distintos[idx_pc_c % len(colores_verdes_distintos)]
                                     idx_pc_c += 1
 
                                     var_label_display = str(var_name)
@@ -3243,7 +3253,7 @@ if sector_seleccionado:
                                         mode='lines+markers',
                                         connectgaps=False,
                                         showlegend=True,
-                                        marker=dict(size=3.5, symbol='circle'), 
+                                        marker=dict(size=4, symbol='circle'), 
                                         line=dict(width=2, color=color_trace_pc),
                                         hovertemplate=f'<b>{domicilio_nombre} - {var_label_display}</b><br>Valor: %{{y:.2f}} mca<extra></extra>'
                                     ))
@@ -3272,7 +3282,7 @@ if sector_seleccionado:
             margin=dict(l=40, r=40, t=10, b=10), hovermode="x unified",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=12)),
             xaxis=dict(range=[f_ini_h, f_fin_h], color="#888888", showgrid=False, tickvals=ticks_pc if 'ticks_pc' in locals() else None, ticktext=etiquetas_pc if 'etiquetas_pc' in locals() else None, tickangle=0),
-            yaxis=dict(tickformat=".2f", color="#00d4ff", showgrid=True, gridcolor="#16304a", title="Presión (mca)")
+            yaxis=dict(tickformat=".2f", color="#2ecc71", showgrid=True, gridcolor="#16304a", title="Presión (mca)")
         )
         st.plotly_chart(fig_pc, use_container_width=True)
 
@@ -3325,7 +3335,6 @@ if sector_seleccionado:
             </div>
         """, unsafe_allow_html=True)
 
-    # --- MARCA DE AGUA ALINEADA A LA IZQUIERDA EN LA PARTE INFERIOR ---
     st.markdown("""
         <div style="
             position: relative;
@@ -3760,9 +3769,11 @@ if tab_activa == "mapa":
 
     with col_mapa:
         st.markdown('<div class="mapa-area">', unsafe_allow_html=True)
+        
         m = folium.Map(
             location=st.session_state.centro_mapa, 
-            zoom_start=st.session_state.zoom_inicial, 
+            zoom_start=st.session_state.zoom_inicial,
+            attribution_control=False,
         )
 
         folium.TileLayer(
@@ -4349,7 +4360,41 @@ elif tab_activa == "incidencias":
                 return gdf.to_crs(epsg=4326)
                 
         except Exception as e:
-            st.error(f"Error en BD al obtener geometrías: {e}")
+            st.error(f"Error en BD al obtener geometrías de colonias: {e}")
+            
+        return None
+
+    @st.cache_data(ttl=60)
+    def get_geometria_sector_completa(sector_nombre):
+        if not sector_nombre or str(sector_nombre).strip().upper() in ['NAN', 'N/A', 'NONE', 'SIN SECTOR']:
+            return None
+            
+        sec_busqueda = str(sector_nombre).strip()
+        engine = get_mysql_telemetria_engine()
+        if engine is None:
+            return None
+            
+        try:
+            query = """
+                SELECT ST_AsText(geom) as geom_wkt, Sector, Col_atl, Pozos,
+                       Pozo_1, Afectacion_1, Pozo_2, Afectacion_2,
+                       Pozo_3, Afectacion_3, Pozo_4, Afectacion_4,
+                       Pozo_5, Afectacion_5, Pozo_6, Afectacion_6,
+                       Pozo_7, Afectacion_7, Pozo_8, Afectacion_8,
+                       Pozo_9, Afectacion_9, Pozo_10, Afectacion_10
+                FROM Diccionario_sectores 
+                WHERE TRIM(Sector) = %s
+            """
+            df = pd.read_sql(query, engine, params=(sec_busqueda,))
+            
+            if not df.empty and 'geom_wkt' in df.columns and df['geom_wkt'].iloc[0] is not None:
+                df['geometry'] = df['geom_wkt'].apply(wkt.loads)
+                gdf = gpd.GeoDataFrame(df, geometry='geometry')
+                gdf.set_crs(epsg=32613, inplace=True)
+                return gdf.to_crs(epsg=4326)
+                
+        except Exception as e:
+            st.error(f"Error en BD al obtener geometría completa del sector: {e}")
             
         return None
 
@@ -4368,17 +4413,43 @@ elif tab_activa == "incidencias":
             pass
         return []
 
+    # Función auxiliar para obtener y ordenar alfabéticamente las colonias de un sector
+    @st.cache_data(ttl=60)
+    def get_colonias_del_sector_ordenadas(sec_nombre):
+        if not sec_nombre or str(sec_nombre).strip().upper() in ['NAN', 'N/A', 'NONE', 'SIN SECTOR']:
+            return []
+        engine = get_mysql_telemetria_engine()
+        if engine is None:
+            return []
+        try:
+            q_sec = "SELECT Col_atl FROM Diccionario_sectores WHERE TRIM(Sector) = %s"
+            df_s = pd.read_sql(q_sec, engine, params=(str(sec_nombre).strip(),))
+            if not df_s.empty and 'Col_atl' in df_s.columns:
+                val_col = df_s['Col_atl'].iloc[0]
+                if pd.notnull(val_col) and str(val_col).strip():
+                    # Dividimos por coma, limpiamos espacios y ordenamos alfabéticamente
+                    lista_cruda = [c.strip() for c in str(val_col).split(',') if c.strip()]
+                    return sorted(list(set(lista_cruda)))
+        except Exception:
+            pass
+        return []
+
     @st.fragment
     def renderizar_bloque_incidencia(row, index, tipo):
         val = row['NUM_POZO']
         id_pozo_original = str(val).strip().upper() if pd.notna(val) else ""
         
-        gdf = get_geometries(id_pozo_original) if id_pozo_original else None
+        gdf_col = get_geometries(id_pozo_original) if id_pozo_original else None
 
-        if gdf is not None and not gdf.empty:
-            col_pozo_encontrada = next((c for c in gdf.columns if c.upper() in ['NUM_POZO', 'POZO', 'ID_POZO', 'CVE_POZO', 'SITE', 'SITIO']), None)
-            if col_pozo_encontrada:
-                gdf = gdf[gdf[col_pozo_encontrada].astype(str).str.strip().str.upper() == id_pozo_original]
+        sector_nombre = "N/A"
+        distrito_val = "N/A"
+        if gdf_col is not None and not gdf_col.empty:
+            if 'Sector' in gdf_col.columns and pd.notnull(gdf_col['Sector'].iloc[0]):
+                sector_nombre = str(gdf_col['Sector'].iloc[0]).strip()
+            if 'Distrito' in gdf_col.columns and pd.notnull(gdf_col['Distrito'].iloc[0]):
+                distrito_val = str(gdf_col['Distrito'].iloc[0]).strip()
+
+        gdf_sector = get_geometria_sector_completa(sector_nombre)
 
         st.markdown("""
             <style>
@@ -4389,10 +4460,11 @@ elif tab_activa == "incidencias":
         col1, col2 = st.columns([3, 2], gap="small")
         
         with col1:
-            if gdf is not None and not gdf.empty:
+            if gdf_sector is not None and not gdf_sector.empty:
                 try:
-                    lat, lon = gdf.geometry.centroid.y.mean(), gdf.geometry.centroid.x.mean()
-                    m = folium.Map(location=[lat, lon], zoom_start=13, tiles="CartoDB dark_matter")
+                    lat, lon = gdf_sector.geometry.centroid.y.mean(), gdf_sector.geometry.centroid.x.mean()
+                    
+                    m = folium.Map(location=[lat, lon], zoom_start=13, tiles="CartoDB dark_matter", attribution_control=False)
 
                     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
                     folium.TileLayer(
@@ -4402,32 +4474,92 @@ elif tab_activa == "incidencias":
                         subdomains="abcd", max_zoom=20, overlay=False, control=True
                     ).add_to(m)
                     
+                    r_sec = gdf_sector.iloc[0]
+                    # Obtenemos las colonias ordenadas alfabéticamente para el mapa
+                    cols_ordenadas_mapa = get_colonias_del_sector_ordenadas(sector_nombre)
+                    col_atl_val = ", ".join(cols_ordenadas_mapa) if cols_ordenadas_mapa else str(r_sec.get('Col_atl', 'N/A'))
+                    
+                    df_todas_inc = get_data()
+                    pozos_activos_dict = {}
+                    if isinstance(df_todas_inc, pd.DataFrame) and not df_todas_inc.empty:
+                        for _, r_inc_act in df_todas_inc.iterrows():
+                            if str(r_inc_act.get('ESTATUS', '')).upper() in ['EN PROCESO', 'PENDIENTE']:
+                                p_num = normalizar_id(r_inc_act.get('NUM_POZO'))
+                                pozos_activos_dict[p_num] = str(r_inc_act.get('ESTATUS', '')).upper()
+
+                    pozos_afectaciones_html = ""
+                    for i in range(1, 11):
+                        p_field = f'Pozo_{i}'
+                        a_field = f'Afectacion_{i}'
+                        if p_field in r_sec and pd.notnull(r_sec[p_field]) and str(r_sec[p_field]).strip():
+                            p_val = str(r_sec[p_field]).strip()
+                            p_val_norm = normalizar_id(p_val)
+                            
+                            raw_a = str(r_sec[a_field]) if a_field in r_sec and pd.notnull(r_sec[a_field]) else "0"
+                            a_val = raw_a.replace('%', '').strip()
+                            
+                            estatus_pozo = pozos_activos_dict.get(p_val_norm, "")
+                            if estatus_pozo == 'EN PROCESO':
+                                color_pozo = "#f1c40f" # Amarillo
+                                estado_txt = " (En Proceso)"
+                            elif estatus_pozo == 'PENDIENTE':
+                                color_pozo = "#e74c3c" # Rojo
+                                estado_txt = " (Pendiente)"
+                            else:
+                                color_pozo = "#ffffff" # Blanco normal
+                                estado_txt = ""
+
+                            pozos_afectaciones_html += f"""
+                                <div style="margin-bottom: 2px; color: {color_pozo};">
+                                    • <b>{p_val}:</b> {a_val}% <span style="font-size: 9px; opacity: 0.8;">{estado_txt}</span>
+                                </div>
+                            """
+                    
+                    if not pozos_afectaciones_html:
+                        pozos_afectaciones_html = f"<div>{str(r_sec.get('Pozos', 'N/A'))}</div>"
+
+                    html_tooltip = f"""
+                    <div style="background: rgba(13, 27, 42, 0.95); color: #ffffff; padding: 10px 14px; border: 1px solid #00d4ff; font-size: 11px; border-radius: 6px; width: 290px; max-width: 290px; word-wrap: break-word; overflow-wrap: break-word; box-shadow: 0 4px 12px rgba(0,0,0,0.7);">
+                        <b style="color: #00d4ff; font-size: 12px;">Sector: {sector_nombre}</b>
+                        <hr style="margin: 6px 0; border-color: #1f3a5f;">
+                        <div style="margin-bottom: 6px;">
+                            <b>Colonias:</b> 
+                            <div style="white-space: normal; color: #b0c4de; background: rgba(0,0,0,0.3); padding: 5px 8px; border-radius: 4px; margin-top: 3px; border: 1px solid #1b2a38; line-height: 1.3;">
+                                {col_atl_val}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 4px;"><b>Pozos y Afectación:</b></div>
+                        {pozos_afectaciones_html}
+                    </div>
+                    """
+
                     folium.GeoJson(
-                        gdf, 
-                        style_function=lambda x: {'fillColor': '#3186cc', 'color': 'white', 'weight': 1, 'fillOpacity': 0.4}
+                        gdf_sector, 
+                        style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#ffffff', 'weight': 1.5, 'fillOpacity': 0.35},
+                        tooltip=folium.Tooltip(html_tooltip, sticky=True)
                     ).add_to(m)
                     
-                    for i, (_, r) in enumerate(gdf.iterrows()):
+                    for _, r in gdf_sector.iterrows():
                         if r.geometry:
                             c = r.geometry.centroid
                             destino = [c.y + 0.001, c.x + 0.001]
-                            folium.CircleMarker([c.y, c.x], radius=2, color="white", fill=True, fill_color="white").add_to(m)
-                            folium.PolyLine(locations=[[c.y, c.x], destino], color="white", weight=1).add_to(m)
-                            folium.CircleMarker(destino, radius=2, color="white", fill=True, fill_color="white").add_to(m)
+                            folium.CircleMarker([c.y, c.x], radius=3, color="#00d4ff", fill=True, fill_color="#00d4ff").add_to(m)
+                            folium.PolyLine(locations=[[c.y, c.x], destino], color="#00d4ff", weight=1).add_to(m)
+                            folium.CircleMarker(destino, radius=3, color="#00d4ff", fill=True, fill_color="#00d4ff").add_to(m)
                             folium.Marker(
                                 location=destino,
                                 icon=folium.DivIcon(
-                                    icon_size=(200, 30),
-                                    html=f'<div style="background: rgba(0, 0, 0, 0.9); color: white; padding: 2px 8px; border: 1px solid #FFFFFF; font-size: 10px; font-weight: bold; border-radius: 4px; white-space: nowrap; margin-left: 5px;">{str(r.get("Col_atl", "N/A"))}</div>'
+                                    icon_size=(220, 30),
+                                    html=f'<div style="background: rgba(0, 0, 0, 0.9); color: #00d4ff; padding: 3px 8px; border: 1px solid #00d4ff; font-size: 10px; font-weight: bold; border-radius: 4px; white-space: nowrap; margin-left: 5px;">Sector: {sector_nombre}</div>'
                                 )
                             ).add_to(m)
                     
                     Fullscreen(position='topright').add_to(m)
-                    st_folium(m, use_container_width=True, height=400, key=f"map_{tipo}_{id_pozo_original}_{index}")
+                    st_folium(m, use_container_width=True, height=400, key=f"map_sector_{id_pozo_original}_{index}")
                 except Exception as e:
-                    st.error(f"Error al renderizar el mapa: {e}")
+                    st.error(f"Error al renderizar el mapa del sector: {e}")
             else:
-                st.warning("Sin datos geográficos disponibles.")
+                st.warning(f"Sin geometría de sector disponible para '{sector_nombre}'.")
 
         with col2:
             st.subheader("Tiempo de Atención")
@@ -4472,18 +4604,9 @@ elif tab_activa == "incidencias":
             minutos = (transcurrido.seconds % 3600) // 60
             st.markdown(f"⏱️ **Duración del evento:** {dias}d {horas}h {minutos}m")
 
-            if gdf is not None and not gdf.empty:
-                sectores = [str(s) for s in gdf['Sector'].unique() if pd.notnull(s)]
-                distritos = [str(d) for d in gdf['Distrito'].unique() if pd.notnull(d)]
-                sector_val = ', '.join(sectores) if sectores else 'N/A'
-                distrito_val = ', '.join(distritos) if distritos else 'N/A'
-            else:
-                sector_val = 'N/A'
-                distrito_val = 'N/A'
-
             responsable_val = row.get('RESPONSABLE', 'N/A')
             col_sec, col_dis, col_res = st.columns(3)
-            with col_sec: st.markdown(f"📍 **Sector:** {sector_val}")
+            with col_sec: st.markdown(f"📍 **Sector:** {sector_nombre}")
             with col_dis: st.markdown(f"🏢 **Distrito:** {distrito_val}")
             with col_res: st.markdown(f"👤 **Responsable:** {responsable_val}")
 
@@ -4536,12 +4659,14 @@ elif tab_activa == "incidencias":
                     border: 1px solid #1b2a38;
                     border-radius: 5px;
                     padding: 5px 8px;
-                    max-height: 55px;
+                    max-height: 75px;
                     overflow-y: auto;
                     font-size: 10px;
                     color: #b0c4de;
                     margin-top: 3px;
                     line-height: 1.2;
+                    white-space: normal;
+                    word-wrap: break-word;
                 }
                 .colonias-box-hud::-webkit-scrollbar { width: 3px; }
                 .colonias-box-hud::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 3px; }
@@ -4580,7 +4705,7 @@ elif tab_activa == "incidencias":
                 
                 if gdf_r is not None and not gdf_r.empty:
                     sector_nombre = str(gdf_r['Sector'].iloc[0]).strip()
-                    nombres_cols = sorted([c.strip() for c in gdf_r['Col_atl'].dropna().unique() if str(c).strip()])
+                    nombres_cols = get_colonias_del_sector_ordenadas(sector_nombre)
                 else:
                     sector_nombre = "Sin Sector"
                     nombres_cols = []
@@ -4594,12 +4719,17 @@ elif tab_activa == "incidencias":
 
                     color_afec, val_afec = calcular_color_sector(props_sec, dic_incidencias_activas)
                     
+                    if estatus_inc in ['EN PROCESO', 'PENDIENTE'] and val_afec == 0:
+                        val_afec = 100.0
+                        color_afec = '#FF0000'
+
                     sectores_agrupados[sector_nombre] = {
                         'pozo_tiempos': [(id_p_inc, tiempo_str)],
                         'max_segundos': segundos_fuera,
                         'colonias': set(nombres_cols),
                         'color_badge': color_afec,
-                        'val_afectacion': val_afec
+                        'val_afectacion': val_afec,
+                        'tiene_activa': (estatus_inc in ['EN PROCESO', 'PENDIENTE'])
                     }
                 else:
                     sec = sectores_agrupados[sector_nombre]
@@ -4607,6 +4737,11 @@ elif tab_activa == "incidencias":
                     if segundos_fuera > sec['max_segundos']:
                         sec['max_segundos'] = segundos_fuera
                     sec['colonias'].update(nombres_cols)
+                    if estatus_inc in ['EN PROCESO', 'PENDIENTE']:
+                        sec['tiene_activa'] = True
+                        if sec['val_afectacion'] == 0:
+                            sec['val_afectacion'] = 100.0
+                            sec['color_badge'] = '#FF0000'
 
             sectores_ordenados = sorted(sectores_agrupados.items(), key=lambda x: x[1]['max_segundos'], reverse=True)
 
@@ -4614,7 +4749,10 @@ elif tab_activa == "incidencias":
                 tarjetas_renderizadas = 0
                 if sectores_ordenados:
                     for sec_name, sec_data in sectores_ordenados:
-                        lista_cols_validas = sorted([c for c in sec_data['colonias'] if c])
+                        # Usamos get_colonias_del_sector_ordenadas para asegurar orden alfabético estricto
+                        lista_cols_validas = get_colonias_del_sector_ordenadas(sec_name)
+                        if not lista_cols_validas:
+                            lista_cols_validas = sorted([c for c in sec_data['colonias'] if c])
                         
                         if not lista_cols_validas:
                             continue
@@ -4635,18 +4773,43 @@ elif tab_activa == "incidencias":
                         
                         pct_val = int(sec_data['val_afectacion']) if sec_data['val_afectacion'] > 0 else 0
                         
-                        if pct_val > 0:
+                        if sec_data.get('tiene_activa', False):
+                            if pct_val == 0:
+                                pct_val = 100
                             pct_str = f"{pct_val}% AFECTACIÓN"
-                            bg_badge = "#FF4B4B" if pct_val > 50 else "#F1C40F"
+                            if pct_val >= 76:
+                                bg_badge = "#FF0000"
+                            elif pct_val >= 51:
+                                bg_badge = "#FFFF00"
+                            elif pct_val >= 31:
+                                bg_badge = "#FFA500"
+                            else:
+                                bg_badge = "#69ADDD"
                         else:
-                            pct_str = "EN RECUPERACIÓN"
-                            bg_badge = "#3498DB"
+                            if pct_val > 0:
+                                pct_str = f"{pct_val}% AFECTACIÓN"
+                                if pct_val >= 76:
+                                    bg_badge = "#FF0000"
+                                elif pct_val >= 51:
+                                    bg_badge = "#FFFF00"
+                                elif pct_val >= 31:
+                                    bg_badge = "#FFA500"
+                                else:
+                                    bg_badge = "#69ADDD"
+                            else:
+                                pct_str = "EN RECUPERACIÓN"
+                                bg_badge = "#8E44AD"
+
+                        if bg_badge == "#8E44AD":
+                            text_color = "#FFFFFF"
+                        else:
+                            text_color = "#000000"
 
                         st.markdown(f"""
                             <div class="hud-card">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                     <span style="color: #ffffff; font-weight: bold; font-size: 12px;">Sector: <b style="color: #00d4ff;">{sec_name}</b> &nbsp;&nbsp;|&nbsp;&nbsp; Fuera de op: {tiempos_str}</span>
-                                    <span style="background-color: {bg_badge}; color: #000; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">{pct_str}</span>
+                                    <span style="background-color: {bg_badge}; color: {text_color}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 5px; white-space: nowrap; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">{pct_str}</span>
                                 </div>
                                 <div style="font-size: 11px; color: #a0aec0;">
                                     <div style="margin-top: 2px;"><b>COLONIAS:</b></div>
@@ -4657,19 +4820,7 @@ elif tab_activa == "incidencias":
                     
                     if tarjetas_renderizadas == 0:
                         if filtrar_por_colonia:
-                            encontrada_en_historial = False
-                            for _, r_hist in df_historial.iterrows():
-                                gdf_h = get_geometries(normalizar_id(r_hist['NUM_POZO']))
-                                if gdf_h is not None and not gdf_h.empty and 'Col_atl' in gdf_h.columns:
-                                    cols_h = [str(c).upper() for c in gdf_h['Col_atl'].dropna().unique()]
-                                    if any(filtrar_por_colonia in ch for ch in cols_h):
-                                        encontrada_en_historial = True
-                                        break
-                            
-                            if encontrada_en_historial:
-                                st.info(f"ℹ️ La colonia '{colonia_seleccionada}' sí estuvo en incidencia, pero ya se restableció (ayer o días anteriores).")
-                            else:
-                                st.warning(f"No hay incidencias activas ni recientes para '{colonia_seleccionada}'.")
+                            st.warning(f"No hay incidencias activas ni recientes para '{colonia_seleccionada}'.")
                         else:
                             st.info("No hay sectores con colonias registradas afectadas actualmente.")
                 else:
@@ -4702,19 +4853,22 @@ elif tab_activa == "incidencias":
                 estatus = str(row.get('ESTATUS', 'N/A')).upper()
                 diag = str(row.get('DIAGNOSTICO_FALLA', 'N/A'))
                 inicio_raw = pd.to_datetime(row.get('FECHA_HORA_INICIO')).tz_localize(None).tz_localize(tz_mx)
-                fin_raw = row.get('FECHA_HORA_FIN')
+                fin_raw = row.get('FECHA_HORA_FIN', None)
+                
                 inicio_str = inicio_raw.strftime('%H:%M %d de %B de %Y')
                 
                 if pd.notnull(fin_raw):
                     fin_dt = pd.to_datetime(fin_raw).tz_localize(None).tz_localize(tz_mx)
+                    fin_str = fin_dt.strftime('%H:%M %d de %B de %Y')
                     delta = fin_dt - inicio_raw
                 else:
+                    fin_str = "Activa (Sin cierre)"
                     delta = ahora_mx - inicio_raw
                     
                 duracion_str = f"{delta.days}d {delta.seconds//3600}h {(delta.seconds//60)%60}m"
                 ind = "🟢" if estatus == 'CERRADA' else ("🔴" if estatus == 'PENDIENTE' else "🟡")
                 
-                titulo = f"{ind}  **Sitio: {row.get('NUM_POZO', 'N/A')}** | ⏱️ Inicio: {inicio_str} | ⚠️ Falla: {diag} | ⏳ Duración: {duracion_str} | 🛠️ Estado: {estatus}"
+                titulo = f"{ind}  **Sitio: {row.get('NUM_POZO', 'N/A')}** | ⏱️ Inicio: {inicio_str} | 🏁 Cierre: {fin_str} | ⚠️ Falla: {diag} | ⏳ Duración: {duracion_str} | 🛠️ Estado: {estatus}"
                 
                 with st.expander(titulo):
                     renderizar_bloque_incidencia(row, index, "act")
@@ -4736,10 +4890,6 @@ elif tab_activa == "incidencias":
             mes_actual = datetime.now().strftime('%B %Y').capitalize()
             default_index = meses.index(mes_actual) if mes_actual in meses else 0
             
-            # Pre-cálculos para saber el comportamiento de paginación antes de pintar las columnas
-            # (Lo manejamos de forma segura para alinear los 4 elementos en una sola hilera)
-            
-            # Definimos las 4 columnas exactas en una sola hilera horizontal
             col_f1, col_f2, col_f3, col_f4 = st.columns(4, gap="medium")
             
             with col_f1:
@@ -4754,7 +4904,6 @@ elif tab_activa == "incidencias":
                 opciones_pozos_hist = ["Todos los pozos"] + lista_pozos_global
                 pozo_hist_sel = st.selectbox("Filtrar por Pozo:", opciones_pozos_hist, key="select_pozo_historial")
 
-            # Determinación de base de datos según si se seleccionó un pozo específico o no
             if pozo_hist_sel != "Todos los pozos":
                 datos_trabajo = df_historial[df_historial['NUM_POZO'].astype(str).str.strip().str.upper() == pozo_hist_sel].copy()
                 modo_pozo_activo = True
@@ -4762,7 +4911,6 @@ elif tab_activa == "incidencias":
                 datos_trabajo = df_historial[df_historial['MES_AÑO'] == mes_sel].copy()
                 modo_pozo_activo = False
 
-            # Aplicar filtro adicional por colonia si está seleccionado
             if colonia_sel != "Todas las colonias":
                 pozos_validos_col = []
                 for _, rh in datos_trabajo.iterrows():
@@ -4776,7 +4924,6 @@ elif tab_activa == "incidencias":
 
             total_registros_calc = len(datos_trabajo)
 
-            # Cuarta columna: Control de Paginación o indicador de vista global de pozo
             with col_f4:
                 if modo_pozo_activo:
                     st.markdown(f"<div style='background-color: rgba(0,212,255,0.1); border: 1px solid #00d4ff; padding: 6px; border-radius: 4px; text-align: center; color: #00d4ff; font-size: 11px; margin-top: 24px; font-weight: bold;'>Modo global pozo (Sin paginación)</div>", unsafe_allow_html=True)
@@ -4790,7 +4937,6 @@ elif tab_activa == "incidencias":
                         st.markdown(f"<div style='font-size:11px; color:#8fa4c0; margin-top: 28px;'>Registros en mes: <b>{total_registros_calc}</b></div>", unsafe_allow_html=True)
                         pagina_actual = 1
 
-            # Tarjeta de cabecera con el indicador de registros integrado
             st.markdown(f"""
                 <style>
                 .historial-header-container {{
@@ -4821,7 +4967,6 @@ elif tab_activa == "incidencias":
                 </div>
             """, unsafe_allow_html=True)
 
-            # Selección de datos paginados vs globales
             if modo_pozo_activo:
                 datos_pagina = datos_trabajo.copy()
             else:
@@ -4893,10 +5038,7 @@ elif tab_activa == "incidencias":
                         df_sectores_mes = df_sectores_mes.sort_values(by='Total', ascending=False).head(5)
                     else:
                         df_sectores_mes = pd.DataFrame({'Sector': ['Sin datos'], 'Total': [0]})
-
-                    colores_pastel = ['#FF4B4B', '#F1C40F', '#00d4ff', '#9B59B6', '#2ECC71']
                     
-                    # Reemplazamos el gráfico circular por el Treemap exacto
                     fig_treemap = px.treemap(
                         df_sectores_mes,
                         path=['Sector'],
