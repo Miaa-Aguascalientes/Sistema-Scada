@@ -426,6 +426,7 @@ def cargar_sectores_poligonos():
                    "DOTACION",
                    "BAL_VOL",
                    "EF",
+                   "ANF",
                    "IMP-FACT_US",
                    "PERD_US_MES",
                    "PERD_HAB_DIA",
@@ -2297,64 +2298,38 @@ if sector_seleccionado:
             'Pozos_Sector': ''
         }
 
-    @st.cache_data(ttl=300)
-    def cargar_indicadores_google_sheets():
-        sheet_id = "1Ovj2DZ19Y8H4BtamnVwB71c2dyHC3dyVmau-tMbWre8"
-        gid = "1820360811"
-        url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+    def _fmt_indicador_postgres(val, decimals=2, integer_only=False, is_pct=False):
+        if val is None or (isinstance(val, float) and pd.isna(val)):
+            return "N/D"
+        txt = str(val).strip()
+        if not txt or txt.lower() in ("none", "nan", "nat", "n/d"):
+            return "N/D"
         try:
-            df = pd.read_csv(url_csv)
-            return df
-        except Exception:
-            return pd.DataFrame()
+            num = float(txt.replace("%", "").replace(",", "").strip())
+            if pd.isna(num):
+                return txt
+            if integer_only:
+                res = f"{num:,.0f}"
+            else:
+                res = f"{num:,.{decimals}f}"
+            return f"{res}%" if is_pct else res
+        except (ValueError, TypeError):
+            return txt if (not is_pct or txt.endswith("%")) else f"{txt}%"
 
-    df_ind_gs = cargar_indicadores_google_sheets()
+    # 1. EF -> Eficiencia Física (EF) en porcentaje
+    val_ef = _fmt_indicador_postgres(datos_s.get("EF"), decimals=0, is_pct=True)
 
-    val_ef = "N/D"
-    val_anf = "N/D"
-    val_dotacion = "N/D"
-    val_perd_us_mes = "N/D"
-    val_fugas_km = "N/D"
+    # 2. ANF -> Agua No Facturada (ANF) exclusivamente de la columna ANF, en porcentaje
+    val_anf = _fmt_indicador_postgres(datos_s.get("ANF"), decimals=0, is_pct=True)
 
-    if not df_ind_gs.empty and df_ind_gs.shape[1] >= 28:
-        sec_buscar = str(sec_val_actual).strip().upper()
-        sec_buscar_limpio = ''.join(c for c in sec_buscar if c.isalnum())
-        
-        fila_encontrada = None
-        for _, row in df_ind_gs.iterrows():
-            val_col_b = str(row.iloc[1]).strip().upper()
-            val_col_b_limpio = ''.join(c for c in val_col_b if c.isalnum())
-            if val_col_b == sec_buscar or val_col_b_limpio == sec_buscar_limpio or (sec_buscar in val_col_b and len(sec_buscar) >= 3):
-                fila_encontrada = row
-                break
-        
-        if fila_encontrada is not None:
-            raw_ef = fila_encontrada.iloc[20]
-            val_ef = str(raw_ef).strip() if pd.notna(raw_ef) else "N/D"
-            
-            raw_anf = fila_encontrada.iloc[21]
-            val_anf = str(raw_anf).strip() if pd.notna(raw_anf) else "N/D"
-            
-            raw_dot = fila_encontrada.iloc[18]
-            if pd.notna(raw_dot):
-                try:
-                    val_dotacion = f"{float(str(raw_dot).replace(',', '')):,.0f}"
-                except ValueError:
-                    val_dotacion = str(raw_dot).strip()
-            
-            raw_perd = fila_encontrada.iloc[23]
-            if pd.notna(raw_perd):
-                try:
-                    val_perd_us_mes = f"{float(str(raw_perd).replace(',', '')):,.2f}"
-                except ValueError:
-                    val_perd_us_mes = str(raw_perd).strip()
-            
-            raw_fugas = fila_encontrada.iloc[27]
-            if pd.notna(raw_fugas):
-                try:
-                    val_fugas_km = f"{float(str(raw_fugas).replace(',', '')):,.2f}"
-                except ValueError:
-                    val_fugas_km = str(raw_fugas).strip()
+    # 3. DOTACION -> Dotación
+    val_dotacion = _fmt_indicador_postgres(datos_s.get("DOTACION"), integer_only=True)
+
+    # 4. PERD_US_MES -> Pérd. Usuario-Mes
+    val_perd_us_mes = _fmt_indicador_postgres(datos_s.get("PERD_US_MES"), decimals=2)
+
+    # 5. FUGAS_KM -> Fugas por Km
+    val_fugas_km = _fmt_indicador_postgres(datos_s.get("FUGAS_KM"), decimals=2)
 
     with st.container(border=True):
         head_col1, head_col2, head_col3 = st.columns([1.5, 5.5, 2.2], gap="medium")
@@ -3308,68 +3283,187 @@ if sector_seleccionado:
         st.plotly_chart(fig_pc, use_container_width=True)
 
     with col_op:
-        st.markdown(f"""
+        st.markdown("""
+            <style>
+                .dma-op-grid .dma-op-row {
+                    padding: 0.34rem 0 !important;
+                    font-size: 0.82rem !important;
+                }
+            </style>
             <div style="background: #0b1a29; border: 1px solid #1f4068; padding: 10px 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px;">
                 <p style="color: #ffffff; font-size: 1.05rem; font-weight: bold; margin: 0;">Datos operativos</p>
                 <p style="color: #888888; font-size: 0.78rem; margin: 2px 0 0 0;">Ficha del sector y últimas lecturas del periodo</p>
             </div>
         """, unsafe_allow_html=True)
-        
-        tomas_activas_val = f"{(datos_s.get('U_Domesticos', 0) + datos_s.get('U_NoDom', 0)):,.0f}".replace(",", ".")
-        long_red_val = f"{datos_s.get('Long_Red', 42.6):,.1f}".replace(",", ".") + " kilómetros"
-        demanda_cat_val = f"{demanda_estimada_val:,.1f}".replace(",", ".") + " L/s" if demanda_estimada_val else "74,2 L/s"
-        
+
+        def _svg_op(kind):
+            s = 'width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"'
+            c_cyan = "#00d4ff"
+            c_green = "#2ecc71"
+            c_amber = "#ffb020"
+            c_red = "#ff5c5c"
+            c_purple = "#c77dff"
+
+            icons = {
+                "pin": f'<svg {s} stroke="{c_cyan}"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+                "users_group": f'<svg {s} stroke="{c_cyan}"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+                "user": f'<svg {s} stroke="{c_cyan}"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+                "home": f'<svg {s} stroke="{c_cyan}"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
+                "building": f'<svg {s} stroke="{c_cyan}"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 7h2m2 0h2M9 11h2m2 0h2M9 15h2m2 0h2"/></svg>',
+                "grid": f'<svg {s} stroke="{c_cyan}"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+                "area": f'<svg {s} stroke="{c_cyan}"><path d="M3 20L20 3v17H3z"/><path d="M7 20V11l9-9"/></svg>',
+                "ruler": f'<svg {s} stroke="{c_cyan}"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>',
+                "hash": f'<svg {s} stroke="{c_cyan}"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
+                "well": f'<svg {s} stroke="{c_cyan}"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>',
+                "bolt": f'<svg {s} stroke="{c_cyan}"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+                "cylinder": f'<svg {s} stroke="{c_cyan}"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14a8 3 0 0 0 16 0V5"/></svg>',
+                "chart": f'<svg {s} stroke="{c_cyan}"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+                "receipt": f'<svg {s} stroke="{c_cyan}"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>',
+                "scale": f'<svg {s} stroke="{c_cyan}"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
+                "drop": f'<svg {s} stroke="{c_cyan}"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>',
+                "alert_off": f'<svg {s} stroke="{c_red}"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>',
+                "wrench": f'<svg {s} stroke="{c_amber}"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+                "currency": f'<svg {s} stroke="{c_green}"><circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2.5 0 0 0-5 0c0 2.5 5 1.5 5 4a2.5 2.5 0 0 1-5 0"/><line x1="12" y1="5.5" x2="12" y2="18.5"/></svg>',
+                "trend_down": f'<svg {s} stroke="{c_amber}"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>',
+                "warning": f'<svg {s} stroke="{c_amber}"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+                "file_check": f'<svg {s} stroke="{c_cyan}"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>',
+                "gauge": f'<svg {s} stroke="{c_cyan}"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
+                "tank": f'<svg {s} stroke="{c_purple}"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M4 13h16"/><circle cx="12" cy="8.5" r="1"/></svg>',
+            }
+            return icons.get(kind, icons["drop"])
+
+        def _get_val_op(d, *keys):
+            if not isinstance(d, dict):
+                return None
+            norm_map = {}
+            for k, v in d.items():
+                nk = str(k).strip().lower().replace("-", "_").replace(" ", "_")
+                norm_map[nk] = v
+            for k in keys:
+                nk = str(k).strip().lower().replace("-", "_").replace(" ", "_")
+                if nk in norm_map:
+                    val = norm_map[nk]
+                    if val is not None and not (isinstance(val, float) and pd.isna(val)):
+                        return val
+            return None
+
+        def _fmt_op(val, suffix="", decimals=2, integer_only=False):
+            if val is None or (isinstance(val, float) and pd.isna(val)):
+                return "N/D"
+            txt = str(val).strip()
+            if not txt or txt.lower() in ("none", "nan", "nat", "n/d"):
+                return "N/D"
+            try:
+                num = float(txt.replace("%", "").replace(",", "").strip())
+                if pd.isna(num):
+                    return f"{txt}{suffix}"
+                if integer_only:
+                    num_str = f"{num:,.0f}"
+                else:
+                    num_str = f"{num:,.{decimals}f}"
+                return f"{num_str}{suffix}"
+            except (ValueError, TypeError):
+                return f"{txt}{suffix}"
+
+        distrito_val = _get_val_op(datos_s, "Distrito", "DISTRITO") or "Oriente"
+        cant_pozos_val = _fmt_op(_get_val_op(datos_s, "Cantidad_Pozos", "CANTIDAD_POZOS"), integer_only=True)
+        pozos_sec_raw = _get_val_op(datos_s, "Pozos_Sector", "POZOS_SECTOR")
+        pozos_sec_val = str(pozos_sec_raw).strip() if pozos_sec_raw and str(pozos_sec_raw).strip().lower() not in ("none", "nan", "") else "N/D"
+        area_val = _fmt_op(_get_val_op(datos_s, "AREA", "Superficie", "AREA_KM"), suffix=" km²", decimals=2)
+        long_red_raw = _get_val_op(datos_s, "LONG_RED", "Long_Red")
+        long_red_val = _fmt_op(long_red_raw if long_red_raw is not None else 42.6, suffix=" km", decimals=2)
+
+        usuarios_val = _fmt_op(_get_val_op(datos_s, "USUARIOS", "Usuarios"), integer_only=True)
+        usu_dom_raw = _get_val_op(datos_s, "USU_DOM", "U_Domesticos")
+        usu_dom_val = _fmt_op(usu_dom_raw, integer_only=True)
+        pob_2025_raw = _get_val_op(datos_s, "POB_2025", "Poblacion", "POB_TOT_23")
+        pob_2025_val = _fmt_op(pob_2025_raw, integer_only=True)
+
+        q_prod_val = _fmt_op(_get_val_op(datos_s, "Q_PROD"), suffix=" L/s", decimals=2)
+        vol_prod_mes_val = _fmt_op(_get_val_op(datos_s, "VOL_PROD-MES", "VOL_PROD_MES", "Vol_Prod"), suffix=" m³", decimals=2)
+        cons_prom_raw = _get_val_op(datos_s, "CONS_PROM", "Cons_m3", "Demanda")
+        cons_prom_val = _fmt_op(cons_prom_raw if cons_prom_raw is not None else demanda_estimada_val, suffix=" m³", decimals=2)
+        vol_fact_val = _fmt_op(_get_val_op(datos_s, "VOL_FACT", "Vol_Fact"), suffix=" m³", decimals=2)
+        bal_vol_val = _fmt_op(_get_val_op(datos_s, "BAL_VOL", "Balance_Estimado"), suffix=" m³", decimals=2)
+
+        dom_a_val = _fmt_op(_get_val_op(datos_s, "DOM_A"), integer_only=True)
+        dom_b_val = _fmt_op(_get_val_op(datos_s, "DOM_B"), integer_only=True)
+        dom_c_val = _fmt_op(_get_val_op(datos_s, "DOM_C"), integer_only=True)
+        comercial_raw = _get_val_op(datos_s, "COMERCIAL", "U_NoDom")
+        comercial_val = _fmt_op(comercial_raw, integer_only=True)
+
+        faltas_agua_val = _fmt_op(_get_val_op(datos_s, "FALTAS_AGUA"), integer_only=True)
+        fugas_val = _fmt_op(_get_val_op(datos_s, "FUGAS"), integer_only=True)
+        imp_fact_us_val = _fmt_op(_get_val_op(datos_s, "IMP-FACT_US", "IMP_FACT_US"), decimals=2)
+        perd_hab_dia_val = _fmt_op(_get_val_op(datos_s, "PERD_HAB_DIA"), suffix=" L/hab/d", decimals=2)
+        niv_morosidad_val = _fmt_op(_get_val_op(datos_s, "NIV_MOROSIDAD"), suffix="%", decimals=2)
+        fa_usuario_val = _fmt_op(_get_val_op(datos_s, "FA_USUARIO"), decimals=2)
+
+        filas_col1 = [
+            ("pin", "Distrito", f"Distrito {distrito_val}"),
+            ("users_group", "Pob. 2025", pob_2025_val),
+            ("user", "Usuarios", usuarios_val),
+            ("home", "Usu. dom.", usu_dom_val),
+            ("building", "Comercial", comercial_val),
+            ("grid", "Dom. A / B / C", f"{dom_a_val}/{dom_b_val}/{dom_c_val}"),
+            ("area", "Área", area_val),
+            
+        ]
+
+        filas_col2 = [
+            ("ruler", "Long. red", long_red_val),
+            ("well", "Pozos sector", pozos_sec_val),
+            ("bolt", "Q prod.", q_prod_val),
+            ("cylinder", "Vol. prod. mes", vol_prod_mes_val),
+            ("chart", "Cons. prom.", cons_prom_val),
+            ("receipt", "Vol. fact.", vol_fact_val),
+            ("scale", "Bal. vol.", bal_vol_val),
+           
+        ]
+
+        filas_col3 = [
+            ("alert_off", "Faltas agua", faltas_agua_val),
+            ("wrench", "Fugas", fugas_val),
+            ("currency", "Imp. fact./us.", imp_fact_us_val),
+            ("trend_down", "Pérd. hab./día", perd_hab_dia_val),
+            ("warning", "Morosidad", niv_morosidad_val),
+            ("file_check", "FA usuario", fa_usuario_val),
+            ("tank", "TQ-055", f"{texto_nivel_tq} · {fec_nivel_tq_str}"),
+        ]
+
+        html_col1 = "".join(
+            f'<div class="dma-op-row"><span class="dma-op-label">{_svg_op(ico)}{lbl}</span><span class="dma-op-value">{val}</span></div>'
+            for ico, lbl, val in filas_col1
+        )
+        html_col2 = "".join(
+            f'<div class="dma-op-row"><span class="dma-op-label">{_svg_op(ico)}{lbl}</span><span class="dma-op-value">{val}</span></div>'
+            for ico, lbl, val in filas_col2
+        )
+        html_col3 = "".join(
+            f'<div class="dma-op-row"><span class="dma-op-label">{_svg_op(ico)}{lbl}</span><span class="dma-op-value">{val}</span></div>'
+            for ico, lbl, val in filas_col3
+        )
+
         st.markdown(f"""
-            <div style="background: #0b1a29; border: 1px solid #1f4068; border-top: none; border-radius: 0 0 8px 8px; padding: 14px 18px; height: 382px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div class="dma-op-row">
-                    <span class="dma-op-label">📍 Distrito</span>
-                    <span class="dma-op-value">Distrito {datos_s.get('Distrito', 'Oriente')}</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">🏠 Tomas activas</span>
-                    <span class="dma-op-value">{tomas_activas_val}</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">📏 Longitud de red</span>
-                    <span class="dma-op-value">{long_red_val}</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">🌊 Demanda estimada · catálogo</span>
-                    <span class="dma-op-value">{demanda_cat_val}</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">💧 Presión mínima de referencia</span>
-                    <span class="dma-op-value">15.0 mca</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">🎛️ Consigna VRP · catálogo</span>
-                    <span class="dma-op-value">30.0 mca</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">🟦 Tanque TQ-055 · último</span>
-                    <span class="dma-op-value">{texto_nivel_tq}</span>
-                </div>
-                <div class="dma-op-row">
-                    <span class="dma-op-label">🕒 Fecha del nivel / condición</span>
-                    <span class="dma-op-value">{fec_nivel_tq_str}</span>
-                </div>
+            <div class="dma-op-grid" style="
+                background: #0b1a29;
+                border: 1px solid #1f4068;
+                border-top: none;
+                border-radius: 0 0 8px 8px;
+                padding: 8px 16px;
+                height: 360px;
+                max-height: 360px;
+                overflow-y: auto;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0 22px;
+                align-content: space-between;
+            ">
+                <div>{html_col1}</div>
+                <div>{html_col2}</div>
+                <div>{html_col3}</div>
             </div>
         """, unsafe_allow_html=True)
-
-    st.markdown("""
-        <div style="
-            position: relative;
-            margin-top: 35px;
-            margin-bottom: 20px;
-            padding-left: 5px;
-            text-align: left;
-            line-height: 1.25;
-            opacity: 0.85;
-        ">
-            <span style="color: #00d4ff; font-size: 0.75rem; font-weight: 700; font-family: 'Courier New', monospace; display: block;">Dirección de Planeación</span>
-            <span style="color: #ffffff; font-size: 0.65rem; font-weight: 500; font-family: 'Courier New', monospace; display: block;">Subdirección de Tecnología e Innovación</span>
-        </div>
-    """, unsafe_allow_html=True)
 
     st.stop()
     
@@ -4352,7 +4446,7 @@ elif tab_activa == "incidencias":
         try:
             query = """
                 SELECT ST_AsText(geom) as geom_wkt, Pozos, Col_atl, Sector, Distrito, Supervisor 
-                FROM Diccionario_colonias 
+                FROM Diccionario_sectores 
                 WHERE Pozos = %s 
                    OR Pozos LIKE %s 
                    OR Pozos LIKE %s 
