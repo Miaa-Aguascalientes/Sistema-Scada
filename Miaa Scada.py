@@ -3985,6 +3985,7 @@ if tab_activa == "mapa":
                 gdf_sectores['Info_Colonias'] = lista_colonias_sec_tooltip
 
                 fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos")
+                
                 def estilo_final_sector(feature):
                     props = feature.get('properties', {})
                     color_dinamico, afectacion_val = calcular_color_sector(props, dic_incidencias_activas)
@@ -3994,8 +3995,8 @@ if tab_activa == "mapa":
                         opacity_final = 0.25
                     else:
                         border_color_final = '#2980B9'
-                        weight_final = 1
-                        opacity_final = 0.08
+                        weight_final = 2
+                        opacity_final = 0.25
                     return {'fillColor': color_dinamico, 'color': border_color_final, 'weight': weight_final, 'fillOpacity': opacity_final}
 
                 def estilo_hover_sector(feature):
@@ -4254,7 +4255,19 @@ if tab_activa == "mapa":
                     diagnostico_falla = info_incidencia.get('diagnostico', info_incidencia.get('motivo', 'FALLA')) if isinstance(info_incidencia, dict) else str(info_incidencia)
                     
                     html_globo_incidencia = f"""
-                    <div style="position: relative; width: 350px; height: 80px; pointer-events: none; font-family: sans-serif;">
+                    <style>
+                        @keyframes parpadeoAlertaIncPozo {{
+                            0%, 100% {{ opacity: 1; transform: scale(1); }}
+                            50% {{ opacity: 0.2; transform: scale(0.92); }}
+                        }}
+                        .alerta-parpadeo-inc-pozo {{
+                            display: inline-block;
+                            font-size: 13px;
+                            margin-left: 6px;
+                            animation: parpadeoAlertaIncPozo 0.9s infinite ease-in-out;
+                        }}
+                    </style>
+                    <div style="position: relative; width: 380px; height: 80px; pointer-events: none; font-family: sans-serif;">
                         <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;">
                             <line x1="15" y1="65" x2="75" y2="35" stroke="#ff4d4d" stroke-width="2" />
                             <circle cx="15" cy="65" r="4" fill="#ffffff" stroke="#ff4d4d" stroke-width="2" />
@@ -4263,9 +4276,11 @@ if tab_activa == "mapa":
                             <span style="font-size: 14px; margin-right: 6px;">🛠️</span>
                             <span style="font-size: 11px; font-weight: bold; color: #ffffff; margin-right: 8px;">{id_p}</span>
                             <span style="font-size: 10px; font-weight: bold; color: #ffffff; background: #c0392b; padding: 2px 6px; border-radius: 4px;">{diagnostico_falla.upper()}</span>
+                            <span class="alerta-parpadeo-inc-pozo">⚠️</span>
                         </div>
                     </div>
                     """
+                    
                     folium.Marker(
                         location=info['coord'],
                         icon=folium.DivIcon(icon_size=(350, 80), icon_anchor=(15, 65), html=html_globo_incidencia),
@@ -4371,7 +4386,19 @@ if tab_activa == "mapa":
                     )
 
                     html_globo_incidencia_rb = f"""
-                    <div style="position: relative; width: 350px; height: 80px; pointer-events: none; font-family: sans-serif;">
+                    <style>
+                        @keyframes parpadeoAlertaInc {{
+                            0%, 100% {{ opacity: 1; transform: scale(1); }}
+                            50% {{ opacity: 0.2; transform: scale(0.92); }}
+                        }}
+                        .alerta-parpadeo-inc {{
+                            display: inline-block;
+                            font-size: 13px;
+                            margin-left: 6px;
+                            animation: parpadeoAlertaInc 0.9s infinite ease-in-out;
+                        }}
+                    </style>
+                    <div style="position: relative; width: 380px; height: 80px; pointer-events: none; font-family: sans-serif;">
                         <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;">
                             <line x1="15" y1="65" x2="75" y2="35" stroke="#ff4d4d" stroke-width="2" />
                             <circle cx="15" cy="65" r="4" fill="#ffffff" stroke="#ff4d4d" stroke-width="2" />
@@ -4380,9 +4407,11 @@ if tab_activa == "mapa":
                             <span style="font-size: 14px; margin-right: 6px;">🛠️</span>
                             <span style="font-size: 11px; font-weight: bold; color: #ffffff; margin-right: 8px;">{id_rb}</span>
                             <span style="font-size: 10px; font-weight: bold; color: #ffffff; background: #c0392b; padding: 2px 6px; border-radius: 4px;">{diagnostico_falla_rb.upper()}</span>
+                            <span class="alerta-parpadeo-inc">⚠️</span>
                         </div>
                     </div>
                     """
+                    
                     folium.Marker(
                         location=info['coord'],
                         icon=folium.DivIcon(icon_size=(350, 80), icon_anchor=(15, 65), html=html_globo_incidencia_rb),
