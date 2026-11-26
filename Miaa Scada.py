@@ -515,6 +515,16 @@ def obtener_pozos_con_incidencias_hoy():
         return dic_incidencias
     except Exception as e:
         return {}
+    
+def _obtener_color_estado_inc(info_incidencia, estatus=""):
+    est = str(estatus).strip().upper()
+    if not est and isinstance(info_incidencia, dict):
+        est = str(info_incidencia.get("estatus", info_incidencia.get("estado", ""))).strip().upper()
+    if "EN PROCESO" in est:
+        return "#ffff00"
+    if "PENDIENTE" in est:
+        return "#ff4d4d"
+    return "#ff4d4d"    
 
 def calcular_color_colonia(props, pozos_con_incidencia):
     suma_afectacion = 0.0
@@ -630,6 +640,40 @@ def get_blink_icon(color):
     @keyframes blinker {{ 50% {{ opacity: 0.2; }} }}
     </style>
     """
+
+@st.cache_data(ttl=60)
+def obtener_pozos_con_incidencias_hoy():
+    engine = get_mysql_scada_engine()
+    if engine is None:
+        return {}
+    try:
+        query = """
+            SELECT NUM_POZO, DIAGNOSTICO_FALLA, ESTATUS 
+            FROM vw_incidencias_en_pozos 
+            WHERE ESTATUS != 'CERRADA'
+        """
+        df_inc = pd.read_sql(query, engine)
+        dic_incidencias = {}
+        for _, row in df_inc.iterrows():
+            val = row['NUM_POZO']
+            if pd.notna(val):
+                id_limpio = str(val).strip().upper()
+                if id_limpio:
+                    diagnostico = str(row['DIAGNOSTICO_FALLA']).strip() if pd.notna(row['DIAGNOSTICO_FALLA']) and str(row['DIAGNOSTICO_FALLA']).strip() else 'Sin diagnóstico'
+                    estatus = str(row['ESTATUS']).strip().upper() if pd.notna(row['ESTATUS']) else ''
+                    payload = {
+                        "diagnostico": diagnostico,
+                        "estatus": estatus
+                    }
+                    id_con_guion = re.sub(r'^([A-Z]+)(\d+)([A-Z]*)$', r'\1-\2\3', id_limpio)
+                    id_sin_guion = id_limpio.replace('-', '')
+
+                    for clave in {id_limpio, id_con_guion, id_sin_guion}:
+                        if clave:
+                            dic_incidencias[clave] = payload
+        return dic_incidencias
+    except Exception as e:
+        return {}
 
 # 3. SECCION -------------------------------------------------------------------------------- 3. CARGA DE DATOS DE DICCIONARIOS -------------------------------------------------------------------------------------------
 
@@ -4247,13 +4291,25 @@ if tab_activa == "mapa":
                 ).add_to(fg_pozos)
 
                 if tiene_incidencia_activa:
-                    info_incidencia = (
-                        dic_incidencias_activas.get(id_p_limpio) or 
-                        dic_incidencias_activas.get(id_p_con_guion) or 
+                    info_incidencia_pozo = (
+                        dic_incidencias_activas.get(id_p_limpio) or
+                        dic_incidencias_activas.get(id_p_con_guion) or
                         dic_incidencias_activas.get(id_p_sin_guion, {})
                     )
-                    diagnostico_falla = info_incidencia.get('diagnostico', info_incidencia.get('motivo', 'FALLA')) if isinstance(info_incidencia, dict) else str(info_incidencia)
-                    
+                    if isinstance(info_incidencia_pozo, dict):
+                        diagnostico_falla = info_incidencia_pozo.get('diagnostico', info_incidencia_pozo.get('motivo', 'FALLA'))
+                        estatus_inc_pozo = str(info_incidencia_pozo.get('estatus', info_incidencia_pozo.get('estado', ''))).strip().upper()
+                    else:
+                        diagnostico_falla = str(info_incidencia_pozo)
+                        estatus_inc_pozo = ""
+
+                    if "EN PROCESO" in estatus_inc_pozo:
+                        color_texto_falla_pozo = "#ffff00"
+                    elif "PENDIENTE" in estatus_inc_pozo:
+                        color_texto_falla_pozo = "#ff4d4d"
+                    else:
+                        color_texto_falla_pozo = _obtener_color_estado_inc(info_incidencia_pozo, estatus_inc_pozo)
+
                     html_globo_incidencia = f"""
                     <style>
                         @keyframes parpadeoAlertaIncPozo {{
@@ -4275,7 +4331,7 @@ if tab_activa == "mapa":
                         <div style="position: absolute; top: 0px; left: 75px; display: inline-flex; align-items: center; background: #000000; border: 2px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.6); pointer-events: auto;">
                             <span style="font-size: 14px; margin-right: 6px;">🛠️</span>
                             <span style="font-size: 11px; font-weight: bold; color: #ffffff; margin-right: 8px;">{id_p}</span>
-                            <span style="font-size: 10px; font-weight: bold; color: #ffffff; background: #c0392b; padding: 2px 6px; border-radius: 4px;">{diagnostico_falla.upper()}</span>
+                            <span style="font-size: 10px; font-weight: bold; color: {color_texto_falla_pozo};">{str(diagnostico_falla).upper()}</span>
                             <span class="alerta-parpadeo-inc-pozo">⚠️</span>
                         </div>
                     </div>
@@ -4287,6 +4343,7 @@ if tab_activa == "mapa":
                         popup=folium.Popup(html_popup, max_width=450),
                         tooltip=f"⚠️ POZO {id_p} - {diagnostico_falla}"
                     ).add_to(fg_pozos)
+                    
                 elif info.get('blink'):
                     folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup, max_width=450)).add_to(fg_pozos)
                 else:
@@ -4385,6 +4442,18 @@ if tab_activa == "mapa":
                         else str(info_incidencia_rb)
                     )
 
+                    estado_inc_rb = (
+                        str(info_incidencia_rb.get('estado', info_incidencia_rb.get('estatus', info_incidencia_rb.get('status', '')))).strip().upper()
+                        if isinstance(info_incidencia_rb, dict)
+                        else ""
+                    )
+                    if "EN PROCESO" in estado_inc_rb:
+                        color_texto_falla_rb = "#ffff00"
+                    elif "PENDIENTE" in estado_inc_rb:
+                        color_texto_falla_rb = "#ff4d4d"
+                    else:
+                        color_texto_falla_rb = "#ff4d4d"
+
                     html_globo_incidencia_rb = f"""
                     <style>
                         @keyframes parpadeoAlertaInc {{
@@ -4406,7 +4475,7 @@ if tab_activa == "mapa":
                         <div style="position: absolute; top: 0px; left: 75px; display: inline-flex; align-items: center; background: #000000; border: 2px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; white-space: nowrap; box-shadow: 0 4px 8px rgba(0,0,0,0.6); pointer-events: auto;">
                             <span style="font-size: 14px; margin-right: 6px;">🛠️</span>
                             <span style="font-size: 11px; font-weight: bold; color: #ffffff; margin-right: 8px;">{id_rb}</span>
-                            <span style="font-size: 10px; font-weight: bold; color: #ffffff; background: #c0392b; padding: 2px 6px; border-radius: 4px;">{diagnostico_falla_rb.upper()}</span>
+                            <span style="font-size: 10px; font-weight: bold; color: {color_texto_falla_rb};">{diagnostico_falla_rb.upper()}</span>
                             <span class="alerta-parpadeo-inc">⚠️</span>
                         </div>
                     </div>
@@ -4418,6 +4487,7 @@ if tab_activa == "mapa":
                         popup=folium.Popup(html_popup_rb, max_width=350),
                         tooltip=f"⚠️ REBOMBEOS {id_rb} - {diagnostico_falla_rb}"
                     ).add_to(m)
+                    
                 elif ver_rebombeos:
                     if info.get('blink'):
                         folium.Marker(location=info['coord'], icon=folium.DivIcon(html=get_blink_icon(info['color_final'])), popup=folium.Popup(html_popup_rb, max_width=350)).add_to(m)
