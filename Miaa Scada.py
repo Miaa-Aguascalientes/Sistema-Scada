@@ -5477,14 +5477,126 @@ elif tab_activa == "tanques":
     st.markdown(
         """
         <style>
-        .tq-eyebrow { color: #8fa9c2; letter-spacing: .15em; font-size: .67rem; font-weight: 600; text-transform: uppercase; }
-        .tq-kpi-value { color: #f0f7ff; font-size: clamp(1.3rem, 1.65vw, 1.95rem); font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; margin: 2px 0 4px; }
-        .tm-card-title { color: #edf3fb; font-size: 1.05rem; font-weight: 600; overflow-wrap: anywhere; }
-        .tm-card-title b { margin-right: 8px; color: #63b9df; }
-        .tm-card-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 8px; margin: 10px 0 4px; }
-        .tm-card-metrics .tm-metric { display: grid; grid-template-rows: auto auto; min-width: 0; }
-        .tm-card-metrics .tm-metric span { color: #8fa9c2; font-size: .75rem; line-height: 1.2; }
-        .tm-card-metrics .tm-metric strong { color: #f0f7ff; font-size: .88rem; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 3px; }
+        @keyframes tqPulseIcon {
+            0%, 100% { transform: scale(1); opacity: 0.95; }
+            50% { transform: scale(1.12); opacity: 1; }
+        }
+        @keyframes tqAlertBlink {
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 1; }
+            50% { transform: translateY(-1.5px) scale(1.14); opacity: 0.55; }
+        }
+        @keyframes tqWaveSignal {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.45)); }
+            50% { transform: scale(1.10); filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.85)); }
+        }
+        @keyframes tqFloatLevel {
+            0%, 100% { transform: translateY(1px); }
+            50% { transform: translateY(-2px); }
+        }
+        .tq-kpi-card {
+            background: linear-gradient(160deg, rgba(10, 22, 36, 0.96) 0%, rgba(5, 11, 20, 0.98) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.24);
+            border-top: 2px solid rgba(0, 229, 255, 0.55);
+            border-radius: 12px;
+            padding: 11px 13px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .tq-kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 229, 255, 0.65);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 229, 255, 0.16);
+        }
+        .tq-kpi-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .tq-eyebrow {
+            color: #8fa9c2;
+            letter-spacing: .12em;
+            font-size: .64rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+        .tq-kpi-icon-wrap {
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.28);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #00e5ff;
+        }
+        .tq-anim-pulse { animation: tqPulseIcon 2.2s infinite ease-in-out; }
+        .tq-anim-alert { animation: tqAlertBlink 1.1s infinite ease-in-out; color: #ff4d4d; }
+        .tq-anim-signal { animation: tqWaveSignal 1.8s infinite ease-in-out; }
+        .tq-anim-float { animation: tqFloatLevel 2.0s infinite ease-in-out; }
+        .tq-kpi-value {
+            color: #f4f9ff;
+            font-size: clamp(1.25rem, 1.55vw, 1.85rem);
+            font-weight: 750;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            margin: 2px 0 4px;
+            line-height: 1.15;
+            text-shadow: 0 0 14px rgba(0, 212, 255, 0.14);
+        }
+        .tq-kpi-caption {
+            color: #7d99b5;
+            font-size: 0.74rem;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tm-card-title { color: #edf3fb; font-size: 1.08rem; font-weight: 700; overflow-wrap: anywhere; line-height: 1.2; }
+        .tm-card-title b { margin-right: 6px; color: #00d4ff; font-weight: 800; }
+        .tm-card-sub { color: #8fa9c2; font-size: 0.78rem; margin: 2px 0 10px; font-variant-numeric: tabular-nums; }
+        .tm-hero-row { display: flex; align-items: stretch; gap: 10px; margin: 4px 0 10px; flex-wrap: nowrap; }
+        .tm-hero-box {
+            min-width: 155px;
+            flex: 1.15 1 0;
+            background: rgba(11, 22, 34, 0.88);
+            border: 1px solid rgba(56, 86, 114, 0.55);
+            border-radius: 10px;
+            padding: 8px 11px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            font-size: 0.82rem;
+            line-height: 1.28;
+            color: #c7d8e8;
+        }
+        .tm-hero-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tm-hero-line strong { color: #f0f7ff; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .tm-hero-age { color: #8fa9c2; font-size: 0.73rem; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tm-side-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            flex: 1.45 1 0;
+            min-width: 0;
+        }
+        .tm-side-metrics .tm-metric {
+            background: rgba(11, 22, 34, 0.82);
+            border: 1px solid rgba(56, 86, 114, 0.5);
+            border-radius: 9px;
+            padding: 7px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+        }
+        .tm-side-metrics .tm-metric span { color: #9ab2c9; font-size: .7rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tm-side-metrics .tm-metric strong { color: #f0f7ff; font-size: .84rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         </style>
         """,
         unsafe_allow_html=True
@@ -5497,6 +5609,99 @@ elif tab_activa == "tanques":
         if pd.isna(value):
             return "—"
         return f"{value:,.{decimals}f}{unit}"
+
+    def _obtener_color_tanquesito(porcentaje) -> str:
+        if pd.isna(porcentaje):
+            return "#ff4d4d"
+        try:
+            val = float(porcentaje)
+        except (TypeError, ValueError):
+            return "#ff4d4d"
+        val = max(0.0, min(100.0, val))
+        if val <= 25.0:
+            return "#ff4d4d"
+        elif val < 50.0:
+            return "#ffd000"
+        else:
+            return "#38b86b"
+
+    def _render_tanquesito_html(porcentaje) -> str:
+        sin_dato = pd.isna(porcentaje)
+        if sin_dato:
+            val = 0.0
+            texto_pct = "—"
+        else:
+            try:
+                val = float(porcentaje)
+            except (TypeError, ValueError):
+                val = 0.0
+            val = max(0.0, min(100.0, val))
+            texto_pct = f"{int(round(val))}%"
+
+        color_llenado = _obtener_color_tanquesito(val)
+        borde_cian = "#00e5ff"
+        glow_cian = "0 0 8px rgba(0, 229, 255, 0.35)"
+
+        return (
+            f'<div style="position: relative; width: 58px; height: 74px; flex-shrink: 0; '
+            f'display: flex; flex-direction: column; align-items: center;">'
+            f'<div style="width: 22px; height: 6px; background: #04111a; '
+            f'border: 2.5px solid {borde_cian}; border-bottom: none; border-radius: 5px 5px 0 0; '
+            f'box-shadow: {glow_cian};"></div>'
+            f'<div style="position: relative; width: 100%; flex: 1; '
+            f'background: #04111a; border: 2.5px solid {borde_cian}; border-radius: 11px; '
+            f'overflow: hidden; box-shadow: {glow_cian};">'
+            f'<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {val:.2f}%; '
+            f'background: {color_llenado}; transition: height 0.25s ease;"></div>'
+            f'<div style="position: relative; z-index: 2; width: 100%; height: 100%; '
+            f'display: flex; align-items: center; justify-content: center; '
+            f'color: #ffffff; font-family: sans-serif; font-size: 14px; font-weight: 800; '
+            f'text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 5px rgba(0,0,0,0.95);">{escape(texto_pct)}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    def _render_kpi_icon_html(icon_key: str, accent_color: str = "#00e5ff", anim_class: str = "tq-anim-pulse") -> str:
+        icons = {
+            "tanks": (
+                f'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                f'<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M9 5V3h6v2"/><path d="M4.5 13h15"/>'
+                f'</svg>'
+            ),
+            "alert": (
+                f'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                f'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
+                f'<line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="{accent_color}"/>'
+                f'</svg>'
+            ),
+            "wifi": (
+                f'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                f'<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19.5" r="1.2" fill="{accent_color}"/>'
+                f'</svg>'
+            ),
+            "capacity": (
+                f'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                f'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>'
+                f'</svg>'
+            ),
+            "volume": (
+                f'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                f'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>'
+                f'</svg>'
+            ),
+            "storage": (
+                f'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{accent_color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                f'<path d="M3 15c2.48 0 4.5-1.57 4.5-3.5S5.48 8 3 8"/><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 18V9"/><path d="M9 12l3-3 3 3"/>'
+                f'</svg>'
+            ),
+        }
+        svg_markup = icons.get(icon_key, icons["tanks"])
+        border_style = f"border-color: {accent_color}55; background: {accent_color}18;"
+        return (
+            f'<div class="tq-kpi-icon-wrap" style="{border_style}">'
+            f'<span class="{escape(anim_class)}" style="display: inline-flex; align-items: center; justify-content: center;">{svg_markup}</span>'
+            f'</div>'
+        )
 
     def _render_filters(data, key, catalog, available_start=None, available_end=None):
         first = available_start if available_start is not None else data["timestamp"].min()
@@ -5631,22 +5836,34 @@ elif tab_activa == "tanques":
             else np.nan
         )
 
+        color_alerta = "#ff4d4d" if insufficient_count > 0 else "#38b86b"
+        anim_alerta = "tq-anim-alert" if insufficient_count > 0 else "tq-anim-pulse"
+        color_pct = _obtener_color_tanquesito(percent) if pd.notna(percent) else "#00e5ff"
+
         kpis = [
-            ("TANQUES TOTALES", str(len(summary)), "Registrados", "tq_kpi_1"),
-            ("COMUNICACIÓN <5%", str(insufficient_count), "Sin reporte activo", "tq_kpi_2"),
-            ("% COMUNICACIÓN", _number(communication_pct, " %", 1), "Promedio global", "tq_kpi_3"),
-            ("CAPACIDAD REGULACIÓN", _number(capacity, " m³"), "Capacidad instalada", "tq_kpi_4"),
-            ("VOLUMEN REGULACIÓN", _number(volume, " m³"), "Volumen actual", "tq_kpi_5"),
-            ("% ALMACENAMIENTO", _number(percent, " %", 1), "Nivel de reserva", "tq_kpi_6"),
+            ("TANQUES TOTALES", str(len(summary)), "Registrados", "tanks", "#00e5ff", "tq-anim-pulse", "#f4f9ff"),
+            ("COMUNICACIÓN <5%", str(insufficient_count), "Sin reporte activo", "alert", color_alerta, anim_alerta, color_alerta),
+            ("% COMUNICACIÓN", _number(communication_pct, " %", 1), "Promedio global", "wifi", "#00e5ff", "tq-anim-signal", "#f4f9ff"),
+            ("CAPACIDAD REGULACIÓN", _number(capacity, " m³"), "Capacidad instalada", "capacity", "#63b9df", "tq-anim-pulse", "#f4f9ff"),
+            ("VOLUMEN REGULACIÓN", _number(volume, " m³"), "Volumen actual", "volume", "#00e5ff", "tq-anim-float", "#f4f9ff"),
+            ("% ALMACENAMIENTO", _number(percent, " %", 1), "Nivel de reserva", "storage", color_pct, "tq-anim-float", color_pct),
         ]
 
         cols = st.columns(6)
-        for col, (title, value, caption, key_name) in zip(cols, kpis):
+        for col, (title, value, caption, icon_key, icon_color, anim_cls, val_color) in zip(cols, kpis):
             with col:
-                with st.container(border=True, key=key_name):
-                    st.html(f'<div class="tq-eyebrow">{escape(title)}</div>')
-                    st.html(f'<div class="tq-kpi-value">{escape(value)}</div>')
-                    st.caption(caption)
+                icon_html = _render_kpi_icon_html(icon_key, icon_color, anim_cls)
+                card_html = (
+                    f'<div class="tq-kpi-card" style="border-top-color: {icon_color}88;">'
+                    f'<div class="tq-kpi-top">'
+                    f'<div class="tq-eyebrow">{escape(title)}</div>'
+                    f'{icon_html}'
+                    f'</div>'
+                    f'<div class="tq-kpi-value" style="color: {val_color};">{escape(value)}</div>'
+                    f'<div class="tq-kpi-caption">{escape(caption)}</div>'
+                    f'</div>'
+                )
+                st.markdown(card_html, unsafe_allow_html=True)
 
         st.caption(f"Corte de información: {end:%d/%m/%Y %H:%M}")
 
@@ -5662,19 +5879,20 @@ elif tab_activa == "tanques":
         level_data["_segment"] = breaks.cumsum()
         valid = level_data.dropna(subset=["level_m"])
 
-        for _, block in valid.groupby("_segment"):
+        for idx, (_, block) in enumerate(valid.groupby("_segment")):
             multiple_points = len(block) > 1
             fig.add_trace(
                 go.Scatter(
                     x=block["timestamp"],
                     y=block["level_m"],
                     mode="lines+markers" if multiple_points else "markers",
-                    line={"color": "#63b9df", "width": 1.6},
-                    marker={"color": "#63b9df", "size": 4, "symbol": "circle", "opacity": 0.8},
+                    line={"color": "#00d4ff", "width": 1.6},
+                    marker={"color": "#45e3ff", "size": 3.5, "symbol": "circle", "opacity": 0.85},
                     fill="tozeroy" if multiple_points else None,
-                    fillcolor="rgba(99, 185, 223, 0.2)",
-                    name="Nivel",
-                    hovertemplate="<b>%{y:.2f} m</b><br>%{x|%d/%m/%Y %H:%M}<extra></extra>",
+                    fillcolor="rgba(0, 212, 255, 0.24)",
+                    name="Nivel TQ",
+                    showlegend=(idx == 0),
+                    hovertemplate="<b>%{y:.2f} m</b><extra></extra>",
                 )
             )
 
@@ -5694,10 +5912,29 @@ elif tab_activa == "tanques":
             paper_bgcolor="rgba(0,0,0,0)",
             font={"color": "#e4edf7", "size": 11},
             showlegend=False,
-            hovermode="closest",
+            hovermode="x unified",
+            hoverlabel={
+                "bgcolor": "rgba(6, 12, 20, 0.95)",
+                "bordercolor": "rgba(0, 229, 255, 0.5)",
+                "font": {"color": "#f0f7ff", "size": 11},
+            },
         )
-        fig.update_xaxes(range=[start, end], gridcolor="rgba(35, 55, 74, 0.6)", zerolinecolor="rgba(35, 55, 74, 0.6)")
-        fig.update_yaxes(gridcolor="rgba(35, 55, 74, 0.6)", zerolinecolor="rgba(35, 55, 74, 0.6)")
+        fig.update_xaxes(
+            range=[start, end],
+            gridcolor="rgba(35, 55, 74, 0.6)",
+            zerolinecolor="rgba(35, 55, 74, 0.6)",
+            showspikes=True,
+            spikemode="across",
+            spikesnap="cursor",
+            spikedash="dot",
+            spikecolor="rgba(0, 229, 255, 0.45)",
+            spikethickness=1,
+        )
+        fig.update_yaxes(
+            gridcolor="rgba(35, 55, 74, 0.6)",
+            zerolinecolor="rgba(35, 55, 74, 0.6)",
+            showspikes=False,
+        )
         return fig
 
     def _render_tank(data, tank, start, end, gap_minutes, key):
@@ -5707,27 +5944,11 @@ elif tab_activa == "tanques":
         if display_name.startswith(tank_id):
             display_name = display_name[len(tank_id) :].lstrip(" -")
 
-        st.html(f'<div class="tm-card-title"><b>{escape(tank_id)}</b> {escape(display_name)}</div>')
-
-        metrics_html = f"""
-        <div class="tm-card-metrics">
-            <div class="tm-metric"><span>Máx. per.</span><strong>{escape(_number(tank['max_period'], ' m', 2))}</strong></div>
-            <div class="tm-metric"><span>Mín. per.</span><strong>{escape(_number(tank['min_period'], ' m', 2))}</strong></div>
-            <div class="tm-metric"><span>% Com.</span><strong>{escape(_number(tank['communication_pct'], ' %', 1))}</strong></div>
-            <div class="tm-metric"><span>% Alm.</span><strong>{escape(_number(tank['storage_pct'], ' %', 0))}</strong></div>
-        </div>
-        """
-        st.html(metrics_html)
-
-        if data["level_m"].notna().any():
-            figure = _build_level_chart(data, tank, start, end, gap_minutes)
-            st.plotly_chart(figure, use_container_width=True, theme=None, key=key, config={"displaylogo": False, "displayModeBar": "hover"})
-        else:
-            st.info("Sin niveles disponibles.")
-
         timestamp = tank["timestamp"]
         if pd.notna(timestamp):
-            elapsed_minutes = max(0, int((end - timestamp).total_seconds() / 60 + 0.5))
+            ts_dt = pd.Timestamp(timestamp)
+            lectura_txt = ts_dt.strftime("%d/%m %H:%M")
+            elapsed_minutes = max(0, int((end - ts_dt).total_seconds() / 60 + 0.5))
             days, rem = divmod(elapsed_minutes, 1440)
             hours, minutes = divmod(rem, 60)
             parts = []
@@ -5736,9 +5957,44 @@ elif tab_activa == "tanques":
             if minutes or not parts: parts.append(f"{minutes}m")
             elapsed_text = " ".join(parts)
         else:
+            lectura_txt = "Sin lectura"
             elapsed_text = "Sin datos"
 
-        st.caption(f"Antigüedad de lectura: {elapsed_text}")
+        tanquesito_html = _render_tanquesito_html(tank.get("storage_pct"))
+        color_estado = _obtener_color_tanquesito(tank.get("storage_pct"))
+
+        nivel_actual_txt = escape(_number(tank.get("level_m"), " m", 2))
+        nivel_max_txt = escape(_number(tank.get("max_level_m"), " m", 2))
+        volumen_txt = escape(_number(tank.get("volume_m3"), " m³", 1))
+        max_per_txt = escape(_number(tank.get("max_period"), " m", 2))
+        min_per_txt = escape(_number(tank.get("min_period"), " m", 2))
+        com_pct_txt = escape(_number(tank.get("communication_pct"), " %", 1))
+
+        card_top_html = (
+            f'<div class="tm-card-title"><b>{escape(tank_id)}</b> {escape(display_name)}</div>'
+            f'<div class="tm-card-sub">Lectura: {escape(lectura_txt)}</div>'
+            f'<div class="tm-hero-row">'
+            f'{tanquesito_html}'
+            f'<div class="tm-hero-box">'
+            f'<div class="tm-hero-line">Nivel actual: <strong style="color: {color_estado};">{nivel_actual_txt}</strong></div>'
+            f'<div class="tm-hero-line">Nivel máx.: <strong>{nivel_max_txt}</strong></div>'
+            f'<div class="tm-hero-line">Volumen: <strong>{volumen_txt}</strong></div>'
+            f'<div class="tm-hero-age">Antigüedad de lectura: {escape(elapsed_text)}</div>'
+            f'</div>'
+            f'<div class="tm-side-metrics">'
+            f'<div class="tm-metric"><span>Máx. per.</span><strong>{max_per_txt}</strong></div>'
+            f'<div class="tm-metric"><span>Mín. per.</span><strong>{min_per_txt}</strong></div>'
+            f'<div class="tm-metric"><span>% Com.</span><strong>{com_pct_txt}</strong></div>'
+            f'</div>'
+            f'</div>'
+        )
+        st.markdown(card_top_html, unsafe_allow_html=True)
+
+        if data["level_m"].notna().any():
+            figure = _build_level_chart(data, tank, start, end, gap_minutes)
+            st.plotly_chart(figure, use_container_width=True, theme=None, key=key, config={"displaylogo": False, "displayModeBar": "hover"})
+        else:
+            st.info("Sin niveles disponibles.")
 
     # 2. Capa de datos optimizada utilizando tus motores existentes
     @st.cache_data(ttl=300, show_spinner=False)
@@ -5875,9 +6131,7 @@ elif tab_activa == "tanques":
                         st.error(f"No fue posible mostrar el tanque {tank_id}.")
 
     renderizar_pestana_tanques()
-
-
-
+    
 # ==============================================================================
 # PESTAÑA 4: SECTORES HIDRÁULICOS (CÓDIGO COMPLETO CON DISEÑO DINÁMICO CRUZADO)
 # ==============================================================================
